@@ -1,0 +1,7 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2021"
+
+# This is a simple exercise with no external dependencies
+[dependencies]

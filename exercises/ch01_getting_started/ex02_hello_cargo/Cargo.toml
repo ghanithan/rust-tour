@@ -1,0 +1,8 @@
+[package]
+name = "hello_cargo"
+version = "0.1.0"
+edition = "2021"
+
+# Learn about dependencies by adding a simple one
+[dependencies]
+# TODO: Add the "colored" crate version "2" to make colorful output

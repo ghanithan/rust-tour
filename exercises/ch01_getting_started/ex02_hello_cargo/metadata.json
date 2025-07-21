@@ -1,0 +1,50 @@
+{
+  "id": "ch01-ex02-hello-cargo",
+  "title": "Hello, Cargo!",
+  "description": "Learn about Cargo, Rust's build system and package manager. Create a proper Rust project structure and understand how Cargo.toml works.",
+  "chapter": 1,
+  "exercise_number": 2,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": [
+    "cargo",
+    "project-structure",
+    "build-system",
+    "dependencies"
+  ],
+  "prerequisites": ["ch01-ex01-hello-world"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "1.3",
+    "supporting_chapters": ["1.2"],
+    "specific_sections": [
+      {
+        "chapter": "1.3",
+        "title": "Hello, Cargo!",
+        "url": "https://doc.rust-lang.org/book/ch01-03-hello-cargo.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "14",
+        "title": "More About Cargo and Crates.io",
+        "url": "https://doc.rust-lang.org/book/ch14-00-more-about-cargo.html",
+        "relevance": "advanced"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["cargo_toml_valid", "proper_project_structure"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["valid_cargo_project"]
+  }
+}

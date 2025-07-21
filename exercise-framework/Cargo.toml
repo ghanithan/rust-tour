@@ -1,0 +1,29 @@
+[package]
+name = "exercise-framework"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+walkdir.workspace = true
+tempfile.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+
+# For test execution
+tokio = { workspace = true, optional = true }
+
+[features]
+default = ["async"]
+async = ["tokio"]
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "exercise_loading"
+harness = false
