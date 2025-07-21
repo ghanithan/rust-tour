@@ -1,0 +1,62 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js
+web/node_modules/
+web/dist/
+web/.env
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+
+# Progress tracking (user-specific)
+progress/user_*.json
+progress/analytics_cache.json
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Exercise working files (preserve templates)
+exercises/*/ex*/src/*.rs
+!exercises/*/ex*/src/*_template.rs
+!exercises/*/ex*/src/lib_template.rs
+!exercises/*/ex*/src/main_template.rs
+
+# Build artifacts
+web/build/
+cli/target/
+exercise-framework/target/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Coverage
+coverage/
+*.lcov

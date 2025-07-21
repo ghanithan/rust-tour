@@ -1,0 +1,45 @@
+[workspace]
+members = [
+    "cli",
+    "exercise-framework", 
+    "exercises/*/ex*"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Rust Learning Platform Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-username/rust-learning-platform"
+homepage = "https://github.com/your-username/rust-learning-platform"
+
+[workspace.dependencies]
+# CLI dependencies
+clap = { version = "4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Exercise framework dependencies  
+criterion = "0.5"
+tempfile = "3.8"
+walkdir = "2.4"
+
+# Web server dependencies (for Rust components)
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+
+# Common dependencies
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"

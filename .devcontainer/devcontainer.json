@@ -1,0 +1,53 @@
+{
+  "name": "Rust Learning Platform",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bookworm",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "vadimcn.vscode-lldb",
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.cargo.features": "all"
+      }
+    }
+  },
+
+  "forwardPorts": [3000, 8080, 8000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Web UI",
+      "onAutoForward": "openBrowser"
+    },
+    "8080": {
+      "label": "API Server", 
+      "onAutoForward": "ignore"
+    },
+    "8000": {
+      "label": "Development Server",
+      "onAutoForward": "ignore"
+    }
+  },
+
+  "postCreateCommand": "bash scripts/setup.sh",
+  
+  "remoteUser": "vscode",
+  
+  "mounts": [
+    "source=${localWorkspaceFolder}/.git,target=/workspaces/${localWorkspaceFolderBasename}/.git,type=bind,consistency=cached"
+  ]
+}
