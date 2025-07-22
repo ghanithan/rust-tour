@@ -83,9 +83,7 @@ fi
 # Build the exercise framework
 print_status "Building exercise framework..."
 if [ -d "exercise-framework" ]; then
-    cd exercise-framework
     cargo build --release
-    cd ..
 fi
 
 # Build CLI tool if it exists
