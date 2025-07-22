@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor';
+import { marked } from 'marked';
 
 // Configure Monaco Environment for web workers
 self.MonacoEnvironment = {
@@ -137,17 +138,14 @@ export class UI {
             <span class="panel-title">📖 Learning Resources</span>
           </div>
           <div class="panel-tabs">
-            <div class="panel-tab active" data-tab="book">Book</div>
+            <div class="panel-tab active" data-tab="info">Info</div>
             <div class="panel-tab" data-tab="hints">Hints</div>
-            <div class="panel-tab" data-tab="info">Info</div>
+            <div class="panel-tab" data-tab="book">Book</div>
           </div>
           <div class="panel-content">
-            <div class="panel-section active" id="book-section">
-              <div class="book-links" id="book-links">
-                <div class="loading">
-                  <span class="spinner">📖</span>
-                  Select an exercise to see book references
-                </div>
+            <div class="panel-section active" id="info-section">
+              <div id="exercise-info" class="loading">
+                Select an exercise to see details
               </div>
             </div>
             <div class="panel-section" id="hints-section">
@@ -172,9 +170,12 @@ export class UI {
                 </div>
               </div>
             </div>
-            <div class="panel-section" id="info-section">
-              <div id="exercise-info" class="loading">
-                Select an exercise to see details
+            <div class="panel-section" id="book-section">
+              <div class="book-links" id="book-links">
+                <div class="loading">
+                  <span class="spinner">📖</span>
+                  Select an exercise to see book references
+                </div>
               </div>
             </div>
           </div>
@@ -295,6 +296,22 @@ export class UI {
       e.stopPropagation();
       document.dispatchEvent(new CustomEvent('toggle-terminal'));
     });
+
+    // Read Instructions button - use event delegation since it's dynamically created
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'read-instructions-btn') {
+        this.showInstructions();
+      }
+      
+      // Handle all links to open in new tabs
+      if (e.target && e.target.tagName === 'A' && e.target.href) {
+        // Check if it's an external link or if it doesn't have target="_blank" already
+        if (e.target.href.startsWith('http') && !e.target.target) {
+          e.preventDefault();
+          window.open(e.target.href, '_blank', 'noopener,noreferrer');
+        }
+      }
+    });
   }
 
   updateExerciseList(exercises) {
@@ -401,7 +418,7 @@ export class UI {
         </div>
         
         <div class="exercise-actions" style="margin-top: 15px;">
-          <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="this.scrollToTop()">
+          <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" id="read-instructions-btn">
             📖 Read Instructions
           </button>
         </div>
@@ -611,6 +628,50 @@ export class UI {
         outputContent.scrollTop = outputContent.scrollHeight;
       }, 0);
     }
+  }
+
+  showInstructions() {
+    if (!this.currentExercise || !this.currentExercise.readme) {
+      this.showNotification('No instructions available for this exercise', 'warning');
+      return;
+    }
+
+    // Create modal for instructions
+    const modal = document.createElement('div');
+    modal.className = 'instructions-modal';
+    modal.innerHTML = `
+      <div class="instructions-modal-content">
+        <div class="instructions-modal-header">
+          <h2>📖 Exercise Instructions</h2>
+          <button class="btn btn-small" onclick="this.parentElement.parentElement.parentElement.remove()">✕</button>
+        </div>
+        <div class="instructions-modal-body">
+          <div class="markdown-content">${this.renderMarkdown(this.currentExercise.readme)}</div>
+        </div>
+        <div class="instructions-modal-footer">
+          <button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  renderMarkdown(markdown) {
+    // Configure marked options
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      highlight: function(code, language) {
+        // Basic code highlighting (could be enhanced with syntax highlighting library)
+        return code;
+      }
+    });
+    
+    // Convert markdown to HTML - the global click handler will handle opening in new tabs
+    return marked.parse(markdown);
   }
 
   setupOutputResize() {
