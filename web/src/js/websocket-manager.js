@@ -143,22 +143,24 @@ export class WebSocketManager {
   }
 
   handleFileUpdated(data) {
-    // Show notification about external file update
-    this.showNotification(`File updated: ${data.file}`, 'info');
+    // Show notification about file update with exercise name
+    const displayName = data.exercise || data.file;
+    this.showNotification(`File updated: ${displayName}`, 'info');
     
     // Dispatch custom event
     document.dispatchEvent(new CustomEvent('file-updated', { 
-      detail: data 
+      detail: { ...data, displayName } 
     }));
   }
 
   handleFileChanged(data) {
     // Handle file system changes
-    console.log(`File changed: ${data.file}`);
+    const displayName = data.exercise || data.file;
+    console.log(`File changed: ${displayName}`);
     
     // Dispatch custom event
     document.dispatchEvent(new CustomEvent('file-changed', { 
-      detail: data 
+      detail: { ...data, displayName } 
     }));
   }
 

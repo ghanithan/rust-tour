@@ -369,10 +369,21 @@ app.put('/api/exercises/:chapter/:exercise/code', async (req, res) => {
     
     await fs.writeFile(mainPath, code, 'utf8');
     
-    // Broadcast file change to connected clients
+    // Broadcast file change to connected clients with exercise name
+    let exerciseName = `${chapter}/${exercise}`;
+    try {
+      const metadataPath = path.join(exercisePath, 'metadata.json');
+      if (await fs.pathExists(metadataPath)) {
+        const metadata = await fs.readJson(metadataPath);
+        exerciseName = metadata.title || exerciseName;
+      }
+    } catch (error) {
+      // If metadata loading fails, use the path as fallback
+    }
+    
     broadcast({
       type: 'file_updated',
-      exercise: `${chapter}/${exercise}`,
+      exercise: exerciseName,
       file: 'src/main.rs'
     });
     
@@ -456,17 +467,27 @@ app.get('/api/progress', async (req, res) => {
       res.json(progress);
     } else {
       // Return default progress
-      res.json({
+      const defaultProgress = {
         user_id: 'default',
         created_at: new Date().toISOString(),
         overall_progress: 0.0,
         chapters_completed: 0,
         exercises_completed: 0,
         total_exercises: 200,
+        current_streak: 0,
+        longest_streak: 0,
+        total_time_minutes: 0,
         chapters: {},
         exercise_history: [],
-        achievements: []
-      });
+        achievements: [],
+        session_stats: {
+          exercises_viewed: 0,
+          exercises_completed: 0,
+          hints_used: 0,
+          time_spent: 0
+        }
+      };
+      res.json(defaultProgress);
     }
   } catch (error) {
     console.error('Error loading progress:', error);
@@ -478,12 +499,78 @@ app.get('/api/progress', async (req, res) => {
 app.post('/api/progress/complete', async (req, res) => {
   try {
     const { exercise_id, time_taken_minutes } = req.body;
+    const progressPath = path.join(__dirname, '../progress/user_progress.json');
     
-    // This would integrate with the Rust progress system
-    // For now, just acknowledge the completion
-    console.log(`Exercise completed: ${exercise_id} in ${time_taken_minutes} minutes`);
+    // Load existing progress or create default
+    let progress;
+    if (await fs.pathExists(progressPath)) {
+      progress = await fs.readJson(progressPath);
+    } else {
+      progress = {
+        user_id: 'default',
+        created_at: new Date().toISOString(),
+        overall_progress: 0.0,
+        chapters_completed: 0,
+        exercises_completed: 0,
+        total_exercises: 200,
+        current_streak: 0,
+        longest_streak: 0,
+        total_time_minutes: 0,
+        chapters: {},
+        exercise_history: [],
+        achievements: [],
+        session_stats: {
+          exercises_viewed: 0,
+          exercises_completed: 0,
+          hints_used: 0,
+          time_spent: 0
+        }
+      };
+    }
     
-    res.json({ success: true });
+    // Ensure required arrays exist
+    if (!progress.exercise_history) progress.exercise_history = [];
+    if (!progress.achievements) progress.achievements = [];
+    if (!progress.chapters) progress.chapters = {};
+    if (!progress.session_stats) {
+      progress.session_stats = {
+        exercises_viewed: 0,
+        exercises_completed: 0,
+        hints_used: 0,
+        time_spent: 0
+      };
+    }
+    
+    // Check if already completed to avoid duplicates
+    const isAlreadyCompleted = progress.exercise_history.some(entry => entry.exercise_id === exercise_id);
+    if (isAlreadyCompleted) {
+      console.log(`Exercise ${exercise_id} already completed`);
+      return res.json({ success: true, message: 'Exercise already completed' });
+    }
+    
+    // Update progress
+    progress.exercises_completed += 1;
+    progress.session_stats.exercises_completed += 1;
+    progress.total_time_minutes += time_taken_minutes || 0;
+    progress.overall_progress = progress.exercises_completed / progress.total_exercises;
+    
+    // Add to exercise history
+    progress.exercise_history.push({
+      exercise_id: exercise_id,
+      completed_at: new Date().toISOString(),
+      time_taken_minutes: time_taken_minutes || 0,
+      session_id: `session_${Date.now()}`
+    });
+    
+    // Save updated progress
+    await fs.ensureDir(path.dirname(progressPath));
+    await fs.writeJson(progressPath, progress, { spaces: 2 });
+    
+    console.log(`Exercise completed: ${exercise_id} in ${time_taken_minutes || 0} minutes`);
+    console.log(`Total exercises completed: ${progress.exercises_completed}/${progress.total_exercises}`);
+    console.log(`Progress saved to: ${progressPath}`);
+    
+    res.json({ success: true, progress: progress });
   } catch (error) {
     console.error('Error updating progress:', error);
     res.status(500).json({ error: 'Failed to update progress' });
@@ -515,12 +602,44 @@ const watcher = chokidar.watch(exercisesPath, {
   persistent: true
 });
 
-watcher.on('change', (filePath) => {
+watcher.on('change', async (filePath) => {
   const relativePath = path.relative(exercisesPath, filePath);
-  broadcast({
-    type: 'file_changed',
-    file: relativePath
-  });
+  
+  // Extract exercise name from path (e.g., "ch01_getting_started/ex01_hello_world/src/main.rs")
+  const pathParts = relativePath.split(path.sep);
+  if (pathParts.length >= 2) {
+    const chapterDir = pathParts[0];
+    const exerciseDir = pathParts[1];
+    
+    try {
+      // Try to load the exercise metadata to get the title
+      const metadataPath = path.join(exercisesPath, chapterDir, exerciseDir, 'metadata.json');
+      if (await fs.pathExists(metadataPath)) {
+        const metadata = await fs.readJson(metadataPath);
+        broadcast({
+          type: 'file_changed',
+          exercise: metadata.title || exerciseDir,
+          file: relativePath
+        });
+        return;
+      }
+    } catch (error) {
+      // If metadata loading fails, fall back to directory name
+    }
+    
+    // Fallback: use exercise directory name
+    broadcast({
+      type: 'file_changed',
+      exercise: exerciseDir.replace(/_/g, ' ').replace(/^ex\d+_/, ''),
+      file: relativePath
+    });
+  } else {
+    // Fallback: use the file path
+    broadcast({
+      type: 'file_changed',
+      file: relativePath
+    });
+  }
 });
 
 // Serve React app for all non-API routes

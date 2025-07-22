@@ -342,15 +342,24 @@ export class UI {
         exerciseDiv.className = 'exercise-item';
         exerciseDiv.dataset.path = exercise.path;
         
+        // Check if exercise is completed
+        const isCompleted = this.platform && this.platform.progressTracker ? 
+          this.platform.progressTracker.isExerciseCompleted(exercise.id) : false;
+        
+        const statusIcon = isCompleted ? '✅' : '📝';
+        const completedClass = isCompleted ? ' completed' : '';
+        
+        exerciseDiv.className = `exercise-item${completedClass}`;
         exerciseDiv.innerHTML = `
           <div class="exercise-status">
-            <span>📝</span>
+            <span class="status-icon">${statusIcon}</span>
           </div>
           <div class="exercise-info">
             <div class="exercise-title">${exercise.title}</div>
             <div class="exercise-meta">
               <span>${exercise.difficulty}</span>
               <span>${exercise.estimated_time_minutes}min</span>
+              ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
             </div>
           </div>
         `;
@@ -612,6 +621,29 @@ export class UI {
 
   showCompletionCelebration() {
     this.showNotification('🎉 Congratulations! Exercise completed!', 'success');
+    // Refresh exercise list to show completion status
+    if (this.platform && this.platform.exercises) {
+      this.updateExerciseList(this.platform.exercises);
+    }
+  }
+
+  showExerciseCompletion(exerciseMetadata) {
+    this.showNotification(`🎉 "${exerciseMetadata.title}" completed!`, 'success');
+    // Refresh exercise list to show completion status
+    if (this.platform && this.platform.exercises) {
+      this.updateExerciseList(this.platform.exercises);
+    }
+  }
+
+  suggestNextExercise(nextExercise) {
+    setTimeout(() => {
+      const shouldContinue = confirm(`Great job! Would you like to move on to the next exercise: "${nextExercise.title}"?`);
+      if (shouldContinue) {
+        document.dispatchEvent(new CustomEvent('exercise-selected', {
+          detail: { path: nextExercise.path }
+        }));
+      }
+    }, 1000);
   }
 
   escapeHtml(text) {

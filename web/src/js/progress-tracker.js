@@ -5,9 +5,22 @@ export class ProgressTracker {
     this.currentExerciseStartTime = null;
   }
 
-  async init() {
+  async init(exercises = null) {
     await this.loadProgress();
+    
+    // Set total exercises based on actual loaded exercises
+    if (exercises && Array.isArray(exercises)) {
+      this.setTotalExercises(exercises.length);
+    }
+    
     console.log('Progress tracker initialized');
+  }
+  
+  setTotalExercises(count) {
+    if (this.progress) {
+      this.progress.total_exercises = count;
+      this.updateProgressDisplay();
+    }
   }
 
   async loadProgress() {
@@ -87,7 +100,18 @@ export class ProgressTracker {
       await this.loadProgress();
     }
     
+    // Check if already completed to avoid duplicates
+    if (this.isExerciseCompleted(exerciseId)) {
+      console.log(`Exercise ${exerciseId} already completed`);
+      return;
+    }
+    
     try {
+      // Ensure exercise_history exists
+      if (!this.progress.exercise_history) {
+        this.progress.exercise_history = [];
+      }
+      
       // Update local progress
       this.progress.exercises_completed += 1;
       this.progress.session_stats.exercises_completed += 1;
@@ -135,6 +159,11 @@ export class ProgressTracker {
   checkForAchievements() {
     if (!this.progress) return;
     
+    // Ensure achievements array exists
+    if (!this.progress.achievements) {
+      this.progress.achievements = [];
+    }
+    
     const achievements = this.progress.achievements;
     const completed = this.progress.exercises_completed;
     
@@ -151,6 +180,9 @@ export class ProgressTracker {
     }
 
     // Chapter completion achievements
+    if (!this.progress.chapters) {
+      this.progress.chapters = {};
+    }
     const chaptersCompleted = Object.keys(this.progress.chapters).length;
     if (chaptersCompleted === 1 && !achievements.find(a => a.id === 'first_chapter')) {
       this.unlockAchievement({
@@ -249,13 +281,25 @@ export class ProgressTracker {
     
     const progressText = document.getElementById('progress-text');
     if (progressText) {
-      const percentage = Math.round(this.progress.overall_progress * 100);
-      progressText.textContent = `${percentage}% Complete (${this.progress.exercises_completed}/${this.progress.total_exercises})`;
+      const completed = this.progress.exercises_completed || 0;
+      const total = this.progress.total_exercises || 0;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      if (total > 0) {
+        progressText.textContent = `${percentage}% Complete (${completed}/${total})`;
+      } else {
+        progressText.textContent = 'Loading exercises...';
+      }
     }
   }
 
   getProgress() {
     return this.progress;
+  }
+
+  isExerciseCompleted(exerciseId) {
+    if (!this.progress || !this.progress.exercise_history) return false;
+    return this.progress.exercise_history.some(entry => entry.exercise_id === exerciseId);
   }
 
   getSessionStats() {

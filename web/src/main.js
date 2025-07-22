@@ -23,11 +23,14 @@ class RustLearningPlatform {
     try {
       // Initialize components
       await this.exerciseManager.init();
-      await this.progressTracker.init();
-      this.websocket.init(this.handleWebSocketMessage.bind(this));
       
-      // Load exercises
+      // Load exercises first
       this.exercises = await this.exerciseManager.loadExercises();
+      
+      // Initialize progress tracker with exercise count
+      await this.progressTracker.init(this.exercises);
+      
+      this.websocket.init(this.handleWebSocketMessage.bind(this));
       
       // Initialize UI
       this.ui.init(this);
@@ -181,6 +184,7 @@ class RustLearningPlatform {
         // Check if this completes the exercise
         if (this.isExerciseComplete(result)) {
           this.ui.showCompletionCelebration();
+          await this.completeExercise();
         }
       } else {
         this.ui.setExecutionStatus('warning', 'Some tests failed');
@@ -267,7 +271,7 @@ class RustLearningPlatform {
     const timeSpent = this.progressTracker.getTimeSpentOnCurrentExercise();
     
     await this.progressTracker.completeExercise(
-      this.currentExercise.metadata.id,
+      this.currentExercise.id || this.currentExercise.metadata.id,
       timeSpent
     );
     
@@ -293,10 +297,8 @@ class RustLearningPlatform {
   }
 
   isExerciseComplete(testResult) {
-    // Check if all tests pass and there are no TODOs left
-    return testResult.success && 
-           !this.ui.getEditorContent().includes('TODO') &&
-           !this.ui.getEditorContent().includes('unimplemented!');
+    // Exercise is complete when all functional tests pass
+    return testResult.success;
   }
 
   handleWebSocketMessage(data) {

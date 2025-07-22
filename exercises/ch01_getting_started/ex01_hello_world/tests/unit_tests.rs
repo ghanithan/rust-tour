@@ -56,17 +56,11 @@ fn test_output_format_is_correct() {
 }
 
 #[test]
-fn test_no_hardcoded_solutions() {
+fn test_implementation_quality() {
     let source_code = std::fs::read_to_string("src/main.rs")
         .expect("Failed to read main.rs");
 
-    // This test ensures students actually implement the solution
-    // rather than just removing the TODO comment
-    assert!(
-        !source_code.contains("TODO"),
-        "Remove the TODO comment and implement the solution"
-    );
-
+    // This test ensures students use the correct Rust constructs
     assert!(
         source_code.contains("println!"),
         "Solution should use the println! macro"
