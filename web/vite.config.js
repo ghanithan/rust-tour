@@ -13,9 +13,20 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      '/ws': {
+        target: 'ws://localhost:3000',
+        ws: true,
+      },
     },
   },
   optimizeDeps: {
-    include: ['monaco-editor/esm/vs/editor/editor.api'],
+    include: [
+      'monaco-editor/esm/vs/editor/editor.api',
+      '@xterm/xterm',
+      '@xterm/addon-fit'
+    ],
+  },
+  define: {
+    global: 'globalThis',
   },
 });

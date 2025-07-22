@@ -7,9 +7,11 @@ const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const chokidar = require('chokidar');
+const pty = require('node-pty');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DEBUG_WEBSOCKET = process.env.DEBUG_WEBSOCKET === 'true' || false;
 
 // Middleware
 app.use(helmet({
@@ -24,18 +26,48 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/monaco', express.static(path.join(__dirname, 'node_modules/monaco-editor')));
 
+// Create HTTP server
+const server = require('http').createServer(app);
+
 // WebSocket server for real-time updates
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ noServer: true });
 
-// Store active connections
+// Store active connections and terminal sessions
 const connections = new Set();
+const terminalSessions = new Map();
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, request) => {
   connections.add(ws);
   console.log('Client connected to WebSocket');
   
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      if (DEBUG_WEBSOCKET) {
+        console.log('Received WebSocket message:', data.type);
+      }
+      
+      if (data.type === 'terminal') {
+        if (DEBUG_WEBSOCKET) {
+          console.log('Handling terminal message:', data.action);
+        }
+        handleTerminalMessage(ws, data);
+      }
+    } catch (error) {
+      console.error('Error parsing WebSocket message:', error);
+    }
+  });
+  
   ws.on('close', () => {
     connections.delete(ws);
+    // Clean up terminal session if it exists
+    for (const [sessionId, session] of terminalSessions) {
+      if (session.ws === ws) {
+        session.pty.kill();
+        terminalSessions.delete(sessionId);
+        break;
+      }
+    }
     console.log('Client disconnected from WebSocket');
   });
 });
@@ -48,6 +80,162 @@ function broadcast(data) {
       ws.send(message);
     }
   });
+}
+
+// Terminal message handler
+function handleTerminalMessage(ws, data) {
+  const { action, sessionId, input, cols, rows } = data;
+  
+  switch (action) {
+    case 'create':
+      createTerminalSession(ws, sessionId, cols, rows);
+      break;
+    case 'check':
+      checkTerminalSession(ws, sessionId);
+      break;
+    case 'input':
+      sendInputToTerminal(sessionId, input);
+      break;
+    case 'resize':
+      resizeTerminal(sessionId, cols, rows);
+      break;
+    case 'destroy':
+      destroyTerminalSession(sessionId);
+      break;
+  }
+}
+
+// Check if terminal session exists
+function checkTerminalSession(ws, sessionId) {
+  const session = terminalSessions.get(sessionId);
+  if (session && session.pty && !session.pty.killed) {
+    // Session exists and is active
+    ws.send(JSON.stringify({
+      type: 'terminal',
+      action: 'exists',
+      sessionId: sessionId
+    }));
+    // Update WebSocket reference
+    session.ws = ws;
+  } else {
+    // Session doesn't exist or is dead
+    ws.send(JSON.stringify({
+      type: 'terminal',
+      action: 'not_found',
+      sessionId: sessionId
+    }));
+    // Clean up dead session
+    if (session) {
+      terminalSessions.delete(sessionId);
+    }
+  }
+}
+
+// Create a new terminal session
+function createTerminalSession(ws, sessionId, cols = 80, rows = 24) {
+  try {
+    // Check if session already exists
+    const existingSession = terminalSessions.get(sessionId);
+    if (existingSession && existingSession.pty && !existingSession.pty.killed) {
+      // Update WebSocket reference for existing session
+      existingSession.ws = ws;
+      ws.send(JSON.stringify({
+        type: 'terminal',
+        action: 'created',
+        sessionId: sessionId
+      }));
+      return;
+    }
+
+    // Clean up any dead session with same ID
+    if (existingSession) {
+      terminalSessions.delete(sessionId);
+    }
+
+    // Determine working directory based on current exercise or default
+    const cwd = path.join(__dirname, '../exercises');
+    
+    const ptyProcess = pty.spawn(process.platform === 'win32' ? 'powershell.exe' : 'bash', [], {
+      name: 'xterm-color',
+      cols: cols,
+      rows: rows,
+      cwd: cwd,
+      env: process.env
+    });
+
+    ptyProcess.onData((data) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'terminal',
+          action: 'output',
+          sessionId: sessionId,
+          data: data
+        }));
+      }
+    });
+
+    ptyProcess.onExit(() => {
+      terminalSessions.delete(sessionId);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'terminal',
+          action: 'exit',
+          sessionId: sessionId
+        }));
+      }
+    });
+
+    terminalSessions.set(sessionId, {
+      pty: ptyProcess,
+      ws: ws
+    });
+
+    ws.send(JSON.stringify({
+      type: 'terminal',
+      action: 'created',
+      sessionId: sessionId
+    }));
+
+    if (DEBUG_WEBSOCKET) {
+      console.log(`Terminal session ${sessionId} created`);
+    }
+  } catch (error) {
+    console.error('Error creating terminal session:', error);
+    ws.send(JSON.stringify({
+      type: 'terminal',
+      action: 'error',
+      sessionId: sessionId,
+      message: 'Failed to create terminal session'
+    }));
+  }
+}
+
+// Send input to terminal
+function sendInputToTerminal(sessionId, input) {
+  const session = terminalSessions.get(sessionId);
+  if (session) {
+    session.pty.write(input);
+  }
+}
+
+// Resize terminal
+function resizeTerminal(sessionId, cols, rows) {
+  const session = terminalSessions.get(sessionId);
+  if (session) {
+    session.pty.resize(cols, rows);
+  }
+}
+
+// Destroy terminal session
+function destroyTerminalSession(sessionId) {
+  const session = terminalSessions.get(sessionId);
+  if (session) {
+    session.pty.kill();
+    terminalSessions.delete(sessionId);
+    if (DEBUG_WEBSOCKET) {
+      console.log(`Terminal session ${sessionId} destroyed`);
+    }
+  }
 }
 
 // Helper function to run cargo commands
@@ -340,10 +528,21 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// Handle WebSocket upgrade requests
+server.on('upgrade', (request, socket, head) => {
+  if (request.url === '/ws') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🌐 Rust Learning Platform server running on http://localhost:${PORT}`);
-  console.log(`📡 WebSocket server running on ws://localhost:8080`);
+  console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
   console.log(`🦀 Ready to serve Rust learning exercises!`);
 });
 

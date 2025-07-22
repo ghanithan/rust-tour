@@ -1,7 +1,7 @@
 use crate::exercise::{Exercise, TestType};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::process::{Command, Output};
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 /// Test execution results
@@ -137,7 +137,7 @@ impl TestRunner {
     }
 
     /// Check if the code compiles
-    fn check_compilation(&self, exercise: &Exercise) -> Result<CompilationResult> {
+    fn check_compilation(&self, _exercise: &Exercise) -> Result<CompilationResult> {
         // First check with cargo check (faster)
         let check_output = Command::new(&self.cargo_path)
             .args(["check", "--message-format=json"])
@@ -199,7 +199,7 @@ impl TestRunner {
     }
 
     /// Run unit tests
-    fn run_unit_tests(&self, exercise: &Exercise) -> Result<Vec<IndividualTestResult>> {
+    fn run_unit_tests(&self, _exercise: &Exercise) -> Result<Vec<IndividualTestResult>> {
         let mut results = Vec::new();
 
         // Run cargo test with JSON output
@@ -242,7 +242,7 @@ impl TestRunner {
     }
 
     /// Run quality checks
-    fn run_quality_checks(&self, exercise: &Exercise) -> Result<QualityResult> {
+    fn run_quality_checks(&self, _exercise: &Exercise) -> Result<QualityResult> {
         // Check formatting
         let fmt_output = Command::new(&self.cargo_path)
             .args(["fmt", "--check"])
@@ -303,7 +303,7 @@ impl TestRunner {
         }
 
         // Run cargo bench (simplified)
-        let bench_output = Command::new(&self.cargo_path)
+        let _bench_output = Command::new(&self.cargo_path)
             .args(["bench"])
             .output()
             .context("Failed to run cargo bench")?;

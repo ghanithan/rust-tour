@@ -4,6 +4,7 @@ import { ProgressTracker } from './js/progress-tracker.js';
 import { BookIntegration } from './js/book-integration.js';
 import { WebSocketManager } from './js/websocket-manager.js';
 import { UI } from './js/ui.js';
+import { TerminalManager } from './js/terminal.js';
 
 class RustLearningPlatform {
   constructor() {
@@ -12,6 +13,7 @@ class RustLearningPlatform {
     this.bookIntegration = new BookIntegration();
     this.websocket = new WebSocketManager();
     this.ui = new UI();
+    this.terminal = new TerminalManager(this.websocket);
     
     this.currentExercise = null;
     this.exercises = [];
@@ -30,6 +32,10 @@ class RustLearningPlatform {
       // Initialize UI
       this.ui.init(this);
       this.ui.updateExerciseList(this.exercises);
+      
+      // Initialize terminal
+      this.terminal.init('terminal');
+      
       this.setupEventListeners();
       
       // Load default exercise or last opened
@@ -92,6 +98,23 @@ class RustLearningPlatform {
       saveTimeout = setTimeout(() => {
         this.saveCode(true); // silent save
       }, 2000);
+    });
+
+    // Terminal controls
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'terminal-btn') {
+        this.toggleTerminal();
+      } else if (e.target.id === 'terminal-close-btn') {
+        this.hideTerminal();
+      }
+    });
+
+    // Terminal keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === '~') {
+        e.preventDefault();
+        this.toggleTerminal();
+      }
     });
   }
 
@@ -287,6 +310,37 @@ class RustLearningPlatform {
         // Handle file system changes
         break;
     }
+  }
+
+  // Terminal control methods
+  toggleTerminal() {
+    const terminalBtn = document.getElementById('terminal-btn');
+    const terminalContainer = document.getElementById('terminal-container');
+    
+    if (terminalContainer.style.display === 'none') {
+      this.showTerminal();
+    } else {
+      this.hideTerminal();
+    }
+  }
+
+  showTerminal() {
+    const terminalBtn = document.getElementById('terminal-btn');
+    terminalBtn.classList.add('active');
+    
+    this.terminal.show();
+    
+    // Navigate to current exercise directory if one is loaded
+    if (this.currentExercise) {
+      this.terminal.navigateToExercise(this.currentExercise.path);
+    }
+  }
+
+  hideTerminal() {
+    const terminalBtn = document.getElementById('terminal-btn');
+    terminalBtn.classList.remove('active');
+    
+    this.terminal.hide();
   }
 }
 

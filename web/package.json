@@ -14,30 +14,38 @@
     "lint:fix": "eslint src server.js --ext .js,.ts --fix",
     "start": "node server.js"
   },
-  "keywords": ["rust", "learning", "education", "programming"],
+  "keywords": [
+    "rust",
+    "learning",
+    "education",
+    "programming"
+  ],
   "author": "Rust Learning Platform Contributors",
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "express": "^4.18.2",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "chokidar": "^3.5.3",
     "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
     "helmet": "^7.0.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.4",
-    "ws": "^8.14.2",
-    "chokidar": "^3.5.3",
-    "fs-extra": "^11.1.1"
+    "node-pty": "^1.0.0",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
-    "@types/express": "^4.17.17",
+    "@monaco-editor/loader": "^1.4.0",
     "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.17",
     "@types/multer": "^1.4.7",
     "@types/ws": "^8.5.5",
-    "vite": "^4.4.0",
     "concurrently": "^8.2.0",
-    "nodemon": "^3.0.1",
     "eslint": "^8.45.0",
     "jest": "^29.6.0",
-    "@monaco-editor/loader": "^1.4.0",
-    "monaco-editor": "^0.41.0"
+    "monaco-editor": "^0.41.0",
+    "nodemon": "^3.0.1",
+    "vite": "^4.4.0"
   }
 }

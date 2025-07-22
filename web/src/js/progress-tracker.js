@@ -50,6 +50,21 @@ export class ProgressTracker {
   }
 
   async trackExerciseViewed(exerciseId) {
+    // Ensure progress is loaded
+    if (!this.progress) {
+      await this.loadProgress();
+    }
+    
+    // Ensure session_stats exists
+    if (!this.progress.session_stats) {
+      this.progress.session_stats = {
+        exercises_viewed: 0,
+        exercises_completed: 0,
+        hints_used: 0,
+        time_spent: 0
+      };
+    }
+    
     this.currentExerciseStartTime = Date.now();
     this.progress.session_stats.exercises_viewed += 1;
     
@@ -58,6 +73,9 @@ export class ProgressTracker {
   }
 
   async trackHintUsed(exerciseId, level) {
+    if (!this.progress) {
+      await this.loadProgress();
+    }
     this.progress.session_stats.hints_used += 1;
     
     // In a real implementation, this would be saved to the backend
@@ -65,6 +83,10 @@ export class ProgressTracker {
   }
 
   async completeExercise(exerciseId, timeSpentMinutes) {
+    if (!this.progress) {
+      await this.loadProgress();
+    }
+    
     try {
       // Update local progress
       this.progress.exercises_completed += 1;
@@ -111,6 +133,8 @@ export class ProgressTracker {
   }
 
   checkForAchievements() {
+    if (!this.progress) return;
+    
     const achievements = this.progress.achievements;
     const completed = this.progress.exercises_completed;
     
@@ -221,6 +245,8 @@ export class ProgressTracker {
   }
 
   updateProgressDisplay() {
+    if (!this.progress) return;
+    
     const progressText = document.getElementById('progress-text');
     if (progressText) {
       const percentage = Math.round(this.progress.overall_progress * 100);
@@ -233,6 +259,8 @@ export class ProgressTracker {
   }
 
   getSessionStats() {
+    if (!this.progress) return null;
+    
     return {
       ...this.progress.session_stats,
       session_duration: Math.round((Date.now() - this.sessionStartTime) / (1000 * 60)) // minutes
@@ -240,6 +268,13 @@ export class ProgressTracker {
   }
 
   getChapterProgress(chapterNum) {
+    if (!this.progress) return {
+      completed: false,
+      exercises_completed: 0,
+      total_exercises: 0,
+      time_spent: 0
+    };
+    
     return this.progress.chapters[chapterNum] || {
       completed: false,
       exercises_completed: 0,
@@ -249,6 +284,8 @@ export class ProgressTracker {
   }
 
   getRecentAchievements(limit = 5) {
+    if (!this.progress) return [];
+    
     return this.progress.achievements
       .sort((a, b) => new Date(b.unlocked_at) - new Date(a.unlocked_at))
       .slice(0, limit);

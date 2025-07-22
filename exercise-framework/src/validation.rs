@@ -1,6 +1,6 @@
 use crate::exercise::{Exercise, ExerciseType};
 use crate::metadata::ExerciseMetadata;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 

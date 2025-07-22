@@ -10,10 +10,16 @@ This is a Rust learning platform that provides progressive, exercise-based educa
 ### Project Setup
 ```bash
 # Initialize the project structure
-./scripts/init.sh
+./scripts/setup.sh
 
 # Set up development container (if using Codespaces)
 # The .devcontainer/ configuration handles this automatically
+
+# Start the complete platform
+./scripts/run.sh platform
+
+# Start web development server only
+./scripts/run.sh web
 ```
 
 ### Testing and Validation
@@ -28,7 +34,7 @@ cd exercises/ch01_getting_started/ex01_hello_world && cargo test
 ./scripts/check-exercise.sh ch01 ex01
 
 # Run all exercise validations
-./scripts/run-tests.sh
+./scripts/run.sh test
 
 # Lint code (Clippy integration)
 cargo clippy -- -D warnings

@@ -52,7 +52,7 @@ pub struct TestFile {
 }
 
 /// Types of test files
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TestType {
     Unit,        // Unit tests for functionality
     Integration, // Integration tests
@@ -115,14 +115,14 @@ impl Exercise {
         
         for entry in std::fs::read_dir(exercises_root)? {
             let entry = entry?;
-            let name = entry.file_name().to_string_lossy();
+            let name = entry.file_name().to_string_lossy().to_string();
             
             if name.starts_with(&chapter_pattern) && entry.file_type()?.is_dir() {
                 // Look for exercise within chapter
                 let chapter_path = entry.path();
                 for exercise_entry in std::fs::read_dir(&chapter_path)? {
                     let exercise_entry = exercise_entry?;
-                    let exercise_name = exercise_entry.file_name().to_string_lossy();
+                    let _exercise_name = exercise_entry.file_name().to_string_lossy();
                     
                     // Check if this exercise matches the ID
                     let exercise_path = exercise_entry.path();

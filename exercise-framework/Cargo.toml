@@ -24,6 +24,7 @@ async = ["tokio"]
 [dev-dependencies]
 criterion.workspace = true
 
-[[bench]]
-name = "exercise_loading"
-harness = false
+# Benchmarks disabled for now
+# [[bench]]
+# name = "exercise_loading"
+# harness = false

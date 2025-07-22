@@ -82,12 +82,14 @@ impl Framework {
 trait Pipe<T> {
     fn pipe<F, R>(self, f: F) -> R
     where
+        Self: Sized,
         F: FnOnce(Self) -> R;
 }
 
 impl<T> Pipe<T> for T {
     fn pipe<F, R>(self, f: F) -> R
     where
+        Self: Sized,
         F: FnOnce(Self) -> R,
     {
         f(self)

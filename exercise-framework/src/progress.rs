@@ -392,7 +392,7 @@ impl ProgressTracker {
     }
 
     /// Get next recommended exercises
-    pub fn get_recommendations(&self, limit: usize) -> Result<Vec<String>> {
+    pub fn get_recommendations(&self, _limit: usize) -> Result<Vec<String>> {
         // TODO: Implement sophisticated recommendation algorithm
         // For now, return simple sequential progression
         let next_chapter = self.current_progress.chapters_completed + 1;

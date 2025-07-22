@@ -46,6 +46,12 @@ body {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
 }
 
 /* Main Layout */
@@ -55,9 +61,10 @@ body {
     "header header header"
     "sidebar editor panel"
     "sidebar output panel";
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 300px 1fr 400px;
   grid-template-rows: 60px 1fr 300px;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
 }
 
@@ -626,4 +633,156 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-secondary);
+}
+
+/* Terminal Styles */
+.terminal-container {
+  position: fixed;
+  bottom: 0 !important;
+  left: 0;
+  right: 0;
+  height: 25vh;
+  max-height: none;
+  min-height: 100px !important;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-primary);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  transform: translateY(0) !important;
+}
+
+.terminal-container.minimized {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  bottom: 0 !important;
+}
+
+/* Adjust main content when terminal is minimized */
+body.terminal-open .app {
+  height: calc(100vh - var(--terminal-height)) !important;
+  max-height: calc(100vh - var(--terminal-height)) !important;
+}
+
+.terminal-container.resizing {
+  pointer-events: none;
+}
+
+/* Terminal resize handle */
+.terminal-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  background: rgba(206, 66, 43, 0.1);
+  z-index: 1001;
+  border-top: 1px solid transparent;
+}
+
+.terminal-resize-handle:hover {
+  background: rgba(206, 66, 43, 0.3);
+  border-top: 1px solid var(--rust-orange);
+}
+
+.terminal-container.resizing .terminal-resize-handle {
+  background: rgba(206, 66, 43, 0.5);
+  border-top: 1px solid var(--rust-orange);
+}
+
+/* Adjust main content when terminal is open */
+:root {
+  --terminal-height: 25vh;
+}
+
+body.terminal-open .output-container {
+  max-height: calc(100vh - var(--terminal-height) - 150px);
+  overflow-y: auto;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  cursor: pointer; /* Make header clickable for minimize/maximize */
+  user-select: none;
+}
+
+.terminal-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.terminal-controls {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.terminal-title {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.terminal-content {
+  flex: 1;
+  padding: 2px;
+  background: #1e1e1e;
+  overflow: hidden !important;
+  min-height: 0;
+  height: calc(100% - 42px);
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-container.minimized .terminal-content {
+  display: none;
+}
+
+/* XTerm overrides - allow flexible sizing */
+.terminal-content .xterm {
+  height: 100% !important;
+  width: 100% !important;
+  flex: 1;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.terminal-content .xterm .xterm-viewport {
+  flex: 1 !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: transparent !important;
+}
+
+.terminal-content .xterm .xterm-screen {
+  height: 100% !important;
+  background: transparent !important;
+}
+
+.terminal-content .xterm .xterm-helper-textarea {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Terminal button active state */
+#terminal-btn.active {
+  background: var(--rust-orange);
+  color: white;
+}
+
+/* Small button style */
+.btn.btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: auto;
 }

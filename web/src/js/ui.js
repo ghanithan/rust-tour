@@ -1,5 +1,24 @@
 import * as monaco from 'monaco-editor';
 
+// Configure Monaco Environment for web workers
+self.MonacoEnvironment = {
+  getWorkerUrl: function (moduleId, label) {
+    if (label === 'json') {
+      return './monaco-editor/esm/vs/language/json/json.worker.js';
+    }
+    if (label === 'css' || label === 'scss' || label === 'less') {
+      return './monaco-editor/esm/vs/language/css/css.worker.js';
+    }
+    if (label === 'html' || label === 'handlebars' || label === 'razor') {
+      return './monaco-editor/esm/vs/language/html/html.worker.js';
+    }
+    if (label === 'typescript' || label === 'javascript') {
+      return './monaco-editor/esm/vs/language/typescript/ts.worker.js';
+    }
+    return './monaco-editor/esm/vs/editor/editor.worker.js';
+  }
+};
+
 export class UI {
   constructor() {
     this.editor = null;
@@ -63,6 +82,9 @@ export class UI {
               <button class="btn btn-secondary" id="check-btn" title="Check (Ctrl+L)">
                 🔍 Check
               </button>
+              <button class="btn btn-secondary" id="terminal-btn" title="Terminal (Ctrl+~)">
+                🖥️ Terminal
+              </button>
             </div>
           </div>
           <div id="editor"></div>
@@ -92,6 +114,20 @@ export class UI {
               <div class="output-placeholder">Check code quality to see suggestions here</div>
             </div>
           </div>
+        </section>
+
+        <!-- Terminal Container -->
+        <section class="terminal-container" id="terminal-container" style="display: none;">
+          <div class="terminal-resize-handle" id="terminal-resize-handle"></div>
+          <div class="terminal-header" id="terminal-header">
+            <span class="terminal-title">🖥️ Terminal</span>
+            <div class="terminal-controls">
+              <button class="btn btn-small" id="terminal-minimize-btn" title="Minimize Terminal">−</button>
+              <button class="btn btn-small" id="terminal-maximize-btn" title="Maximize Terminal" style="display: none;">□</button>
+              <button class="btn btn-small" id="terminal-close-btn" title="Close Terminal">✕</button>
+            </div>
+          </div>
+          <div class="terminal-content" id="terminal"></div>
         </section>
 
         <!-- Right Panel - Book Integration & Hints -->
@@ -251,6 +287,12 @@ export class UI {
           detail: { level } 
         }));
       });
+    });
+    
+    // Terminal close button
+    document.getElementById('terminal-close-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.dispatchEvent(new CustomEvent('toggle-terminal'));
     });
   }
 

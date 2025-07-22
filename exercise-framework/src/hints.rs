@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Hint system for progressive learning assistance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HintLevel {
     Conceptual,     // Level 1: Points to concepts and documentation
     Strategic,      // Level 2: Suggests approach without code
@@ -86,7 +86,7 @@ impl HintSystem {
             Some(HintLevel::Implementation) => return None, // No more hints
         };
 
-        hints.iter().find(|hint| matches!(hint.level, target_level) == matches!(target_level, _))
+        hints.iter().find(|hint| hint.level == target_level)
     }
 
     /// Get all hints for an exercise (for instructors/solutions)
@@ -202,7 +202,7 @@ impl HintSystem {
     }
 
     /// Generate contextual hints based on error patterns
-    pub fn generate_contextual_hint(&self, exercise_id: &str, error_message: &str) -> Option<Hint> {
+    pub fn generate_contextual_hint(&self, _exercise_id: &str, error_message: &str) -> Option<Hint> {
         // Analyze common error patterns and provide targeted hints
         if error_message.contains("cannot borrow") {
             Some(Hint {

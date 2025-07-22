@@ -5,7 +5,9 @@ export class WebSocketManager {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000; // Start with 1 second
     this.messageHandlers = [];
+    this.typedMessageHandlers = new Map();
     this.isConnecting = false;
+    this.debug = localStorage.getItem('DEBUG_WEBSOCKET') === 'true' || window.location.search.includes('debug=true');
   }
 
   init(messageHandler) {
@@ -26,9 +28,21 @@ export class WebSocketManager {
     
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.hostname}:8080`;
+      let wsUrl;
       
-      console.log(`Connecting to WebSocket: ${wsUrl}`);
+      // Check if we're in GitHub Codespaces or similar environment
+      if (window.location.hostname.includes('github.dev') || window.location.hostname.includes('gitpod.io')) {
+        // In Codespaces, connect directly to port 3000 for WebSocket (where the server is)
+        const port3000Host = window.location.hostname.replace('-8000.', '-3000.');
+        wsUrl = `${protocol}//${port3000Host}/ws`;
+      } else {
+        // Local development - connect directly to port 3000
+        wsUrl = `${protocol}//${window.location.hostname}:3000/ws`;
+      }
+      
+      if (this.debug) {
+        console.log(`Connecting to WebSocket: ${wsUrl}`);
+      }
       this.ws = new WebSocket(wsUrl);
       
       this.ws.onopen = () => {
@@ -89,7 +103,9 @@ export class WebSocketManager {
   }
 
   handleMessage(data) {
-    console.log('Received WebSocket message:', data);
+    if (this.debug) {
+      console.log('Received WebSocket message:', data);
+    }
     
     // Dispatch to all registered handlers
     this.messageHandlers.forEach(handler => {
@@ -99,6 +115,13 @@ export class WebSocketManager {
         console.error('Error in WebSocket message handler:', error);
       }
     });
+
+    // Handle typed message handlers first
+    const typedHandler = this.typedMessageHandlers.get(data.type);
+    if (typedHandler) {
+      typedHandler(data);
+      return; // Don't continue to built-in handlers
+    }
 
     // Handle built-in message types
     switch (data.type) {
@@ -389,4 +412,15 @@ export class WebSocketManager {
       this.ws = null;
     }
   }
+
+  // Add typed message handler
+  addMessageHandler(type, handler) {
+    this.typedMessageHandlers.set(type, handler);
+  }
+
+  // Remove typed message handler
+  removeMessageHandler(type) {
+    this.typedMessageHandlers.delete(type);
+  }
+
 }
