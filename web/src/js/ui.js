@@ -32,6 +32,7 @@ export class UI {
     this.setupLayout();
     await this.initializeEditor();
     this.setupEventHandlers();
+    this.setupOutputResize();
     console.log('UI initialized');
   }
 
@@ -471,6 +472,9 @@ export class UI {
     
     // Switch to output tab
     this.switchOutputTab('output');
+    
+    // Auto-scroll to bottom
+    this.scrollOutputToBottom();
   }
 
   updateTestResults(content) {
@@ -479,6 +483,9 @@ export class UI {
     
     // Switch to tests tab
     this.switchOutputTab('tests');
+    
+    // Auto-scroll to bottom
+    this.scrollOutputToBottom();
   }
 
   updateClippyResults(content) {
@@ -488,6 +495,8 @@ export class UI {
     // Switch to clippy tab if there are suggestions
     if (content.trim()) {
       this.switchOutputTab('clippy');
+      // Auto-scroll to bottom
+      this.scrollOutputToBottom();
     }
   }
 
@@ -592,5 +601,96 @@ export class UI {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  scrollOutputToBottom() {
+    const outputContent = document.querySelector('.output-content');
+    if (outputContent) {
+      // Delay to ensure content is rendered
+      setTimeout(() => {
+        outputContent.scrollTop = outputContent.scrollHeight;
+      }, 0);
+    }
+  }
+
+  setupOutputResize() {
+    const mainLayout = document.querySelector('.main-layout');
+    const editorContainer = document.querySelector('.editor-container');
+    const outputContainer = document.querySelector('.output-container');
+    
+    if (!mainLayout || !editorContainer || !outputContainer) {
+      console.warn('Required elements for resize not found');
+      return;
+    }
+    
+    // Create resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'output-resize-handle';
+    resizeHandle.innerHTML = '<div class="resize-handle-bar"></div>';
+    
+    // Insert resize handle at the top of the output container
+    outputContainer.insertBefore(resizeHandle, outputContainer.firstChild);
+    console.log('Resize handle inserted:', resizeHandle);
+    
+    let isResizing = false;
+    let startY = 0;
+    let startEditorHeight = 0;
+    let startOutputHeight = 0;
+    
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startY = e.clientY;
+      
+      const editorRect = editorContainer.getBoundingClientRect();
+      const outputRect = outputContainer.getBoundingClientRect();
+      startEditorHeight = editorRect.height;
+      startOutputHeight = outputRect.height;
+      
+      document.body.classList.add('resizing-output');
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      e.preventDefault();
+    });
+    
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      
+      const deltaY = e.clientY - startY;
+      const totalHeight = startEditorHeight + startOutputHeight;
+      const minHeight = 150; // Minimum height for both sections
+      
+      let newEditorHeight = startEditorHeight + deltaY;
+      let newOutputHeight = startOutputHeight - deltaY;
+      
+      // Enforce minimum heights
+      if (newEditorHeight < minHeight) {
+        newEditorHeight = minHeight;
+        newOutputHeight = totalHeight - minHeight;
+      } else if (newOutputHeight < minHeight) {
+        newOutputHeight = minHeight;
+        newEditorHeight = totalHeight - minHeight;
+      }
+      
+      // Update grid template rows
+      const headerHeight = 60;
+      mainLayout.style.gridTemplateRows = `${headerHeight}px ${newEditorHeight}px ${newOutputHeight}px`;
+      
+      // Resize Monaco editor
+      if (this.editor) {
+        this.editor.layout();
+      }
+    };
+    
+    const handleMouseUp = () => {
+      isResizing = false;
+      document.body.classList.remove('resizing-output');
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      
+      // Final resize of Monaco editor
+      if (this.editor) {
+        setTimeout(() => this.editor.layout(), 100);
+      }
+    };
   }
 }

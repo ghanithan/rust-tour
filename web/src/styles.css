@@ -300,6 +300,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .output-header {
@@ -701,6 +702,54 @@ body.terminal-open .app {
 body.terminal-open .output-container {
   max-height: calc(100vh - var(--terminal-height) - 150px);
   overflow-y: auto;
+}
+
+/* Output Resize Handle */
+.output-resize-handle {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
+  cursor: ns-resize;
+  z-index: 20;
+  user-select: none;
+}
+
+.output-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.output-resize-handle:active {
+  background: var(--accent);
+}
+
+.resize-handle-bar {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 3px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.output-resize-handle:hover .resize-handle-bar {
+  opacity: 0.8;
+  background: var(--text-secondary);
+}
+
+body.resizing-output {
+  cursor: ns-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-output * {
+  cursor: ns-resize !important;
+  user-select: none !important;
 }
 
 .terminal-header {
