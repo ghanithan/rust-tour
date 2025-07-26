@@ -22,8 +22,8 @@ web/yarn-debug.log*
 web/yarn-error.log*
 
 # Progress tracking (user-specific)
-progress/user_*.json
-progress/analytics_cache.json
+#progress/user_*.json
+#progress/analytics_cache.json
 
 # Temporary files
 *.tmp

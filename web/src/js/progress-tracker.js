@@ -68,31 +68,74 @@ export class ProgressTracker {
       await this.loadProgress();
     }
     
-    // Ensure session_stats exists
-    if (!this.progress.session_stats) {
-      this.progress.session_stats = {
-        exercises_viewed: 0,
-        exercises_completed: 0,
-        hints_used: 0,
-        time_spent: 0
-      };
-    }
-    
     this.currentExerciseStartTime = Date.now();
-    this.progress.session_stats.exercises_viewed += 1;
     
-    // Update UI
-    this.updateProgressDisplay();
+    try {
+      const response = await fetch('/api/progress/view', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          exercise_id: exerciseId
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        this.progress = result.progress;
+        this.updateProgressDisplay();
+        console.log(`Exercise view tracked: ${exerciseId}`);
+      } else {
+        console.error('Failed to track exercise view');
+        // Fallback to local tracking
+        this.progress.session_stats.exercises_viewed += 1;
+        this.updateProgressDisplay();
+      }
+    } catch (error) {
+      console.error('Error tracking exercise view:', error);
+      // Fallback to local tracking
+      if (!this.progress.session_stats) {
+        this.progress.session_stats = {
+          exercises_viewed: 0,
+          exercises_completed: 0,
+          hints_used: 0,
+          time_spent: 0
+        };
+      }
+      this.progress.session_stats.exercises_viewed += 1;
+      this.updateProgressDisplay();
+    }
   }
 
   async trackHintUsed(exerciseId, level) {
     if (!this.progress) {
       await this.loadProgress();
     }
-    this.progress.session_stats.hints_used += 1;
     
-    // In a real implementation, this would be saved to the backend
-    console.log(`Hint used: ${exerciseId}, level ${level}`);
+    try {
+      const response = await fetch('/api/progress/hint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          exercise_id: exerciseId,
+          hint_level: level
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        this.progress = result.progress;
+        this.updateProgressDisplay();
+        console.log(`Hint tracked: ${exerciseId}, level ${level}`);
+      } else {
+        console.error('Failed to track hint usage');
+      }
+    } catch (error) {
+      console.error('Error tracking hint usage:', error);
+    }
   }
 
   async completeExercise(exerciseId, timeSpentMinutes) {

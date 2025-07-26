@@ -457,16 +457,16 @@ app.post('/api/exercises/:chapter/:exercise/check', async (req, res) => {
   }
 });
 
-// Get progress
-app.get('/api/progress', async (req, res) => {
+// Helper function to ensure progress file exists with proper structure
+async function ensureProgressFile(progressPath) {
   try {
-    const progressPath = path.join(__dirname, '../progress/user_progress.json');
+    // Ensure the progress directory exists
+    await fs.ensureDir(path.dirname(progressPath));
     
-    if (await fs.pathExists(progressPath)) {
-      const progress = await fs.readJson(progressPath);
-      res.json(progress);
-    } else {
-      // Return default progress
+    // Check if progress file exists
+    if (!(await fs.pathExists(progressPath))) {
+      console.log('Creating new progress file:', progressPath);
+      
       const defaultProgress = {
         user_id: 'default',
         created_at: new Date().toISOString(),
@@ -487,8 +487,41 @@ app.get('/api/progress', async (req, res) => {
           time_spent: 0
         }
       };
-      res.json(defaultProgress);
+      
+      await fs.writeJson(progressPath, defaultProgress, { spaces: 2 });
+      console.log('Progress file created successfully');
+      return defaultProgress;
     }
+    
+    // File exists, load and return it
+    const progress = await fs.readJson(progressPath);
+    
+    // Ensure all required properties exist (for backwards compatibility)
+    if (!progress.session_stats) {
+      progress.session_stats = {
+        exercises_viewed: 0,
+        exercises_completed: 0,
+        hints_used: 0,
+        time_spent: 0
+      };
+    }
+    if (!progress.exercise_history) progress.exercise_history = [];
+    if (!progress.achievements) progress.achievements = [];
+    if (!progress.chapters) progress.chapters = {};
+    
+    return progress;
+  } catch (error) {
+    console.error('Error ensuring progress file:', error);
+    throw error;
+  }
+}
+
+// Get progress
+app.get('/api/progress', async (req, res) => {
+  try {
+    const progressPath = path.join(__dirname, '../progress/user_progress.json');
+    const progress = await ensureProgressFile(progressPath);
+    res.json(progress);
   } catch (error) {
     console.error('Error loading progress:', error);
     res.status(500).json({ error: 'Failed to load progress' });
@@ -502,44 +535,7 @@ app.post('/api/progress/complete', async (req, res) => {
     const progressPath = path.join(__dirname, '../progress/user_progress.json');
     
     // Load existing progress or create default
-    let progress;
-    if (await fs.pathExists(progressPath)) {
-      progress = await fs.readJson(progressPath);
-    } else {
-      progress = {
-        user_id: 'default',
-        created_at: new Date().toISOString(),
-        overall_progress: 0.0,
-        chapters_completed: 0,
-        exercises_completed: 0,
-        total_exercises: 200,
-        current_streak: 0,
-        longest_streak: 0,
-        total_time_minutes: 0,
-        chapters: {},
-        exercise_history: [],
-        achievements: [],
-        session_stats: {
-          exercises_viewed: 0,
-          exercises_completed: 0,
-          hints_used: 0,
-          time_spent: 0
-        }
-      };
-    }
-    
-    // Ensure required arrays exist
-    if (!progress.exercise_history) progress.exercise_history = [];
-    if (!progress.achievements) progress.achievements = [];
-    if (!progress.chapters) progress.chapters = {};
-    if (!progress.session_stats) {
-      progress.session_stats = {
-        exercises_viewed: 0,
-        exercises_completed: 0,
-        hints_used: 0,
-        time_spent: 0
-      };
-    }
+    const progress = await ensureProgressFile(progressPath);
     
     // Check if already completed to avoid duplicates
     const isAlreadyCompleted = progress.exercise_history.some(entry => entry.exercise_id === exercise_id);
@@ -574,6 +570,80 @@ app.post('/api/progress/complete', async (req, res) => {
   } catch (error) {
     console.error('Error updating progress:', error);
     res.status(500).json({ error: 'Failed to update progress' });
+  }
+});
+
+// Track hint usage
+app.post('/api/progress/hint', async (req, res) => {
+  try {
+    const { exercise_id, hint_level } = req.body;
+    const progressPath = path.join(__dirname, '../progress/user_progress.json');
+    
+    // Load existing progress or create default
+    const progress = await ensureProgressFile(progressPath);
+    
+    // Update hint usage stats
+    progress.session_stats.hints_used += 1;
+    
+    // Add to exercise history if not already tracked for this exercise
+    const existingEntry = progress.exercise_history.find(entry => entry.exercise_id === exercise_id);
+    if (existingEntry) {
+      if (!existingEntry.hints_used) existingEntry.hints_used = [];
+      if (!existingEntry.hints_used.includes(hint_level)) {
+        existingEntry.hints_used.push(hint_level);
+      }
+    } else {
+      // Create new entry for this exercise
+      progress.exercise_history.push({
+        exercise_id: exercise_id,
+        viewed_at: new Date().toISOString(),
+        hints_used: [hint_level],
+        status: 'in_progress'
+      });
+    }
+    
+    // Save updated progress
+    await fs.writeJson(progressPath, progress, { spaces: 2 });
+    
+    console.log(`Hint used: ${exercise_id}, level ${hint_level}`);
+    res.json({ success: true, progress: progress });
+  } catch (error) {
+    console.error('Error tracking hint usage:', error);
+    res.status(500).json({ error: 'Failed to track hint usage' });
+  }
+});
+
+// Track exercise view
+app.post('/api/progress/view', async (req, res) => {
+  try {
+    const { exercise_id } = req.body;
+    const progressPath = path.join(__dirname, '../progress/user_progress.json');
+    
+    // Load existing progress or create default
+    const progress = await ensureProgressFile(progressPath);
+    
+    // Update view stats
+    progress.session_stats.exercises_viewed += 1;
+    
+    // Check if already viewed
+    const existingEntry = progress.exercise_history.find(entry => entry.exercise_id === exercise_id);
+    if (!existingEntry) {
+      // Create new entry for this exercise
+      progress.exercise_history.push({
+        exercise_id: exercise_id,
+        viewed_at: new Date().toISOString(),
+        status: 'viewed'
+      });
+    }
+    
+    // Save updated progress
+    await fs.writeJson(progressPath, progress, { spaces: 2 });
+    
+    console.log(`Exercise viewed: ${exercise_id}`);
+    res.json({ success: true, progress: progress });
+  } catch (error) {
+    console.error('Error tracking exercise view:', error);
+    res.status(500).json({ error: 'Failed to track exercise view' });
   }
 });
 
@@ -658,11 +728,25 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
+// Initialize progress system on startup
+async function initializeProgressSystem() {
+  try {
+    const progressPath = path.join(__dirname, '../progress/user_progress.json');
+    await ensureProgressFile(progressPath);
+    console.log('📊 Progress system initialized');
+  } catch (error) {
+    console.error('Failed to initialize progress system:', error);
+  }
+}
+
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🌐 Rust Learning Platform server running on http://localhost:${PORT}`);
   console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
   console.log(`🦀 Ready to serve Rust learning exercises!`);
+  
+  // Initialize progress system
+  await initializeProgressSystem();
 });
 
 // Graceful shutdown
