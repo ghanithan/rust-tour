@@ -139,6 +139,9 @@ export class UI {
           <div class="terminal-content" id="terminal"></div>
         </section>
 
+        <!-- Horizontal Resize Handle -->
+        <div class="horizontal-resize-handle" id="horizontal-resize-handle"></div>
+
         <!-- Right Panel Trigger for Responsive -->
         <button class="right-panel-trigger" id="right-panel-trigger" style="display: none;">
           <i class="fas fa-chevron-left trigger-icon"></i>
@@ -310,12 +313,25 @@ export class UI {
     });
 
     // Window resize handler for responsive behavior
+    let resizeTimer;
     window.addEventListener('resize', () => {
+      // Disable transitions during resize
+      document.body.classList.add('disable-transitions');
+      
       this.handleResize();
+      
+      // Re-enable transitions after resize is complete
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        document.body.classList.remove('disable-transitions');
+      }, 300);
     });
 
     // Initial resize check
     this.handleResize();
+
+    // Horizontal resize handler
+    this.setupHorizontalResize();
 
     // Chapter navigation handlers
     const prevBtn = document.getElementById('prev-chapter-btn');
@@ -1208,19 +1224,109 @@ export class UI {
   handleResize() {
     const trigger = document.getElementById('right-panel-trigger');
     const rightPanel = document.getElementById('right-panel');
+    const resizeHandle = document.getElementById('horizontal-resize-handle');
+    const mainLayout = document.querySelector('.main-layout');
     
     // Show/hide trigger based on screen size (64rem = 1024px)
     if (window.innerWidth <= 1024) {
       trigger.style.display = 'flex';
+      resizeHandle.style.display = 'none';
+      // Reset to responsive grid layout - remove inline styles to let CSS take over
+      mainLayout.style.removeProperty('grid-template-columns');
       // Close panel on resize to smaller screen
       if (this.rightPanelOpen) {
         this.closeRightPanel();
       }
     } else {
       trigger.style.display = 'none';
+      resizeHandle.style.display = 'flex';
+      // Restore saved desktop layout using ratios
+      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1';
+      const savedRightRatio = localStorage.getItem('layout-right-ratio') || '1';
+      mainLayout.style.gridTemplateColumns = `${savedLeftRatio}fr 0.25rem ${savedRightRatio}fr`;
       // Ensure panel is closed when switching back to desktop
       this.closeRightPanel();
     }
+  }
+
+  setupHorizontalResize() {
+    const resizeHandle = document.getElementById('horizontal-resize-handle');
+    const mainLayout = document.querySelector('.main-layout');
+    let isResizing = false;
+    let startX = 0;
+    let startLeftWidth = 0;
+    
+    // Only apply saved layout if we're on desktop (> 1024px)
+    if (window.innerWidth > 1024) {
+      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1';
+      const savedRightRatio = localStorage.getItem('layout-right-ratio') || '1';
+      mainLayout.style.gridTemplateColumns = `${savedLeftRatio}fr 0.25rem ${savedRightRatio}fr`;
+    }
+
+    // Double-click to reset to default 50/50 split
+    resizeHandle.addEventListener('dblclick', () => {
+      mainLayout.style.gridTemplateColumns = '1fr 0.25rem 1fr';
+      localStorage.setItem('layout-left-ratio', '1');
+      localStorage.setItem('layout-right-ratio', '1');
+    });
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      
+      // Get current column widths
+      const computedStyle = window.getComputedStyle(mainLayout);
+      const columns = computedStyle.gridTemplateColumns.split(' ');
+      startLeftWidth = parseFloat(columns[0]);
+      
+      document.body.classList.add('resizing-horizontal');
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+
+      const deltaX = e.clientX - startX;
+      const containerWidth = mainLayout.offsetWidth;
+      const deltaPercent = (deltaX / containerWidth) * 100;
+      
+      // Calculate new widths with constraints
+      let newLeftPercent = (startLeftWidth / containerWidth) * 100 + deltaPercent;
+      let newRightPercent = 100 - newLeftPercent;
+      
+      // Constrain to reasonable limits (20% to 80%)
+      newLeftPercent = Math.max(20, Math.min(80, newLeftPercent));
+      newRightPercent = 100 - newLeftPercent;
+      
+      // Convert to fr ratios for flexible scaling
+      const leftRatio = newLeftPercent / 50; // Normalize to 1 as baseline (50% = 1fr)
+      const rightRatio = newRightPercent / 50;
+      
+      // Apply new layout using fr units
+      mainLayout.style.gridTemplateColumns = `${leftRatio}fr 0.25rem ${rightRatio}fr`;
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.classList.remove('resizing-horizontal');
+        
+        // Save layout preferences as ratios
+        // Instead of trying to parse computed style, calculate ratios directly from current percentage
+        const containerWidth = mainLayout.offsetWidth;
+        const leftElement = document.querySelector('.editor-container');
+        const leftWidth = leftElement.offsetWidth;
+        const leftPercent = (leftWidth / containerWidth) * 100;
+        const rightPercent = 100 - leftPercent;
+        
+        // Convert to fr ratios (normalize to 1 as baseline for 50%)
+        const leftRatio = leftPercent / 50;
+        const rightRatio = rightPercent / 50;
+        
+        localStorage.setItem('layout-left-ratio', leftRatio.toFixed(3));
+        localStorage.setItem('layout-right-ratio', rightRatio.toFixed(3));
+      }
+    });
   }
 
   buildExerciseHierarchy() {

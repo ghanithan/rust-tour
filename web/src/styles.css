@@ -210,16 +210,71 @@ body {
 .main-layout {
   display: grid;
   grid-template-areas: 
-    "header header"
-    "editor panel"
-    "output panel";
-  grid-template-columns: 1fr 1fr;
+    "header header header"
+    "editor resize panel"
+    "output resize panel";
+  grid-template-columns: 1fr 0.25rem 1fr;
   grid-template-rows: var(--header-height) 1fr var(--output-height);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  gap: var(--gap-size);
+  gap: 0;
   container-type: inline-size;
+}
+
+/* Horizontal resize handle */
+.horizontal-resize-handle {
+  grid-area: resize;
+  background: var(--border-primary);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+.horizontal-resize-handle:hover {
+  background: var(--accent-blue);
+}
+
+.horizontal-resize-handle:active {
+  background: var(--accent-blue-dark);
+}
+
+.horizontal-resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.125rem;
+  height: 2rem;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 0.0625rem;
+}
+
+body.resizing-horizontal {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-horizontal * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-horizontal .main-layout {
+  transition: none !important;
+}
+
+body.resizing-horizontal .main-layout * {
+  transition: none !important;
+}
+
+/* Disable transitions during window resize */
+body.disable-transitions * {
+  transition: none !important;
 }
 
 /* Header */
@@ -937,6 +992,10 @@ body {
       "header"
       "editor"
       "output";
+  }
+  
+  .horizontal-resize-handle {
+    display: none;
   }
   
   .right-panel-trigger {
