@@ -27,6 +27,7 @@ export class UI {
     this.platform = null;
     this.notifications = [];
     this.sidebarOpen = false;
+    this.rightPanelOpen = false;
     this.exerciseHierarchy = null; // Will store the hierarchical structure
     this.currentTheme = localStorage.getItem('theme') || 'dark';
   }
@@ -138,8 +139,17 @@ export class UI {
           <div class="terminal-content" id="terminal"></div>
         </section>
 
+        <!-- Right Panel Trigger for Responsive -->
+        <button class="right-panel-trigger" id="right-panel-trigger" style="display: none;">
+          <i class="fas fa-chevron-left trigger-icon"></i>
+          <span class="trigger-text">LEARN</span>
+        </button>
+        
+        <!-- Right Panel Backdrop -->
+        <div class="right-panel-backdrop" id="right-panel-backdrop"></div>
+
         <!-- Right Panel - Book Integration & Hints -->
-        <aside class="right-panel">
+        <aside class="right-panel" id="right-panel">
           <div class="panel-header">
             <span class="panel-title"><i class="fas fa-book-open"></i> Learning Resources</span>
             <div class="panel-nav-buttons">
@@ -272,6 +282,16 @@ export class UI {
       this.closeSidebar();
     });
 
+    // Right panel trigger handler
+    document.getElementById('right-panel-trigger').addEventListener('click', () => {
+      this.toggleRightPanel();
+    });
+
+    // Right panel backdrop handler
+    document.getElementById('right-panel-backdrop').addEventListener('click', () => {
+      this.closeRightPanel();
+    });
+
     // Theme toggle handler
     document.getElementById('theme-toggle').addEventListener('click', () => {
       this.toggleTheme();
@@ -279,10 +299,23 @@ export class UI {
 
     // ESC key handler
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.sidebarOpen) {
-        this.closeSidebar();
+      if (e.key === 'Escape') {
+        if (this.sidebarOpen) {
+          this.closeSidebar();
+        }
+        if (this.rightPanelOpen) {
+          this.closeRightPanel();
+        }
       }
     });
+
+    // Window resize handler for responsive behavior
+    window.addEventListener('resize', () => {
+      this.handleResize();
+    });
+
+    // Initial resize check
+    this.handleResize();
 
     // Chapter navigation handlers
     const prevBtn = document.getElementById('prev-chapter-btn');
@@ -1143,6 +1176,51 @@ export class UI {
     const backdrop = document.getElementById('sidebar-backdrop');
     sidebar.classList.remove('open');
     backdrop.classList.remove('visible');
+  }
+
+  toggleRightPanel() {
+    this.rightPanelOpen = !this.rightPanelOpen;
+    const rightPanel = document.getElementById('right-panel');
+    const backdrop = document.getElementById('right-panel-backdrop');
+    const trigger = document.getElementById('right-panel-trigger');
+    
+    if (this.rightPanelOpen) {
+      rightPanel.classList.add('open');
+      backdrop.classList.add('visible');
+      trigger.classList.add('open');
+    } else {
+      rightPanel.classList.remove('open');
+      backdrop.classList.remove('visible');
+      trigger.classList.remove('open');
+    }
+  }
+
+  closeRightPanel() {
+    this.rightPanelOpen = false;
+    const rightPanel = document.getElementById('right-panel');
+    const backdrop = document.getElementById('right-panel-backdrop');
+    const trigger = document.getElementById('right-panel-trigger');
+    rightPanel.classList.remove('open');
+    backdrop.classList.remove('visible');
+    trigger.classList.remove('open');
+  }
+
+  handleResize() {
+    const trigger = document.getElementById('right-panel-trigger');
+    const rightPanel = document.getElementById('right-panel');
+    
+    // Show/hide trigger based on screen size (64rem = 1024px)
+    if (window.innerWidth <= 1024) {
+      trigger.style.display = 'flex';
+      // Close panel on resize to smaller screen
+      if (this.rightPanelOpen) {
+        this.closeRightPanel();
+      }
+    } else {
+      trigger.style.display = 'none';
+      // Ensure panel is closed when switching back to desktop
+      this.closeRightPanel();
+    }
   }
 
   buildExerciseHierarchy() {
