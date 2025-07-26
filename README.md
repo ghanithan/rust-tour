@@ -1,8 +1,8 @@
-# 🦀 Rust Learning Platform
+# 🦀 Rust Tour
 
-An interactive, progressive learning platform for mastering Rust programming through hands-on exercises integrated with "The Rust Programming Language" book.
+An interactive Rust tutorial with progressive exercises integrated with "The Rust Programming Language" book.
 
-[![CI](https://github.com/your-username/rust-learning-platform/workflows/CI/badge.svg)](https://github.com/your-username/rust-learning-platform/actions)
+[![CI](https://github.com/your-username/rust-tour/workflows/CI/badge.svg)](https://github.com/your-username/rust-tour/actions)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 
 ## ✨ Features
@@ -10,7 +10,7 @@ An interactive, progressive learning platform for mastering Rust programming thr
 - **🎯 Progressive Learning**: 20 chapters following the Rust Book structure
 - **📚 Integrated Rust Book**: Side-by-side theory and practice
 - **🌐 Interactive Web UI**: Monaco editor with syntax highlighting
-- **⚡ CLI Companion**: Powerful command-line tool for advanced users  
+- **⚡ Integrated Terminal**: Built-in terminal for running Rust commands  
 - **📊 Smart Progress Tracking**: Multi-dimensional learning analytics
 - **🎮 Gamified Experience**: Achievements, streaks, and skill trees
 - **🔄 Adaptive Difficulty**: AI-powered exercise recommendations
@@ -23,13 +23,13 @@ An interactive, progressive learning platform for mastering Rust programming thr
 2. Wait for environment setup (2-3 minutes)
 3. Run `./scripts/setup.sh` to initialize
 4. Open browser to `localhost:3000` for web UI
-5. Or use `cargo run --bin rust-learn-cli` for CLI
+5. Start using the integrated terminal for Rust commands
 
 ### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/rust-learning-platform.git
-cd rust-learning-platform
+git clone https://github.com/your-username/rust-tour.git
+cd rust-tour
 
 # Setup with Docker (recommended)
 docker-compose up -d
@@ -68,18 +68,13 @@ docker-compose up -d
 - **Visual Progress**: Interactive skill tree and analytics
 - **Responsive Design**: Works on desktop, tablet, and mobile
 
-### CLI Tool Features  
+### Integrated Terminal Features  
 ```bash
-# Exercise management
-rust-learn list --chapter 3        # List chapter exercises
-rust-learn start ch03-ex02         # Start specific exercise
-rust-learn test                    # Run current exercise tests
-rust-learn hint --level 2          # Get strategic hint
-
-# Progress tracking
-rust-learn status                  # View overall progress
-rust-learn stats                   # Detailed analytics
-rust-learn sync                    # Sync progress with GitHub
+# Exercise management via built-in terminal
+cd exercises/ch03_common_concepts/ex02_data_types
+cargo test                         # Run exercise tests
+cargo run                          # Execute your solution
+cargo clippy                       # Check code quality
 ```
 
 ## 📊 Progress Tracking
@@ -95,9 +90,9 @@ The platform tracks multiple dimensions of your learning:
 ## 🏗️ Architecture
 
 ```
-rust-learning-platform/
+rust-tour/
 ├── 🌐 web/                    # TypeScript/React web interface
-├── 🦀 cli/                    # Rust CLI companion tool
+├── 🦀 web-server/             # Rust web server with terminal support
 ├── 🔧 exercise-framework/     # Core exercise system (Rust)
 ├── 📝 exercises/              # Learning content
 │   ├── ch01_getting_started/
@@ -128,7 +123,7 @@ cargo test --workspace           # Rust components
 cd web && npm test              # Web components
 
 # Start development servers
-cargo run --bin dev-server      # Rust backend
+cargo run --package rust-tour   # Rust backend
 cd web && npm run dev           # Frontend
 ```
 
@@ -191,4 +186,4 @@ at your option.
 
 ---
 
-**Ready to master Rust?** 🚀 [Start your journey](https://github.com/your-username/rust-learning-platform) today!
+**Ready to master Rust?** 🚀 [Start your journey](https://github.com/your-username/rust-tour) today!

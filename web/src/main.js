@@ -6,7 +6,7 @@ import { WebSocketManager } from './js/websocket-manager.js';
 import { UI } from './js/ui.js';
 import { TerminalManager } from './js/terminal.js';
 
-class RustLearningPlatform {
+class RustTour {
   constructor() {
     this.exerciseManager = new ExerciseManager();
     this.progressTracker = new ProgressTracker();
@@ -53,10 +53,10 @@ class RustLearningPlatform {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('app').classList.add('loaded');
       
-      console.log('🦀 Rust Learning Platform loaded successfully!');
+      console.log('🦀 Rust Tour loaded successfully!');
     } catch (error) {
       console.error('Failed to initialize platform:', error);
-      this.ui.showError('Failed to initialize the learning platform. Please refresh and try again.');
+      this.ui.showError('Failed to initialize Rust Tour. Please refresh and try again.');
     }
   }
 
@@ -353,6 +353,6 @@ class RustLearningPlatform {
 
 // Initialize the platform when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  const platform = new RustLearningPlatform();
+  const platform = new RustTour();
   platform.init();
 });

@@ -535,7 +535,7 @@ export class TerminalManager {
   navigateToExercise(exercisePath) {
     if (this.sessionId && this.terminal) {
       // Clear current line and send cd command
-      const cdCommand = `cd /workspaces/rust-learning-platform/exercises/${exercisePath}\r`;
+      const cdCommand = `cd /workspaces/rust-tour/exercises/${exercisePath}\r`;
       this.ws.send({
         type: 'terminal',
         action: 'input',
@@ -560,7 +560,7 @@ export class TerminalManager {
   // Session persistence methods
   loadSessionId() {
     try {
-      return localStorage.getItem('rust-platform-terminal-session');
+      return localStorage.getItem('rust-tour-terminal-session');
     } catch (error) {
       if (this.debug) {
         console.log('Could not load session ID from localStorage:', error);
@@ -572,7 +572,7 @@ export class TerminalManager {
   saveSessionId() {
     if (this.sessionId) {
       try {
-        localStorage.setItem('rust-platform-terminal-session', this.sessionId);
+        localStorage.setItem('rust-tour-terminal-session', this.sessionId);
       } catch (error) {
         if (this.debug) {
           console.log('Could not save session ID to localStorage:', error);
@@ -583,7 +583,7 @@ export class TerminalManager {
 
   clearSessionId() {
     try {
-      localStorage.removeItem('rust-platform-terminal-session');
+      localStorage.removeItem('rust-tour-terminal-session');
     } catch (error) {
       if (this.debug) {
         console.log('Could not clear session ID from localStorage:', error);

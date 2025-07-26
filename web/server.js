@@ -801,7 +801,7 @@ async function initializeProgressSystem() {
 
 // Start server
 server.listen(PORT, async () => {
-  console.log(`🌐 Rust Learning Platform server running on http://localhost:${PORT}`);
+  console.log(`🌐 Rust Tour server running on http://localhost:${PORT}`);
   console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
   console.log(`🦀 Ready to serve Rust learning exercises!`);
   

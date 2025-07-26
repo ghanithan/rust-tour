@@ -62,7 +62,7 @@ The project follows a chapter-based exercise structure:
 - `exercises/chXX_topic/` - Individual chapter exercises
 - `solutions/` - Reference solutions for all exercises
 - `scripts/` - Automation scripts for testing and progress tracking
-- `cli-tool/` - Optional CLI companion tool
+- `web-server/` - Rust web server with integrated terminal support
 - `progress.json` - Git-trackable progress file
 
 ### Exercise Framework

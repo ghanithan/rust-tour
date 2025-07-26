@@ -53,7 +53,7 @@ export class UI {
           </button>
           <div class="logo">
             <img src="/images/ferris-official.svg" alt="Ferris" class="logo-icon ferris-logo">
-            <span>Rust Learning Platform</span>
+            <span>Rust Tour</span>
           </div>
           <div class="header-controls">
             <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">

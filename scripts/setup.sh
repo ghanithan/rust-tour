@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🦀 Setting up Rust Learning Platform..."
+echo "🦀 Setting up Rust Tour..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -86,18 +86,9 @@ if [ -d "exercise-framework" ]; then
     cargo build --release
 fi
 
-# Build CLI tool if it exists
-if [ -d "cli" ]; then
-    print_status "Building CLI tool..."
-    cd cli
-    cargo build --release
-    cd ..
-    
-    # Add to PATH if in Codespaces
-    if [ "$IN_CODESPACES" = true ]; then
-        echo 'export PATH="$PATH:'$(pwd)'/target/release"' >> ~/.bashrc
-    fi
-fi
+# Build web server
+print_status "Building web server..."
+cargo build --package rust-tour --release
 
 # Set up git hooks for progress tracking
 print_status "Setting up git hooks..."
@@ -122,13 +113,13 @@ print_success "Setup completed successfully! 🎉"
 print_status ""
 print_status "Next steps:"
 print_status "1. Start web UI: ./scripts/start-web.sh"
-print_status "2. Use CLI tool: cargo run --bin rust-learn-cli"
+print_status "2. Use integrated web terminal for Rust commands"
 print_status "3. Begin learning: ./scripts/start-learning.sh"
 print_status ""
 
 if [ "$IN_CODESPACES" = true ]; then
     print_status "🌟 Codespaces detected! The web UI will auto-forward to port 3000"
-    print_status "💡 Try: cargo run --bin rust-learn-cli status"
+    print_status "💡 Try: Open the web UI and use the built-in terminal"
 else
     print_status "🏠 Local setup complete! Run 'source ~/.bashrc' to update PATH"
 fi

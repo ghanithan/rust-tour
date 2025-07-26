@@ -32,8 +32,8 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Development Setup
 ```bash
 # Fork the repository on GitHub
-git clone https://github.com/YOUR_USERNAME/rust-learning-platform.git
-cd rust-learning-platform
+git clone https://github.com/YOUR_USERNAME/rust-tour.git
+cd rust-tour
 
 # Run the setup script
 ./scripts/setup.sh
