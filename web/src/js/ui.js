@@ -28,11 +28,13 @@ export class UI {
     this.notifications = [];
     this.sidebarOpen = false;
     this.exerciseHierarchy = null; // Will store the hierarchical structure
+    this.currentTheme = localStorage.getItem('theme') || 'dark';
   }
 
   async init(platform) {
     this.platform = platform;
     this.setupLayout();
+    this.initializeTheme();
     await this.initializeEditor();
     this.setupEventHandlers();
     this.setupOutputResize();
@@ -53,6 +55,9 @@ export class UI {
             <span>Rust Learning Platform</span>
           </div>
           <div class="header-controls">
+            <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+              <span class="theme-icon">🌙</span>
+            </button>
             <div class="progress-indicator">
               <span id="progress-text">0% Complete</span>
             </div>
@@ -268,6 +273,11 @@ export class UI {
     // Backdrop handler
     document.getElementById('sidebar-backdrop').addEventListener('click', () => {
       this.closeSidebar();
+    });
+
+    // Theme toggle handler
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      this.toggleTheme();
     });
 
     // ESC key handler
@@ -996,5 +1006,38 @@ export class UI {
         setTimeout(() => this.editor.layout(), 100);
       }
     };
+  }
+
+  // Theme management methods
+  initializeTheme() {
+    // Apply the current theme to the document
+    document.documentElement.setAttribute('data-theme', this.currentTheme);
+    this.updateThemeIcon();
+  }
+
+  toggleTheme() {
+    this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', this.currentTheme);
+    localStorage.setItem('theme', this.currentTheme);
+    this.updateThemeIcon();
+    
+    // Update Monaco editor theme if it exists
+    if (this.editor) {
+      const theme = this.currentTheme === 'dark' ? 'vs-dark' : 'vs';
+      monaco.editor.setTheme(theme);
+    }
+  }
+
+  updateThemeIcon() {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+      themeIcon.textContent = this.currentTheme === 'dark' ? '☀️' : '🌙';
+    }
+    
+    // Update tooltip
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+      themeToggle.title = `Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} theme`;
+    }
   }
 }
