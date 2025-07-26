@@ -58,10 +58,10 @@ body {
 .main-layout {
   display: grid;
   grid-template-areas: 
-    "header header header"
-    "sidebar editor panel"
-    "sidebar output panel";
-  grid-template-columns: 300px 1fr 400px;
+    "header header"
+    "editor panel"
+    "output panel";
+  grid-template-columns: 1fr 400px;
   grid-template-rows: 60px 1fr 300px;
   height: 100vh;
   width: 100vw;
@@ -78,6 +78,26 @@ body {
   padding: 0 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 100;
+}
+
+.hamburger-menu {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px 12px;
+  margin-right: 10px;
+  transition: background 0.2s ease;
+  border-radius: 4px;
+}
+
+.hamburger-menu:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hamburger-menu:active {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .logo {
@@ -109,12 +129,39 @@ body {
 
 /* Sidebar - Exercise Navigation */
 .sidebar {
-  grid-area: sidebar;
+  position: fixed;
+  left: -300px;
+  top: 60px;
+  width: 300px;
+  height: calc(100vh - 60px);
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+/* Sidebar Backdrop */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 999;
+}
+
+.sidebar-backdrop.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 .sidebar-header {

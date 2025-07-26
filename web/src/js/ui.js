@@ -26,6 +26,7 @@ export class UI {
     this.currentExercise = null;
     this.platform = null;
     this.notifications = [];
+    this.sidebarOpen = false;
   }
 
   async init(platform) {
@@ -43,6 +44,9 @@ export class UI {
       <div class="main-layout">
         <!-- Header -->
         <header class="header">
+          <button class="hamburger-menu" id="hamburger-menu" title="Toggle Exercise Menu">
+            <span class="hamburger-icon">☰</span>
+          </button>
           <div class="logo">
             <span class="logo-icon">🦀</span>
             <span>Rust Learning Platform</span>
@@ -54,8 +58,11 @@ export class UI {
           </div>
         </header>
 
+        <!-- Sidebar Backdrop -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
         <!-- Sidebar - Exercise Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
           <div class="sidebar-header">
             <span>📚 Exercises</span>
           </div>
@@ -250,6 +257,23 @@ export class UI {
   }
 
   setupEventHandlers() {
+    // Hamburger menu handler
+    document.getElementById('hamburger-menu').addEventListener('click', () => {
+      this.toggleSidebar();
+    });
+
+    // Backdrop handler
+    document.getElementById('sidebar-backdrop').addEventListener('click', () => {
+      this.closeSidebar();
+    });
+
+    // ESC key handler
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.sidebarOpen) {
+        this.closeSidebar();
+      }
+    });
+
     // Button handlers
     document.getElementById('run-btn').addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('run-code'));
@@ -368,6 +392,7 @@ export class UI {
           document.dispatchEvent(new CustomEvent('exercise-selected', {
             detail: { path: exercise.path }
           }));
+          this.closeSidebar();
         });
 
         chapterDiv.appendChild(exerciseDiv);
@@ -704,6 +729,28 @@ export class UI {
     
     // Convert markdown to HTML - the global click handler will handle opening in new tabs
     return marked.parse(markdown);
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    
+    if (this.sidebarOpen) {
+      sidebar.classList.add('open');
+      backdrop.classList.add('visible');
+    } else {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('visible');
+    }
+  }
+
+  closeSidebar() {
+    this.sidebarOpen = false;
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('visible');
   }
 
   setupOutputResize() {
