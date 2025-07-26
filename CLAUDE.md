@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-This is a Rust learning platform that provides progressive, exercise-based education following "The Rust Programming Language" book structure. The platform uses a hybrid approach with GitHub Repository + Codespaces as the primary delivery method.
+This is Rust Tour, an interactive Rust tutorial that provides progressive, exercise-based education following "The Rust Programming Language" book structure. The platform uses a hybrid approach with GitHub Repository + Codespaces as the primary delivery method.
 
 ## Development Commands
 
@@ -15,11 +15,14 @@ This is a Rust learning platform that provides progressive, exercise-based educa
 # Set up development container (if using Codespaces)
 # The .devcontainer/ configuration handles this automatically
 
-# Start the complete platform
-./scripts/run.sh platform
+# Start Rust Tour
+./scripts/run.sh start
 
-# Start web development server only
-./scripts/run.sh web
+# Start development mode (Vite + Rust server)
+./scripts/run.sh dev
+
+# Start Rust server only
+./scripts/run.sh server
 ```
 
 ### Testing and Validation

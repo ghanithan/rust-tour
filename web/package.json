@@ -1,7 +1,7 @@
 {
-  "name": "rust-learning-platform-web",
+  "name": "rust-tour-web",
   "version": "0.1.0",
-  "description": "Web interface for the Rust Learning Platform",
+  "description": "Web interface for Rust Tour",
   "main": "server.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -20,7 +20,7 @@
     "education",
     "programming"
   ],
-  "author": "Rust Learning Platform Contributors",
+  "author": "Rust Tour Contributors",
   "license": "MIT OR Apache-2.0",
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",

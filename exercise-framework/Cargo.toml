@@ -3,7 +3,9 @@ name = "exercise-framework"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+description = "Exercise framework for Rust Tour"
 license.workspace = true
+publish = false
 
 [dependencies]
 serde.workspace = true

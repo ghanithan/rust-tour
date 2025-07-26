@@ -1,4 +1,9 @@
 {
+  "name": "rust-tour",
+  "version": "0.1.0",
+  "description": "Interactive Rust tutorial with exercises and integrated terminal",
+  "author": "Rust Tour Contributors",
+  "license": "MIT OR Apache-2.0",
   "dependencies": {
     "claude": "^0.1.1"
   }

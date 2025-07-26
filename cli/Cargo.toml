@@ -1,12 +1,13 @@
 [package]
-name = "rust-learn-cli"
+name = "rust-tour-cli"
 version = "0.1.0"
 edition = "2021"
-authors = ["Rust Learning Platform Contributors"]
-description = "CLI tool for the Rust Learning Platform"
+authors = ["Rust Tour Contributors"]
+description = "CLI tool for Rust Tour"
+publish = false
 
 [[bin]]
-name = "rust-learn-cli"
+name = "rust-tour-cli"
 path = "src/main.rs"
 
 [dependencies]
