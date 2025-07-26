@@ -145,7 +145,7 @@ export class WebSocketManager {
   handleFileUpdated(data) {
     // Show notification about file update with exercise name
     const displayName = data.exercise || data.file;
-    this.showNotification(`File updated: ${displayName}`, 'info');
+    // this.showNotification(`File updated: ${displayName}`, 'info');
     
     // Dispatch custom event
     document.dispatchEvent(new CustomEvent('file-updated', { 

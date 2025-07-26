@@ -305,7 +305,7 @@ class RustLearningPlatform {
     switch (data.type) {
       case 'file_updated':
         if (data.exercise === this.currentExercise?.path) {
-          this.ui.showNotification('File updated externally');
+          // this.ui.showNotification('File updated externally');
         }
         break;
       case 'file_changed':

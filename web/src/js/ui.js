@@ -27,6 +27,7 @@ export class UI {
     this.platform = null;
     this.notifications = [];
     this.sidebarOpen = false;
+    this.exerciseHierarchy = null; // Will store the hierarchical structure
   }
 
   async init(platform) {
@@ -67,10 +68,6 @@ export class UI {
             <span>📚 Exercises</span>
           </div>
           <div class="exercise-list" id="exercise-list">
-            <div class="loading">
-              <span class="spinner">⏳</span>
-              Loading exercises...
-            </div>
           </div>
         </aside>
 
@@ -143,6 +140,15 @@ export class UI {
         <aside class="right-panel">
           <div class="panel-header">
             <span class="panel-title">📖 Learning Resources</span>
+            <div class="panel-nav-buttons">
+              <button class="panel-nav-btn" id="prev-chapter-btn" title="Previous Exercise" disabled>
+                ‹
+              </button>
+              <span class="exercise-counter" id="exercise-counter">-/-</span>
+              <button class="panel-nav-btn" id="next-chapter-btn" title="Next Exercise" disabled>
+                ›
+              </button>
+            </div>
           </div>
           <div class="panel-tabs">
             <div class="panel-tab active" data-tab="info">Info</div>
@@ -151,7 +157,7 @@ export class UI {
           </div>
           <div class="panel-content">
             <div class="panel-section active" id="info-section">
-              <div id="exercise-info" class="loading">
+              <div id="exercise-info">
                 Select an exercise to see details
               </div>
             </div>
@@ -179,10 +185,7 @@ export class UI {
             </div>
             <div class="panel-section" id="book-section">
               <div class="book-links" id="book-links">
-                <div class="loading">
-                  <span class="spinner">📖</span>
-                  Select an exercise to see book references
-                </div>
+                Select an exercise to see book references
               </div>
             </div>
           </div>
@@ -274,6 +277,24 @@ export class UI {
       }
     });
 
+    // Chapter navigation handlers
+    const prevBtn = document.getElementById('prev-chapter-btn');
+    const nextBtn = document.getElementById('next-chapter-btn');
+    
+    if (prevBtn && nextBtn) {
+      prevBtn.addEventListener('click', () => {
+        console.log('Previous chapter button clicked');
+        this.navigateToChapter('previous');
+      });
+
+      nextBtn.addEventListener('click', () => {
+        console.log('Next chapter button clicked');
+        this.navigateToChapter('next');
+      });
+    } else {
+      console.error('Navigation buttons not found:', { prevBtn, nextBtn });
+    }
+
     // Button handlers
     document.getElementById('run-btn').addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('run-code'));
@@ -337,13 +358,17 @@ export class UI {
     const listContainer = document.getElementById('exercise-list');
     listContainer.innerHTML = '';
 
+    // Rebuild the exercise hierarchy when exercises are updated
+    this.exerciseHierarchy = this.buildExerciseHierarchy();
+
     // Group exercises by chapter
     const chapters = {};
     exercises.forEach(exercise => {
-      if (!chapters[exercise.chapter]) {
-        chapters[exercise.chapter] = [];
+      const chapterNum = exercise.metadata ? exercise.metadata.chapter : exercise.chapter;
+      if (!chapters[chapterNum]) {
+        chapters[chapterNum] = [];
       }
-      chapters[exercise.chapter].push(exercise);
+      chapters[chapterNum].push(exercise);
     });
 
     // Render chapters
@@ -423,6 +448,9 @@ export class UI {
     // Clear output panels
     this.clearOutputPanels();
     
+    // Update chapter navigation
+    this.updateChapterNavigation();
+    
     // Switch to info tab by default
     this.switchPanelTab('info');
   }
@@ -445,20 +473,20 @@ export class UI {
     }
     
     infoContainer.innerHTML = `
-      <div style="padding: 15px;">
-        <h3 style="margin-bottom: 10px; color: var(--rust-orange);">${exercise.metadata.title}</h3>
-        <p style="margin-bottom: 15px; line-height: 1.6; font-size: 13px;">${exercise.metadata.description}</p>
+      <div style="padding: 0; margin: 0;">
+        <h1 style="margin: 0 0 12px 0; color: var(--rust-orange); font-size: 24px; font-weight: 700;">${exercise.metadata.title}</h1>
+        <p style="margin: 0 0 16px 0; line-height: 1.6; font-size: 14px; color: var(--text-primary);">${exercise.metadata.description}</p>
         
-        <div style="margin-bottom: 10px;">
+        <div style="margin: 0 0 10px 0; color: var(--text-primary);">
           <strong>Difficulty:</strong> 
           <span class="difficulty-${exercise.metadata.difficulty}">${exercise.metadata.difficulty}</span>
         </div>
         
-        <div style="margin-bottom: 10px;">
+        <div style="margin: 0 0 10px 0; color: var(--text-primary);">
           <strong>Estimated Time:</strong> ${exercise.metadata.estimated_time_minutes} minutes
         </div>
         
-        <div style="margin-bottom: 15px;">
+        <div style="margin: 0 0 15px 0; color: var(--text-primary);">
           <strong>Concepts:</strong><br>
           ${exercise.metadata.concepts.map(concept => `<span class="concept-tag">${concept}</span>`).join(' ')}
         </div>
@@ -467,6 +495,10 @@ export class UI {
       </div>
       
       <style>
+        #info-section {
+          padding: 0.75rem !important;
+        }
+        
         .difficulty-beginner { color: var(--status-success); }
         .difficulty-intermediate { color: var(--status-warning); }
         .difficulty-advanced { color: var(--status-error); }
@@ -493,8 +525,8 @@ export class UI {
 
     bookContainer.innerHTML = bookRefs.specific_sections.map(section => `
       <a href="${section.url}" target="_blank" class="book-link">
-        <div class="book-link-title">📖 ${section.title}</div>
-        <div class="book-link-chapter">Chapter ${section.chapter} • ${section.relevance}</div>
+        <h3 class="book-link-title">📖 ${section.title}</h3>
+        <h4 class="book-link-chapter">Chapter ${section.chapter} • ${section.relevance}</h4>
       </a>
     `).join('');
   }
@@ -572,17 +604,24 @@ export class UI {
     const hintButton = document.querySelector(`[data-level="${level}"]`);
     const hintContent = document.getElementById(`hint-${level}`);
     
-    hintButton.classList.add('used');
-    hintContent.innerHTML = this.formatHintContent(hint.content);
-    hintContent.classList.add('visible');
-    
-    // Enable next hint button
-    if (level < 3) {
-      document.querySelector(`[data-level="${level + 1}"]`).disabled = false;
+    // Toggle visibility
+    if (hintContent.classList.contains('visible')) {
+      // Close the hint
+      hintContent.classList.remove('visible');
+    } else {
+      // Open the hint
+      hintButton.classList.add('used');
+      hintContent.innerHTML = this.formatHintContent(hint.content);
+      hintContent.classList.add('visible');
+      
+      // Enable next hint button
+      if (level < 3) {
+        document.querySelector(`[data-level="${level + 1}"]`).disabled = false;
+      }
+      
+      // Switch to hints tab
+      this.switchPanelTab('hints');
     }
-    
-    // Switch to hints tab
-    this.switchPanelTab('hints');
   }
 
   formatHintContent(content) {
@@ -637,23 +676,24 @@ export class UI {
     // Show notification
     setTimeout(() => notification.classList.add('visible'), 100);
     
-    // Hide after 3 seconds
+    // Hide after 1 second for less intrusion
     setTimeout(() => {
       notification.classList.remove('visible');
       setTimeout(() => document.body.removeChild(notification), 300);
-    }, 3000);
+    }, 1000);
   }
 
   showError(message) {
-    this.showNotification(message, 'error');
+    // this.showNotification(message, 'error');
+    console.error('[UI Error]:', message); // Keep for debugging
   }
 
   showSaveSuccess() {
-    this.showNotification('Code saved successfully', 'success');
+    // this.showNotification('Code saved successfully', 'success');
   }
 
   showCompletionCelebration() {
-    this.showNotification('🎉 Congratulations! Exercise completed!', 'success');
+    // this.showNotification('🎉 Congratulations! Exercise completed!', 'success');
     // Refresh exercise list to show completion status
     if (this.platform && this.platform.exercises) {
       this.updateExerciseList(this.platform.exercises);
@@ -661,7 +701,7 @@ export class UI {
   }
 
   showExerciseCompletion(exerciseMetadata) {
-    this.showNotification(`🎉 "${exerciseMetadata.title}" completed!`, 'success');
+    // this.showNotification(`🎉 "${exerciseMetadata.title}" completed!`, 'success');
     // Refresh exercise list to show completion status
     if (this.platform && this.platform.exercises) {
       this.updateExerciseList(this.platform.exercises);
@@ -731,6 +771,150 @@ export class UI {
     const backdrop = document.getElementById('sidebar-backdrop');
     sidebar.classList.remove('open');
     backdrop.classList.remove('visible');
+  }
+
+  buildExerciseHierarchy() {
+    if (!this.platform || !this.platform.exercises) {
+      return null;
+    }
+
+    // Create flat array of all exercises in order
+    const allExercises = [...this.platform.exercises].sort((a, b) => {
+      const chapterA = a.metadata ? a.metadata.chapter : a.chapter;
+      const chapterB = b.metadata ? b.metadata.chapter : b.chapter;
+      const exerciseA = a.metadata ? a.metadata.exercise_number : 1;
+      const exerciseB = b.metadata ? b.metadata.exercise_number : 1;
+      
+      if (chapterA !== chapterB) {
+        return chapterA - chapterB;
+      }
+      return exerciseA - exerciseB;
+    });
+
+    console.log('Exercise hierarchy built:', allExercises.map(ex => ({
+      path: ex.path,
+      chapter: ex.metadata?.chapter,
+      exercise: ex.metadata?.exercise_number
+    })));
+
+    return allExercises;
+  }
+
+  findCurrentExerciseIndex() {
+    if (!this.exerciseHierarchy || !this.currentExercise) {
+      return -1;
+    }
+    
+    return this.exerciseHierarchy.findIndex(ex => ex.path === this.currentExercise.path);
+  }
+
+  getExercisePositionInChapter() {
+    if (!this.currentExercise || !this.platform || !this.platform.exercises) {
+      return { current: 0, total: 0 };
+    }
+
+    const currentChapter = this.currentExercise.metadata ? this.currentExercise.metadata.chapter : this.currentExercise.chapter;
+    const currentExerciseNum = this.currentExercise.metadata ? this.currentExercise.metadata.exercise_number : 1;
+
+    console.log('Counter calc - Current chapter:', currentChapter, 'Current exercise num:', currentExerciseNum);
+
+    // Get all exercises in the current chapter
+    const chapterExercises = this.platform.exercises.filter(ex => {
+      const exerciseChapter = ex.metadata ? ex.metadata.chapter : ex.chapter;
+      return exerciseChapter === currentChapter;
+    }).sort((a, b) => {
+      const exerciseA = a.metadata ? a.metadata.exercise_number : 1;
+      const exerciseB = b.metadata ? b.metadata.exercise_number : 1;
+      return exerciseA - exerciseB;
+    });
+
+    console.log('Chapter exercises:', chapterExercises.map(ex => ({
+      path: ex.path,
+      exercise_number: ex.metadata?.exercise_number
+    })));
+
+    // Find position by matching the actual current exercise path instead of just exercise number
+    const currentPosition = chapterExercises.findIndex(ex => ex.path === this.currentExercise.path) + 1;
+
+    console.log('Position calculation:', {
+      currentPosition,
+      total: chapterExercises.length,
+      currentExercisePath: this.currentExercise.path
+    });
+
+    return {
+      current: currentPosition,
+      total: chapterExercises.length
+    };
+  }
+
+  navigateToChapter(direction) {
+    // Build hierarchy if not exists
+    if (!this.exerciseHierarchy) {
+      this.exerciseHierarchy = this.buildExerciseHierarchy();
+    }
+    
+    if (!this.exerciseHierarchy || !this.currentExercise) {
+      console.log('Navigation failed: missing data');
+      return;
+    }
+
+    const currentIndex = this.findCurrentExerciseIndex();
+    console.log('Current exercise:', this.currentExercise.path, 'index:', currentIndex);
+    
+    if (currentIndex === -1) {
+      console.log('Current exercise not found in hierarchy');
+      return;
+    }
+    
+    const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    console.log('Target index:', targetIndex, 'direction:', direction);
+    
+    // Check bounds
+    if (targetIndex < 0 || targetIndex >= this.exerciseHierarchy.length) {
+      console.log('No target exercise available');
+      return;
+    }
+    
+    const targetExercise = this.exerciseHierarchy[targetIndex];
+    console.log('Target exercise:', targetExercise.path);
+    console.log('Current chapter:', this.currentExercise.metadata?.chapter, 'Target chapter:', targetExercise.metadata?.chapter);
+    
+    if (targetExercise) {
+      document.dispatchEvent(new CustomEvent('exercise-selected', {
+        detail: { path: targetExercise.path }
+      }));
+    }
+  }
+
+  updateChapterNavigation() {
+    // Build hierarchy if not exists
+    if (!this.exerciseHierarchy) {
+      this.exerciseHierarchy = this.buildExerciseHierarchy();
+    }
+    
+    if (!this.exerciseHierarchy || !this.currentExercise) {
+      return;
+    }
+
+    const currentIndex = this.findCurrentExerciseIndex();
+    const hasPrevious = currentIndex > 0;
+    const hasNext = currentIndex < this.exerciseHierarchy.length - 1;
+
+    const prevBtn = document.getElementById('prev-chapter-btn');
+    const nextBtn = document.getElementById('next-chapter-btn');
+    const counter = document.getElementById('exercise-counter');
+    
+    if (prevBtn && nextBtn) {
+      prevBtn.disabled = !hasPrevious;
+      nextBtn.disabled = !hasNext;
+    }
+
+    // Update exercise counter
+    if (counter) {
+      const position = this.getExercisePositionInChapter();
+      counter.textContent = `${position.current}/${position.total}`;
+    }
   }
 
   setupOutputResize() {
