@@ -321,13 +321,8 @@ export class UI {
       document.dispatchEvent(new CustomEvent('toggle-terminal'));
     });
 
-    // Read Instructions button - use event delegation since it's dynamically created
+    // Handle all links to open in new tabs
     document.addEventListener('click', (e) => {
-      if (e.target && e.target.id === 'read-instructions-btn') {
-        this.showInstructions();
-      }
-      
-      // Handle all links to open in new tabs
       if (e.target && e.target.tagName === 'A' && e.target.href) {
         // Check if it's an external link or if it doesn't have target="_blank" already
         if (e.target.href.startsWith('http') && !e.target.target) {
@@ -411,7 +406,7 @@ export class UI {
     // Update editor content
     this.editor.setValue(exercise.mainContent);
     
-    // Update exercise info
+    // Update exercise info (now includes instructions)
     this.updateExerciseInfo(exercise);
     
     // Update active exercise in sidebar
@@ -427,10 +422,27 @@ export class UI {
     
     // Clear output panels
     this.clearOutputPanels();
+    
+    // Switch to info tab by default
+    this.switchPanelTab('info');
   }
+
 
   updateExerciseInfo(exercise) {
     const infoContainer = document.getElementById('exercise-info');
+    
+    // Render instructions if available
+    let instructionsHtml = '';
+    if (exercise.readme) {
+      instructionsHtml = `
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-primary);">
+          <h3 style="margin-bottom: 15px; color: var(--rust-orange);">📖 Instructions</h3>
+          <div class="markdown-content">
+            ${this.renderMarkdown(exercise.readme)}
+          </div>
+        </div>
+      `;
+    }
     
     infoContainer.innerHTML = `
       <div style="padding: 15px;">
@@ -451,11 +463,7 @@ export class UI {
           ${exercise.metadata.concepts.map(concept => `<span class="concept-tag">${concept}</span>`).join(' ')}
         </div>
         
-        <div class="exercise-actions" style="margin-top: 15px;">
-          <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" id="read-instructions-btn">
-            📖 Read Instructions
-          </button>
-        </div>
+        ${instructionsHtml}
       </div>
       
       <style>
@@ -687,34 +695,6 @@ export class UI {
     }
   }
 
-  showInstructions() {
-    if (!this.currentExercise || !this.currentExercise.readme) {
-      this.showNotification('No instructions available for this exercise', 'warning');
-      return;
-    }
-
-    // Create modal for instructions
-    const modal = document.createElement('div');
-    modal.className = 'instructions-modal';
-    modal.innerHTML = `
-      <div class="instructions-modal-content">
-        <div class="instructions-modal-header">
-          <h2>📖 Exercise Instructions</h2>
-          <button class="btn btn-small" onclick="this.parentElement.parentElement.parentElement.remove()">✕</button>
-        </div>
-        <div class="instructions-modal-body">
-          <div class="markdown-content">${this.renderMarkdown(this.currentExercise.readme)}</div>
-        </div>
-        <div class="instructions-modal-footer">
-          <button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">
-            Close
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-  }
 
   renderMarkdown(markdown) {
     // Configure marked options
