@@ -1,6 +1,6 @@
 # Exercise 3.1: Variables and Mutability
 
-Learn about Rust's unique approach to variables, where immutability is the default and mutability must be explicitly declared. This exercise will teach you about variable binding, the `mut` keyword, shadowing, and constants.
+Learn about Rust's unique approach to variables, where immutability is the default and mutability must be explicitly declared. This exercise will teach you about variable binding, the `mut` keyword, and shadowing.
 
 ## 🎯 Learning Objectives
 
@@ -8,7 +8,6 @@ By completing this exercise, you will understand:
 - Why Rust variables are immutable by default
 - How to make variables mutable with the `mut` keyword
 - The difference between shadowing and mutability
-- When and how to use constants
 - How Rust's variable system helps prevent bugs
 
 ## 📚 Background
@@ -18,7 +17,6 @@ Rust takes a unique approach to variables that helps prevent common programming 
 - **Immutable by default**: Variables can't be changed unless explicitly marked as mutable
 - **Explicit mutability**: Use the `mut` keyword when you need to change a variable
 - **Shadowing**: You can declare a new variable with the same name, "shadowing" the previous one
-- **Constants**: Compile-time constants that are always immutable
 
 This design prevents many bugs while still allowing flexibility when you need it.
 
@@ -36,16 +34,14 @@ The `main.rs` file contains code with several compilation errors related to vari
 
 1. **Immutable variables** - The default behavior
 2. **Mutable variables** - Using the `mut` keyword  
-3. **Shadowing** - Reusing variable names
-4. **Constants** - Compile-time values
+3. **Shadowing** - Reusing variable names and changing types
 
 ## 🐛 Fix These Issues
 
 The code has intentional errors that you need to fix:
-- Attempting to modify immutable variables
-- Missing `mut` keywords where needed
-- Incorrect constant declarations
-- Misunderstanding of shadowing vs mutation
+- Missing implementation for mutable variables
+- Understanding the difference between shadowing and mutation
+- Completing the TODO sections in the code
 
 ## 🧪 Testing Your Solution
 
@@ -92,10 +88,6 @@ let x = x + 1; // This creates a new variable, shadowing the old one
 let x = "hello"; // Shadowing can even change the type!
 ```
 
-### Constants
-```rust
-const MAX_POINTS: u32 = 100_000;
-```
 
 ## 🤔 Why Does Rust Do This?
 

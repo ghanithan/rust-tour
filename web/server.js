@@ -340,7 +340,7 @@ app.get('/api/exercises/:chapter/:exercise', async (req, res) => {
     
     // Load hints if available
     let hints = '';
-    const hintsPath = path.join(exercisePath, 'src/hints.md');
+    const hintsPath = path.join(exercisePath, 'hints.md');
     if (await fs.pathExists(hintsPath)) {
       hints = await fs.readFile(hintsPath, 'utf8');
     }
@@ -457,15 +457,52 @@ app.post('/api/exercises/:chapter/:exercise/check', async (req, res) => {
   }
 });
 
+// Helper function to count total exercises
+async function countTotalExercises() {
+  try {
+    const exercisesPath = path.join(__dirname, '../exercises');
+    let totalCount = 0;
+    
+    if (await fs.pathExists(exercisesPath)) {
+      const chapters = await fs.readdir(exercisesPath);
+      
+      for (const chapter of chapters) {
+        const chapterPath = path.join(exercisesPath, chapter);
+        const stat = await fs.stat(chapterPath);
+        
+        if (stat.isDirectory() && chapter.startsWith('ch')) {
+          const exercises = await fs.readdir(chapterPath);
+          for (const exercise of exercises) {
+            const exercisePath = path.join(chapterPath, exercise);
+            const exerciseStat = await fs.stat(exercisePath);
+            if (exerciseStat.isDirectory() && exercise.startsWith('ex')) {
+              totalCount++;
+            }
+          }
+        }
+      }
+    }
+    
+    return totalCount > 0 ? totalCount : 50; // Fallback to reasonable default
+  } catch (error) {
+    console.error('Error counting exercises:', error);
+    return 50; // Safe fallback
+  }
+}
+
 // Helper function to ensure progress file exists with proper structure
 async function ensureProgressFile(progressPath) {
   try {
     // Ensure the progress directory exists
     await fs.ensureDir(path.dirname(progressPath));
     
+    // Get actual exercise count
+    const totalExercises = await countTotalExercises();
+    
     // Check if progress file exists
     if (!(await fs.pathExists(progressPath))) {
       console.log('Creating new progress file:', progressPath);
+      console.log(`Detected ${totalExercises} total exercises`);
       
       const defaultProgress = {
         user_id: 'default',
@@ -473,7 +510,7 @@ async function ensureProgressFile(progressPath) {
         overall_progress: 0.0,
         chapters_completed: 0,
         exercises_completed: 0,
-        total_exercises: 200,
+        total_exercises: totalExercises,
         current_streak: 0,
         longest_streak: 0,
         total_time_minutes: 0,
@@ -509,6 +546,13 @@ async function ensureProgressFile(progressPath) {
     if (!progress.achievements) progress.achievements = [];
     if (!progress.chapters) progress.chapters = {};
     
+    // Update total exercises count if it's wrong or missing
+    if (!progress.total_exercises || progress.total_exercises === 200) {
+      progress.total_exercises = totalExercises;
+      await fs.writeJson(progressPath, progress, { spaces: 2 });
+      console.log(`Updated total exercises count to ${totalExercises}`);
+    }
+    
     return progress;
   } catch (error) {
     console.error('Error ensuring progress file:', error);
@@ -538,7 +582,13 @@ app.post('/api/progress/complete', async (req, res) => {
     const progress = await ensureProgressFile(progressPath);
     
     // Check if already completed to avoid duplicates
-    const isAlreadyCompleted = progress.exercise_history.some(entry => entry.exercise_id === exercise_id);
+    const existingEntry = progress.exercise_history.find(entry => entry.exercise_id === exercise_id);
+    const isAlreadyCompleted = existingEntry && existingEntry.completed_at;
+    
+    console.log(`Checking completion for ${exercise_id}:`);
+    console.log(`Existing entry:`, existingEntry);
+    console.log(`Is already completed:`, isAlreadyCompleted);
+    
     if (isAlreadyCompleted) {
       console.log(`Exercise ${exercise_id} already completed`);
       return res.json({ success: true, message: 'Exercise already completed' });
@@ -550,13 +600,23 @@ app.post('/api/progress/complete', async (req, res) => {
     progress.total_time_minutes += time_taken_minutes || 0;
     progress.overall_progress = progress.exercises_completed / progress.total_exercises;
     
-    // Add to exercise history
-    progress.exercise_history.push({
-      exercise_id: exercise_id,
-      completed_at: new Date().toISOString(),
-      time_taken_minutes: time_taken_minutes || 0,
-      session_id: `session_${Date.now()}`
-    });
+    // Update or add to exercise history
+    if (existingEntry) {
+      // Update existing entry
+      existingEntry.completed_at = new Date().toISOString();
+      existingEntry.time_taken_minutes = time_taken_minutes || 0;
+      existingEntry.status = 'completed';
+      existingEntry.session_id = `session_${Date.now()}`;
+    } else {
+      // Add new entry
+      progress.exercise_history.push({
+        exercise_id: exercise_id,
+        completed_at: new Date().toISOString(),
+        time_taken_minutes: time_taken_minutes || 0,
+        status: 'completed',
+        session_id: `session_${Date.now()}`
+      });
+    }
     
     // Save updated progress
     await fs.ensureDir(path.dirname(progressPath));

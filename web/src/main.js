@@ -71,17 +71,25 @@ class RustLearningPlatform {
       this.runCode();
     });
 
-    document.addEventListener('test-code', () => {
-      this.testCode();
+    document.addEventListener('test-code', async () => {
+      await this.saveCode();
+      await this.testCode();
     });
 
-    document.addEventListener('check-code', () => {
-      this.checkCode();
+    document.addEventListener('check-code', async () => {
+      await this.saveCode();
+      await this.checkCode();
     });
 
     // Code saving
     document.addEventListener('save-code', () => {
       this.saveCode();
+    });
+
+    // Save and run (sequential operation)
+    document.addEventListener('save-and-run-code', async () => {
+      await this.saveCode();
+      await this.runCode();
     });
 
     // Hints
@@ -277,11 +285,8 @@ class RustLearningPlatform {
     
     this.ui.showExerciseCompletion(this.currentExercise.metadata);
     
-    // Suggest next exercise
-    const nextExercise = this.getNextExercise();
-    if (nextExercise) {
-      this.ui.suggestNextExercise(nextExercise);
-    }
+    // Show completion celebration but no dialog for next exercise
+    // (dialog removed per user request, but celebration popup remains)
   }
 
   getNextExercise() {

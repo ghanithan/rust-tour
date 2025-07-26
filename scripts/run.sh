@@ -25,14 +25,25 @@ case "$1" in
         echo "⚙️ Setting up project..."
         exec "$SCRIPT_DIR/setup.sh" "${@:2}"
         ;;
+    "production"|"prod")
+        echo "🚀 Starting production server..."
+        exec "$SCRIPT_DIR/start-production.sh" "${@:2}"
+        ;;
+    "simple"|"start")
+        echo "🚀 Starting server (simple mode)..."
+        cd "$(dirname "$SCRIPT_DIR")/web"
+        exec node server.js
+        ;;
     *)
-        echo "Usage: $0 {platform|web|test|setup} [args...]"
+        echo "Usage: $0 {platform|web|test|setup|production|simple} [args...]"
         echo ""
         echo "Available scripts:"
-        echo "  platform  - Start the complete platform"
-        echo "  web       - Start web development server"
-        echo "  test      - Run exercise tests"
-        echo "  setup     - Set up project"
+        echo "  simple      - Just start the server (for users)"
+        echo "  platform    - Start the complete platform (development)"
+        echo "  web         - Start web development server (same as platform)"
+        echo "  test        - Run exercise tests"
+        echo "  setup       - Set up project"
+        echo "  production  - Start optimized production server (build + run)"
         exit 1
         ;;
 esac

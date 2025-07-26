@@ -368,10 +368,10 @@ export class WebSocketManager {
 
   getNotificationIcon(type) {
     const icons = {
-      info: 'ℹ️',
-      success: '✅',
-      warning: '⚠️',
-      error: '❌'
+      info: '<i class="fas fa-info-circle"></i>',
+      success: '<i class="fas fa-check-circle"></i>',
+      warning: '<i class="fas fa-exclamation-triangle"></i>',
+      error: '<i class="fas fa-times-circle"></i>'
     };
     return icons[type] || icons.info;
   }

@@ -61,18 +61,20 @@ git checkout -b feature/your-feature-name
    exercises/chXX_topic/exYY_name/
    ├── Cargo.toml              # Exercise dependencies
    ├── README.md               # Exercise description
+   ├── hints.md                # Progressive hint system (at root level)
+   ├── metadata.json           # Exercise configuration
    ├── src/
    │   ├── main.rs            # Student implementation area
-   │   └── hints.md           # Progressive hint system
+   │   └── lib.rs             # Library implementation (if applicable)
    ├── tests/
-   │   ├── unit_tests.rs      # Correctness tests
-   │   └── quality_tests.rs   # Code quality checks
-   ├── solutions/
-   │   ├── reference.rs       # Primary solution
-   │   ├── alternative.rs     # Alternative approaches
-   │   └── explained.md       # Solution explanation
-   └── metadata.json          # Exercise configuration
+   │   └── unit_tests.rs      # Functional, outcome-based tests
+   └── solutions/
+       ├── reference.rs       # Primary solution
+       ├── alternative.rs     # Alternative approaches
+       └── explained.md       # Solution explanation
    ```
+
+   **Note**: `hints.md` should be at the exercise root level, not inside `src/`. This keeps hints as project documentation rather than source code.
 
 3. **Exercise Metadata Requirements**
    ```json
@@ -97,10 +99,10 @@ git checkout -b feature/your-feature-name
 #### ✅ Required Elements
 - [ ] Clear, unambiguous exercise description
 - [ ] Appropriate difficulty for target audience
-- [ ] Comprehensive test coverage (>90%)
-- [ ] Progressive 3-level hint system
+- [ ] Functional, outcome-based tests (no heuristic testing)
+- [ ] Progressive 3-level hint system at exercise root level
 - [ ] Reference solution with explanation
-- [ ] Rust Book chapter references
+- [ ] Rust Book chapter references with URLs
 - [ ] Beginner-friendly error messages
 
 #### 🎯 Educational Goals
@@ -114,6 +116,7 @@ git checkout -b feature/your-feature-name
 - [ ] Compiles without warnings (`cargo clippy`)
 - [ ] Follows Rust formatting (`cargo fmt`)
 - [ ] All tests pass reliably
+- [ ] Tests validate actual program behavior, not code patterns
 - [ ] Performance within reasonable bounds
 - [ ] Cross-platform compatibility
 
@@ -167,30 +170,34 @@ cargo fmt --check
 
 ### Test Categories
 
-#### Unit Tests (`tests/unit_tests.rs`)
+#### Functional Tests (`tests/unit_tests.rs`)
+**DO**: Test actual program behavior and outcomes
 ```rust
 #[test]
-fn test_basic_functionality() {
-    // Test core exercise requirements
+fn test_hello_world_output() {
+    let output = Command::new("cargo")
+        .args(&["run", "--quiet"])
+        .output()
+        .expect("Failed to execute program");
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.trim() == "Hello, world!", "Expected 'Hello, world!' output");
 }
 
 #[test]
-#[should_panic(expected = "specific error")]
-fn test_error_conditions() {
-    // Test error handling
+fn test_function_returns_correct_value() {
+    let result = my_function(5, 10);
+    assert_eq!(result, 15, "Function should return sum of inputs");
 }
 ```
 
-#### Quality Tests (`tests/quality_tests.rs`)
+**DON'T**: Test for specific code patterns (heuristic testing)
 ```rust
+// BAD - Don't do this
 #[test]
-fn test_no_hardcoded_values() {
-    // Ensure dynamic solutions
-}
-
-#[test]
-fn test_follows_naming_conventions() {
-    // Check Rust naming patterns
+fn test_contains_println() {
+    let source = std::fs::read_to_string("src/main.rs").unwrap();
+    assert!(source.contains("println!"), "Code should use println! macro");
 }
 ```
 

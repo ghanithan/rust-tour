@@ -48,15 +48,15 @@ export class UI {
         <!-- Header -->
         <header class="header">
           <button class="hamburger-menu" id="hamburger-menu" title="Toggle Exercise Menu">
-            <span class="hamburger-icon">☰</span>
+            <span class="hamburger-icon"><i class="fas fa-bars"></i></span>
           </button>
           <div class="logo">
-            <span class="logo-icon">🦀</span>
+            <img src="/images/ferris-official.svg" alt="Ferris" class="logo-icon ferris-logo">
             <span>Rust Learning Platform</span>
           </div>
           <div class="header-controls">
             <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
-              <span class="theme-icon">🌙</span>
+              <span class="theme-icon"><i class="fas fa-moon"></i></span>
             </button>
             <div class="progress-indicator">
               <span id="progress-text">0% Complete</span>
@@ -70,7 +70,7 @@ export class UI {
         <!-- Sidebar - Exercise Navigation -->
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-header">
-            <span>📚 Exercises</span>
+            <span><i class="fas fa-terminal"></i> Exercises</span>
           </div>
           <div class="exercise-list" id="exercise-list">
           </div>
@@ -81,20 +81,17 @@ export class UI {
           <div class="editor-header">
             <div class="editor-title" id="editor-title">Select an exercise to begin</div>
             <div class="editor-actions">
-              <button class="btn btn-secondary" id="save-btn" title="Save (Ctrl+S)">
-                💾 Save
-              </button>
-              <button class="btn btn-primary" id="run-btn" title="Run (Ctrl+Enter)">
-                ▶️ Run
+              <button class="btn btn-primary" id="save-run-btn" title="Save and Run (Ctrl+Enter)">
+                <i class="fas fa-save"></i> <i class="fas fa-play"></i> Save and Run
               </button>
               <button class="btn btn-success" id="test-btn" title="Test (Ctrl+T)">
-                🧪 Test
+                <i class="fas fa-vial"></i> Test
               </button>
               <button class="btn btn-secondary" id="check-btn" title="Check (Ctrl+L)">
-                🔍 Check
+                <i class="fas fa-search"></i> Check
               </button>
               <button class="btn btn-secondary" id="terminal-btn" title="Terminal (Ctrl+~)">
-                🖥️ Terminal
+                <i class="fas fa-terminal"></i> Terminal
               </button>
             </div>
           </div>
@@ -110,9 +107,9 @@ export class UI {
         <!-- Output Panel -->
         <section class="output-container">
           <div class="output-header">
-            <div class="output-tab active" data-tab="output">📝 Output</div>
-            <div class="output-tab" data-tab="tests">🧪 Tests</div>
-            <div class="output-tab" data-tab="clippy">🔍 Clippy</div>
+            <div class="output-tab active" data-tab="output"><i class="fas fa-terminal"></i> Output</div>
+            <div class="output-tab" data-tab="tests"><i class="fas fa-flask"></i> Tests</div>
+            <div class="output-tab" data-tab="clippy"><i class="fas fa-search"></i> Clippy</div>
           </div>
           <div class="output-content">
             <div class="output-panel active" id="output-panel">
@@ -131,11 +128,11 @@ export class UI {
         <section class="terminal-container" id="terminal-container" style="display: none;">
           <div class="terminal-resize-handle" id="terminal-resize-handle"></div>
           <div class="terminal-header" id="terminal-header">
-            <span class="terminal-title">🖥️ Terminal</span>
+            <span class="terminal-title"><i class="fas fa-terminal"></i> Terminal</span>
             <div class="terminal-controls">
-              <button class="btn btn-small" id="terminal-minimize-btn" title="Minimize Terminal">−</button>
-              <button class="btn btn-small" id="terminal-maximize-btn" title="Maximize Terminal" style="display: none;">□</button>
-              <button class="btn btn-small" id="terminal-close-btn" title="Close Terminal">✕</button>
+              <button class="btn btn-small" id="terminal-minimize-btn" title="Minimize Terminal"><i class="fas fa-minus"></i></button>
+              <button class="btn btn-small" id="terminal-maximize-btn" title="Maximize Terminal" style="display: none;"><i class="fas fa-expand"></i></button>
+              <button class="btn btn-small" id="terminal-close-btn" title="Close Terminal"><i class="fas fa-times"></i></button>
             </div>
           </div>
           <div class="terminal-content" id="terminal"></div>
@@ -144,7 +141,7 @@ export class UI {
         <!-- Right Panel - Book Integration & Hints -->
         <aside class="right-panel">
           <div class="panel-header">
-            <span class="panel-title">📖 Learning Resources</span>
+            <span class="panel-title"><i class="fas fa-book-open"></i> Learning Resources</span>
             <div class="panel-nav-buttons">
               <button class="panel-nav-btn" id="prev-chapter-btn" title="Previous Exercise" disabled>
                 ‹
@@ -156,9 +153,9 @@ export class UI {
             </div>
           </div>
           <div class="panel-tabs">
-            <div class="panel-tab active" data-tab="info">Info</div>
-            <div class="panel-tab" data-tab="hints">Hints</div>
-            <div class="panel-tab" data-tab="book">Book</div>
+            <div class="panel-tab active" data-tab="info"><i class="fas fa-info-circle"></i> Info</div>
+            <div class="panel-tab" data-tab="hints"><i class="fas fa-lightbulb"></i> Hints</div>
+            <div class="panel-tab" data-tab="book"><i class="fas fa-book"></i> Book</div>
           </div>
           <div class="panel-content">
             <div class="panel-section active" id="info-section">
@@ -170,19 +167,19 @@ export class UI {
               <div class="hints-section">
                 <div class="hint-level">
                   <button class="hint-button" data-level="1">
-                    💡 Level 1: Conceptual Hint
+                    <i class="fas fa-lightbulb"></i> Level 1: Conceptual Hint
                   </button>
                   <div class="hint-content" id="hint-1"></div>
                 </div>
                 <div class="hint-level">
                   <button class="hint-button" data-level="2" disabled>
-                    🎯 Level 2: Strategic Hint
+                    <i class="fas fa-crosshairs"></i> Level 2: Strategic Hint
                   </button>
                   <div class="hint-content" id="hint-2"></div>
                 </div>
                 <div class="hint-level">
                   <button class="hint-button" data-level="3" disabled>
-                    🔧 Level 3: Implementation Hint
+                    <i class="fas fa-wrench"></i> Level 3: Implementation Hint
                   </button>
                   <div class="hint-content" id="hint-3"></div>
                 </div>
@@ -248,7 +245,7 @@ export class UI {
 
     // Add keyboard shortcuts
     this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      document.dispatchEvent(new CustomEvent('run-code'));
+      document.dispatchEvent(new CustomEvent('save-and-run-code'));
     });
 
     this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyT, () => {
@@ -306,8 +303,8 @@ export class UI {
     }
 
     // Button handlers
-    document.getElementById('run-btn').addEventListener('click', () => {
-      document.dispatchEvent(new CustomEvent('run-code'));
+    document.getElementById('save-run-btn').addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('save-and-run-code'));
     });
 
     document.getElementById('test-btn').addEventListener('click', () => {
@@ -318,9 +315,7 @@ export class UI {
       document.dispatchEvent(new CustomEvent('check-code'));
     });
 
-    document.getElementById('save-btn').addEventListener('click', () => {
-      document.dispatchEvent(new CustomEvent('save-code'));
-    });
+    // Save button removed - merged with run button
 
     // Output tab switching
     document.querySelectorAll('.output-tab').forEach(tab => {
@@ -400,7 +395,7 @@ export class UI {
         const isCompleted = this.platform && this.platform.progressTracker ? 
           this.platform.progressTracker.isExerciseCompleted(exercise.id) : false;
         
-        const statusIcon = isCompleted ? '✅' : '📝';
+        const statusIcon = isCompleted ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-circle text-muted"></i>';
         const completedClass = isCompleted ? ' completed' : '';
         
         exerciseDiv.className = `exercise-item${completedClass}`;
@@ -474,7 +469,7 @@ export class UI {
     if (exercise.readme) {
       instructionsHtml = `
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-primary);">
-          <h3 style="margin-bottom: 15px; color: var(--rust-orange);">📖 Instructions</h3>
+          <h3 style="margin-bottom: 15px; color: var(--rust-orange);"><i class="fas fa-file-alt"></i> Instructions</h3>
           <div class="markdown-content">
             ${this.renderMarkdown(exercise.readme)}
           </div>
@@ -535,7 +530,7 @@ export class UI {
 
     bookContainer.innerHTML = bookRefs.specific_sections.map(section => `
       <a href="${section.url}" target="_blank" class="book-link">
-        <h3 class="book-link-title">📖 ${section.title}</h3>
+        <h3 class="book-link-title"><i class="fas fa-external-link-alt"></i> ${section.title}</h3>
         <h4 class="book-link-chapter">Chapter ${section.chapter} • ${section.relevance}</h4>
       </a>
     `).join('');
@@ -673,6 +668,8 @@ export class UI {
     
     if (loading) {
       this.setExecutionStatus('info', 'Loading...');
+    } else {
+      this.setExecutionStatus('success', 'Ready');
     }
   }
 
@@ -711,11 +708,376 @@ export class UI {
   }
 
   showExerciseCompletion(exerciseMetadata) {
-    // this.showNotification(`🎉 "${exerciseMetadata.title}" completed!`, 'success');
+    // Get next exercise info
+    const nextExercise = this.platform ? this.platform.getNextExercise() : null;
+    
+    // Create celebration backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'celebration-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    `;
+    
+    // Create completion celebration modal
+    const modal = document.createElement('div');
+    modal.className = 'completion-celebration';
+    modal.innerHTML = `
+      <div class="celebration-content">
+        <div class="celebration-header">
+          <div class="celebration-ferris">
+            <div class="ferris-container">
+              <img src="/images/ferris-happy.png" 
+                   alt="Ferris the Rustacean celebrating" 
+                   class="ferris-image"
+                   title="Ferris the Rustacean by Karen Rustad Tölva • CC0" />
+              <div class="ferris-sparkles">
+                <span class="sparkle sparkle-1">✨</span>
+                <span class="sparkle sparkle-2">⭐</span>
+                <span class="sparkle sparkle-3">✨</span>
+                <span class="sparkle sparkle-4">⭐</span>
+                <span class="sparkle sparkle-5">✨</span>
+                <span class="sparkle sparkle-6">⭐</span>
+              </div>
+            </div>
+          </div>
+          <div class="celebration-text">
+            <h2><i class="fas fa-trophy"></i> Excellent Work!</h2>
+            <p>You've successfully completed</p>
+            <h3>"${exerciseMetadata.title}"</h3>
+          </div>
+        </div>
+        <div class="celebration-actions">
+          ${nextExercise ? `
+            <button class="btn btn-rust-primary next-exercise-btn" data-exercise-path="${nextExercise.path}">
+              <i class="fas fa-arrow-right"></i> Next Exercise
+            </button>
+          ` : `
+            <button class="btn btn-rust-primary continue-learning-btn">
+              <i class="fas fa-graduation-cap"></i> Continue Learning
+            </button>
+          `}
+        </div>
+      </div>
+    `;
+    
+    // Style the modal with Rust theme
+    modal.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.7);
+      background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+      border: 3px solid #62c132;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(98, 193, 50, 0.3), 0 0 0 1px rgba(98, 193, 50, 0.1);
+      z-index: 1001;
+      max-width: 500px;
+      width: 90vw;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      overflow: hidden;
+    `;
+    
+    // Add comprehensive styles
+    const styles = document.createElement('style');
+    styles.textContent = `
+      @keyframes celebrationPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      
+      @keyframes celebrationGlow {
+        0%, 100% { box-shadow: 0 0 20px rgba(98, 193, 50, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(98, 193, 50, 0.6); }
+      }
+      
+      @keyframes celebrationFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      
+      @keyframes ferrisBounce {
+        0%, 100% { transform: rotate(-5deg) scale(1); }
+        25% { transform: rotate(5deg) scale(1.1); }
+        50% { transform: rotate(-3deg) scale(1.05); }
+        75% { transform: rotate(3deg) scale(1.1); }
+      }
+      
+      @keyframes sparkleFloat {
+        0% { 
+          transform: translateY(0px) rotate(0deg);
+          opacity: 0;
+        }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { 
+          transform: translateY(-50px) rotate(360deg);
+          opacity: 0;
+        }
+      }
+      
+      @keyframes sparkleFloat2 {
+        0% { 
+          transform: translateY(0px) rotate(0deg) scale(0.8);
+          opacity: 0;
+        }
+        15% { opacity: 1; }
+        85% { opacity: 1; }
+        100% { 
+          transform: translateY(-60px) rotate(-360deg) scale(1.2);
+          opacity: 0;
+        }
+      }
+      
+      .celebration-content {
+        padding: 32px;
+        text-align: center;
+        color: white;
+      }
+      
+      .celebration-header {
+        margin-bottom: 32px;
+      }
+      
+      .celebration-ferris {
+        margin-bottom: 24px;
+        animation: celebrationFloat 3s ease-in-out infinite;
+        position: relative;
+      }
+      
+      .ferris-container {
+        position: relative;
+        display: inline-block;
+        width: 120px;
+        height: 120px;
+      }
+      
+      .ferris-image {
+        width: 120px;
+        height: 120px;
+        animation: ferrisBounce 2.5s ease-in-out infinite;
+        filter: drop-shadow(0 0 20px rgba(98, 193, 50, 0.4));
+        border-radius: 10px;
+        background: radial-gradient(circle, rgba(98, 193, 50, 0.1) 0%, transparent 70%);
+      }
+      
+      
+      .ferris-sparkles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      
+      .sparkle {
+        position: absolute;
+        font-size: 20px;
+        animation-duration: 2s;
+        animation-iteration-count: infinite;
+        animation-timing-function: ease-in-out;
+      }
+      
+      .sparkle-1 {
+        top: 10%;
+        left: 20%;
+        animation-name: sparkleFloat;
+        animation-delay: 0s;
+      }
+      
+      .sparkle-2 {
+        top: 20%;
+        right: 15%;
+        animation-name: sparkleFloat2;
+        animation-delay: 0.3s;
+      }
+      
+      .sparkle-3 {
+        bottom: 20%;
+        left: 10%;
+        animation-name: sparkleFloat;
+        animation-delay: 0.6s;
+      }
+      
+      .sparkle-4 {
+        bottom: 10%;
+        right: 20%;
+        animation-name: sparkleFloat2;
+        animation-delay: 0.9s;
+      }
+      
+      .sparkle-5 {
+        top: 50%;
+        left: 5%;
+        animation-name: sparkleFloat;
+        animation-delay: 1.2s;
+      }
+      
+      .sparkle-6 {
+        top: 40%;
+        right: 5%;
+        animation-name: sparkleFloat2;
+        animation-delay: 1.5s;
+      }
+      
+      .celebration-text h2 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #62c132;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+      
+      .celebration-text h2 i {
+        color: #f1c40f;
+        animation: celebrationGlow 2s ease-in-out infinite;
+      }
+      
+      .celebration-text p {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        color: #e8f4e8;
+        opacity: 0.9;
+      }
+      
+      .celebration-text h3 {
+        margin: 0;
+        font-size: 20px;
+        color: white;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 16px;
+        border-radius: 8px;
+        display: inline-block;
+      }
+      
+      .celebration-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+      }
+      
+      .btn-rust-primary {
+        background: linear-gradient(135deg, #62c132 0%, #4a9625 100%);
+        color: white;
+        border: 2px solid #62c132;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(98, 193, 50, 0.3);
+      }
+      
+      .btn-rust-primary:hover {
+        background: linear-gradient(135deg, #4a9625 0%, #3d7a1f 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(98, 193, 50, 0.4);
+      }
+      
+      .btn-rust-primary:active {
+        transform: translateY(0px);
+      }
+      
+      .celebration-backdrop {
+        backdrop-filter: blur(4px);
+      }
+    `;
+    document.head.appendChild(styles);
+    
+    // Add elements to DOM
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+    
+    // Animate in
+    setTimeout(() => {
+      backdrop.style.opacity = '1';
+      modal.style.opacity = '1';
+      modal.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 50);
+    
+    // Add event listeners
+    const nextBtn = modal.querySelector('.next-exercise-btn');
+    const continueBtn = modal.querySelector('.continue-learning-btn');
+    
+    const closeModal = () => {
+      modal.style.opacity = '0';
+      modal.style.transform = 'translate(-50%, -50%) scale(0.7)';
+      backdrop.style.opacity = '0';
+      setTimeout(() => {
+        if (document.body.contains(modal)) document.body.removeChild(modal);
+        if (document.body.contains(backdrop)) document.body.removeChild(backdrop);
+        if (document.head.contains(styles)) document.head.removeChild(styles);
+      }, 400);
+    };
+    
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        const exercisePath = nextBtn.dataset.exercisePath;
+        document.dispatchEvent(new CustomEvent('exercise-selected', {
+          detail: { path: exercisePath }
+        }));
+        closeModal();
+      });
+    }
+    
+    if (continueBtn) {
+      continueBtn.addEventListener('click', () => {
+        // Find the next exercise manually if getNextExercise didn't find one
+        const allExercises = this.platform ? this.platform.exercises : [];
+        const currentIndex = allExercises.findIndex(ex => 
+          ex.path === this.platform.currentExercise?.path
+        );
+        
+        if (currentIndex !== -1 && currentIndex < allExercises.length - 1) {
+          // There is a next exercise, navigate to it
+          const nextExercisePath = allExercises[currentIndex + 1].path;
+          document.dispatchEvent(new CustomEvent('exercise-selected', {
+            detail: { path: nextExercisePath }
+          }));
+        }
+        closeModal();
+      });
+    }
+    
+    // Close on backdrop click
+    backdrop.addEventListener('click', closeModal);
+    
+    // Auto-close after 15 seconds
+    setTimeout(closeModal, 15000);
+    
     // Refresh exercise list to show completion status
     if (this.platform && this.platform.exercises) {
       this.updateExerciseList(this.platform.exercises);
     }
+  }
+  
+  dismissNotification(notification) {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translate(-50%, -50%) scale(0.8)';
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 300);
   }
 
   suggestNextExercise(nextExercise) {
@@ -1012,7 +1374,11 @@ export class UI {
   initializeTheme() {
     // Apply the current theme to the document
     document.documentElement.setAttribute('data-theme', this.currentTheme);
-    this.updateThemeIcon();
+    
+    // Use timeout to ensure DOM is ready for icon update
+    setTimeout(() => {
+      this.updateThemeIcon();
+    }, 100);
   }
 
   toggleTheme() {
@@ -1031,7 +1397,8 @@ export class UI {
   updateThemeIcon() {
     const themeIcon = document.querySelector('.theme-icon');
     if (themeIcon) {
-      themeIcon.textContent = this.currentTheme === 'dark' ? '☀️' : '🌙';
+      // Show sun when in dark mode (to switch to light), moon when in light mode (to switch to dark)
+      themeIcon.innerHTML = this.currentTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
     
     // Update tooltip

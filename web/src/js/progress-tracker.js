@@ -232,7 +232,7 @@ export class ProgressTracker {
         id: 'first_chapter',
         title: 'Chapter Master',
         description: 'Completed your first chapter',
-        icon: '📚',
+        icon: '<i class="fas fa-graduation-cap"></i>',
         points: 25,
         unlocked_at: new Date().toISOString()
       });
@@ -342,7 +342,10 @@ export class ProgressTracker {
 
   isExerciseCompleted(exerciseId) {
     if (!this.progress || !this.progress.exercise_history) return false;
-    return this.progress.exercise_history.some(entry => entry.exercise_id === exerciseId);
+    return this.progress.exercise_history.some(entry => 
+      entry.exercise_id === exerciseId && 
+      (entry.completed_at || entry.status === 'completed')
+    );
   }
 
   getSessionStats() {

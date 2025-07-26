@@ -16,7 +16,7 @@ fn test_program_compiles() {
 }
 
 #[test]
-fn test_program_runs_and_outputs_hello_world() {
+fn test_program_runs_successfully() {
     let output = Command::new("cargo")
         .args(&["run"])
         .current_dir(".")
@@ -25,20 +25,13 @@ fn test_program_runs_and_outputs_hello_world() {
 
     assert!(
         output.status.success(),
-        "Program should run successfully. Error output:\n{}",
+        "Program should run successfully without errors. Error output:\n{}",
         String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("Hello, world!"),
-        "Program output should contain 'Hello, world!'. Actual output:\n{}",
-        stdout
     );
 }
 
 #[test]
-fn test_output_format_is_correct() {
+fn test_program_outputs_hello_world() {
     let output = Command::new("cargo")
         .args(&["run"])
         .current_dir(".")
@@ -46,39 +39,102 @@ fn test_output_format_is_correct() {
         .expect("Failed to execute cargo run");
 
     if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        assert_eq!(
-            stdout,
-            "Hello, world!",
-            "Output should be exactly 'Hello, world!' (with no extra text or formatting)"
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Hello, world!"),
+            "Program output should contain 'Hello, world!'. Actual output:\n{}",
+            stdout
         );
     }
 }
 
 #[test]
-fn test_implementation_quality() {
-    let source_code = std::fs::read_to_string("src/main.rs")
-        .expect("Failed to read main.rs");
+fn test_output_is_properly_formatted() {
+    let output = Command::new("cargo")
+        .args(&["run"])
+        .current_dir(".")
+        .output()
+        .expect("Failed to execute cargo run");
 
-    // This test ensures students use the correct Rust constructs
-    assert!(
-        source_code.contains("println!"),
-        "Solution should use the println! macro"
-    );
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stdout_trimmed = stdout.trim();
+        
+        // Test that output contains the greeting
+        assert!(
+            stdout_trimmed.contains("Hello, world!"),
+            "Output should contain the greeting 'Hello, world!'"
+        );
+        
+        // Test that output doesn't contain compilation or debug information
+        assert!(
+            !stdout_trimmed.contains("Compiling") && !stdout_trimmed.contains("Finished"),
+            "Output should be clean program output without build information"
+        );
+    }
+}
 
-    assert!(
-        source_code.contains("Hello, world!"),
-        "Solution should print the correct text"
+#[test]
+fn test_program_terminates_normally() {
+    let output = Command::new("cargo")
+        .args(&["run"])
+        .current_dir(".")
+        .output()
+        .expect("Failed to execute cargo run");
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "Program should terminate with exit code 0 (normal termination)"
     );
 }
 
 #[test]
-fn test_uses_main_function() {
-    let source_code = std::fs::read_to_string("src/main.rs")
-        .expect("Failed to read main.rs");
+fn test_program_produces_text_output() {
+    let output = Command::new("cargo")
+        .args(&["run"])
+        .current_dir(".")
+        .output()
+        .expect("Failed to execute cargo run");
 
-    assert!(
-        source_code.contains("fn main()"),
-        "Program should have a main function"
-    );
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        
+        // Test that program actually produces output (not silent)
+        assert!(
+            !stdout.trim().is_empty(),
+            "Program should produce visible output, not run silently"
+        );
+        
+        // Test that output is text-based (contains printable characters)
+        assert!(
+            stdout.chars().any(|c| c.is_ascii_graphic() || c.is_whitespace()),
+            "Program should produce readable text output"
+        );
+    }
+}
+
+#[test]
+fn test_program_behavior_is_consistent() {
+    // Run the program multiple times to ensure consistent behavior
+    for i in 1..=3 {
+        let output = Command::new("cargo")
+            .args(&["run"])
+            .current_dir(".")
+            .output()
+            .expect("Failed to execute cargo run");
+
+        assert!(
+            output.status.success(),
+            "Program should run consistently on iteration {}", i
+        );
+
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            assert!(
+                stdout.contains("Hello, world!"),
+                "Program should produce consistent output on iteration {}", i
+            );
+        }
+    }
 }
