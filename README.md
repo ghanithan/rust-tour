@@ -71,7 +71,7 @@ docker-compose up -d
 ### Integrated Terminal Features  
 ```bash
 # Exercise management via built-in terminal
-cd exercises/ch03_common_concepts/ex02_data_types
+cd exercises/ch01_getting_started/ex02_hello_cargo
 cargo test                         # Run exercise tests
 cargo run                          # Execute your solution
 cargo clippy                       # Check code quality
