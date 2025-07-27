@@ -374,7 +374,6 @@ async fn main() -> anyhow::Result<()> {
     // Set up paths
     let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let exercises_path = current_dir.join("exercises");
-    let progress_path = current_dir.join("progress").join("user_progress.json");
 
     // Check if exercises exist, download if needed (only for published binaries)
     #[cfg(feature = "download-exercises")]
@@ -384,6 +383,12 @@ async fn main() -> anyhow::Result<()> {
     
     #[cfg(not(feature = "download-exercises"))]
     let exercises_path = exercises_path;
+
+    // Progress file goes in the parent directory (alongside exercises/)
+    let progress_path = exercises_path.parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join("progress")
+        .join("user_progress.json");
 
     // Create broadcast channel for WebSocket messages
     let (broadcast_tx, _) = broadcast::channel(100);
@@ -1866,9 +1871,10 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
     }
 
     // Check if user has a config file with a custom exercises path
-    if let Ok(config_path) = get_config_exercises_path().await {
-        if config_path.exists() && has_exercises(&config_path).await? {
-            return Ok(config_path);
+    if let Ok(base_path) = get_config_exercises_path().await {
+        let exercises_subdir = base_path.join("exercises");
+        if exercises_subdir.exists() && has_exercises(&exercises_subdir).await? {
+            return Ok(exercises_subdir);
         }
     }
 
@@ -1901,14 +1907,17 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
     println!("📦 Downloading exercises...");
     download_exercises(&download_path).await?;
 
-    // Save config for future use
+    // Save config for future use (save the base directory)
     save_config_exercises_path(&download_path).await?;
 
     println!("✅ Exercises downloaded successfully!");
     println!("📂 Location: {}", download_path.display());
+    println!("📂 Exercises: {}", download_path.join("exercises").display());
+    println!("📂 Progress: {}", download_path.join("progress").display());
     println!();
 
-    Ok(download_path)
+    // Return the exercises subdirectory path
+    Ok(download_path.join("exercises"))
 }
 
 #[cfg(feature = "download-exercises")]
@@ -1962,10 +1971,12 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     
     println!("📂 Extracting exercises...");
     
-    // Copy exercises directory from temp to target
+    // Copy exercises directory from temp to target/exercises
     let source_exercises = temp_dir.path().join("exercises");
+    let target_exercises = target_path.join("exercises");
+    
     if source_exercises.exists() {
-        copy_dir_recursive(source_exercises, target_path.to_path_buf()).await?;
+        copy_dir_recursive(source_exercises, target_exercises).await?;
     } else {
         anyhow::bail!("No exercises directory found in repository");
     }
