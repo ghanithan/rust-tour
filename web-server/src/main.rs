@@ -50,12 +50,12 @@ use rust_embed::RustEmbed;
 
 #[cfg(feature = "embed-assets")]
 #[derive(RustEmbed)]
-#[folder = "../web/dist/"]
+#[folder = "web-dist/"]
 struct Assets;
 
 #[cfg(feature = "embed-assets")]
 #[derive(RustEmbed)]
-#[folder = "../web/node_modules/monaco-editor/"]
+#[folder = "monaco-editor/"]
 struct MonacoAssets;
 
 // Application state

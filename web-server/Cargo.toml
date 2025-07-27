@@ -13,8 +13,8 @@ readme = "../README.md"
 include = [
     "src/**/*",
     "build.rs",
-    "../web/dist/**/*",
-    "../web/node_modules/monaco-editor/**/*"
+    "web-dist/**/*",
+    "monaco-editor/**/*"
 ]
 
 [[bin]]

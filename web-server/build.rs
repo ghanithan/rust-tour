@@ -1,6 +1,7 @@
 use std::env;
 use std::path::Path;
 use std::process::Command;
+use std::fs;
 
 fn main() {
     println!("cargo:rerun-if-changed=../web/src");
@@ -10,6 +11,8 @@ fn main() {
     if env::var("CARGO_FEATURE_EMBED_ASSETS").is_ok() {
         let web_dir = Path::new("../web");
         let dist_dir = web_dir.join("dist");
+        let local_dist = Path::new("web-dist");
+        let local_monaco = Path::new("monaco-editor");
         
         // Check if web directory exists (for local builds)
         if web_dir.exists() {
@@ -38,9 +41,40 @@ fn main() {
                 
                 println!("cargo:warning=Frontend build completed successfully");
             }
+            
+            // Copy assets for packaging
+            if !local_dist.exists() {
+                println!("cargo:warning=Copying frontend assets for packaging...");
+                if let Err(e) = copy_dir_all(&dist_dir, local_dist) {
+                    println!("cargo:warning=Failed to copy dist: {}", e);
+                }
+            }
+            
+            // Copy Monaco editor assets
+            let monaco_src = web_dir.join("node_modules/monaco-editor");
+            if !local_monaco.exists() && monaco_src.exists() {
+                println!("cargo:warning=Copying Monaco editor assets...");
+                if let Err(e) = copy_dir_all(&monaco_src, local_monaco) {
+                    println!("cargo:warning=Failed to copy monaco: {}", e);
+                }
+            }
         } else {
-            // For packaged builds, assume assets are pre-built and included
-            println!("cargo:warning=Using pre-built frontend assets for packaging");
+            // For packaged builds, assets should already be copied
+            println!("cargo:warning=Using pre-copied assets for packaging");
         }
     }
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.join(entry.file_name()))?;
+        }
+    }
+    Ok(())
 }
