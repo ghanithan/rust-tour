@@ -1,6 +1,13 @@
 # Multi-stage Dockerfile for Rust Tour
 FROM node:18-alpine AS web-builder
 
+# Install build dependencies for native modules like node-pty
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    musl-dev
+
 # Set working directory for web build
 WORKDIR /app/web
 
@@ -36,7 +43,7 @@ RUN mkdir -p exercise-framework/src web-server/src && \
     echo "fn main() {}" > web-server/src/main.rs
 
 # Build dependencies
-RUN cargo build --release --package rust-tour --features embed-assets
+RUN cargo build --release --package rust-tour
 
 # Copy actual source code
 COPY exercise-framework/ ./exercise-framework/
@@ -45,9 +52,9 @@ COPY web-server/ ./web-server/
 # Copy built web assets
 COPY --from=web-builder /app/web/dist ./web/dist
 
-# Build the actual application with embedded assets
+# Build the actual application
 RUN touch exercise-framework/src/lib.rs web-server/src/main.rs && \
-    cargo build --release --package rust-tour --features embed-assets
+    cargo build --release --package rust-tour
 
 # Copy exercises for runtime
 COPY exercises/ ./exercises/
@@ -63,7 +70,8 @@ FROM alpine:3.18
 RUN apk add --no-cache \
     ca-certificates \
     git \
-    bash
+    bash \
+    wget
 
 # Create non-root user
 RUN addgroup -g 1001 -S rustuser && \
