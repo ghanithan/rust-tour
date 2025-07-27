@@ -35,14 +35,13 @@ pub struct ChapterProgress {
     pub first_started: Option<chrono::DateTime<chrono::Utc>>,
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     pub concept_mastery: HashMap<String, ConceptMastery>,
-    pub is_unlocked: bool,
 }
 
 /// Mastery level for individual concepts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMastery {
     pub concept: String,
-    pub mastery_level: f64, // 0.0 to 1.0
+    pub mastery_level: f64,    // 0.0 to 1.0
     pub confidence_level: f64, // 0.0 to 1.0
     pub last_practiced: chrono::DateTime<chrono::Utc>,
     pub practice_count: u32,
@@ -79,11 +78,11 @@ pub struct Achievement {
 /// Categories of achievements
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AchievementCategory {
-    Progress,    // Chapter completions, streaks
-    Mastery,     // Concept mastery, code quality
-    Challenge,   // Performance, advanced exercises
-    Community,   // Contributions, helping others
-    Special,     // Holiday events, milestones
+    Progress,  // Chapter completions, streaks
+    Mastery,   // Concept mastery, code quality
+    Challenge, // Performance, advanced exercises
+    Community, // Contributions, helping others
+    Special,   // Holiday events, milestones
 }
 
 /// User preferences and settings
@@ -119,8 +118,8 @@ pub enum HintPreference {
 /// Learning analytics and insights
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningAnalytics {
-    pub learning_velocity: f64, // exercises per week
-    pub average_session_time: f64, // minutes
+    pub learning_velocity: f64,        // exercises per week
+    pub average_session_time: f64,     // minutes
     pub peak_learning_hours: Vec<u32>, // hours of day (0-23)
     pub concept_strengths: Vec<String>,
     pub concept_weaknesses: Vec<String>,
@@ -138,7 +137,8 @@ pub struct ProgressTracker {
 impl ProgressTracker {
     /// Create a new progress tracker
     pub fn new<P: AsRef<Path>>(exercises_root: P) -> Result<Self> {
-        let progress_file = exercises_root.as_ref()
+        let progress_file = exercises_root
+            .as_ref()
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .join("progress")
@@ -171,7 +171,7 @@ impl ProgressTracker {
     /// Create default progress for new user
     fn create_default_progress() -> UserProgress {
         let now = chrono::Utc::now();
-        
+
         UserProgress {
             user_id: "default".to_string(),
             created_at: now,
@@ -236,11 +236,11 @@ impl ProgressTracker {
             chapter,
             completed_at: now,
             time_taken_minutes,
-            attempts: 1, // TODO: Track actual attempts
-            hints_used: 0, // TODO: Track actual hint usage
+            attempts: 1,    // TODO: Track actual attempts
+            hints_used: 0,  // TODO: Track actual hint usage
             test_passes: 1, // TODO: Track actual test results
             test_failures: 0,
-            code_quality_score: 0.8, // TODO: Calculate from clippy/fmt
+            code_quality_score: 0.8,      // TODO: Calculate from clippy/fmt
             concepts_learned: Vec::new(), // TODO: Get from exercise metadata
         };
 
@@ -250,12 +250,13 @@ impl ProgressTracker {
         // Update overall progress
         self.current_progress.exercises_completed += 1;
         self.current_progress.total_time_minutes += time_taken_minutes;
-        self.current_progress.overall_progress = 
-            self.current_progress.exercises_completed as f64 / 
-            self.current_progress.total_exercises as f64;
+        self.current_progress.overall_progress = self.current_progress.exercises_completed as f64
+            / self.current_progress.total_exercises as f64;
 
         // Update chapter progress
-        let chapter_progress = self.current_progress.chapters
+        let chapter_progress = self
+            .current_progress
+            .chapters
             .entry(chapter)
             .or_insert_with(|| ChapterProgress {
                 chapter_number: chapter,
@@ -267,14 +268,12 @@ impl ProgressTracker {
                 first_started: Some(now),
                 completed_at: None,
                 concept_mastery: HashMap::new(),
-                is_unlocked: true,
             });
 
         chapter_progress.exercises_completed += 1;
         chapter_progress.time_spent_minutes += time_taken_minutes;
-        chapter_progress.completion_percentage = 
-            chapter_progress.exercises_completed as f64 / 
-            chapter_progress.total_exercises as f64;
+        chapter_progress.completion_percentage =
+            chapter_progress.exercises_completed as f64 / chapter_progress.total_exercises as f64;
 
         // Check if chapter is complete
         if chapter_progress.exercises_completed >= chapter_progress.total_exercises {
@@ -303,7 +302,7 @@ impl ProgressTracker {
     /// Update learning streak
     fn update_streak(&mut self) {
         let now = chrono::Utc::now().date_naive();
-        
+
         if let Some(last_completion) = self.current_progress.exercise_history.last() {
             let last_date = last_completion.completed_at.date_naive();
             let days_diff = (now - last_date).num_days();
@@ -368,25 +367,24 @@ impl ProgressTracker {
         if !self.current_progress.exercise_history.is_empty() {
             let first_exercise = self.current_progress.exercise_history.first().unwrap();
             let days_learning = (chrono::Utc::now() - first_exercise.completed_at).num_days();
-            
+
             if days_learning > 0 {
-                analytics.learning_velocity = 
+                analytics.learning_velocity =
                     (self.current_progress.exercises_completed as f64 * 7.0) / days_learning as f64;
             }
         }
 
         // Calculate average session time
         if !self.current_progress.exercise_history.is_empty() {
-            analytics.average_session_time = 
-                self.current_progress.total_time_minutes as f64 / 
-                self.current_progress.exercise_history.len() as f64;
+            analytics.average_session_time = self.current_progress.total_time_minutes as f64
+                / self.current_progress.exercise_history.len() as f64;
         }
 
         // Update predicted completion time
         if analytics.learning_velocity > 0.0 {
-            let remaining_exercises = 
+            let remaining_exercises =
                 self.current_progress.total_exercises - self.current_progress.exercises_completed;
-            analytics.predicted_completion_time = 
+            analytics.predicted_completion_time =
                 (remaining_exercises as f64 / analytics.learning_velocity * 7.0) as u32;
         }
     }
@@ -399,15 +397,20 @@ impl ProgressTracker {
         Ok(vec![format!("ch{:02}-ex01", next_chapter)])
     }
 
-    /// Check if exercise is unlocked for user
-    pub fn is_exercise_unlocked(&self, exercise_id: &str) -> bool {
-        // TODO: Implement based on prerequisites and current progress
-        // For now, allow first 3 chapters
-        let chapter = exercise_id
-            .strip_prefix("ch")
-            .and_then(|s| s[..2].parse::<u32>().ok())
-            .unwrap_or(1);
-        
-        chapter <= 3 || chapter <= self.current_progress.chapters_completed + 2
+    /// Get exercise recommendations based on current progress and prerequisites
+    pub fn get_exercise_recommendations(&self, limit: usize) -> Result<Vec<String>> {
+        // Simple recommendation algorithm: suggest exercises from current or next chapter
+        let next_chapter = self.current_progress.chapters_completed + 1;
+        let mut recommendations = Vec::new();
+
+        // Suggest from current chapter first, then next
+        for chapter in [next_chapter, next_chapter + 1] {
+            recommendations.push(format!("ch{:02}-ex01", chapter));
+            if recommendations.len() >= limit {
+                break;
+            }
+        }
+
+        Ok(recommendations)
     }
 }

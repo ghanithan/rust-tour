@@ -1,0 +1,75 @@
+name: Cleanup
+
+on:
+  schedule:
+    # Clean up old artifacts and images weekly
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  cleanup-artifacts:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Delete old artifacts
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listArtifactsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - 30); // Keep artifacts for 30 days
+          
+          for (const artifact of artifacts.data.artifacts) {
+            if (new Date(artifact.created_at) < cutoff) {
+              console.log(`Deleting artifact: ${artifact.name} (${artifact.created_at})`);
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+          }
+
+  cleanup-packages:
+    name: Cleanup Old Docker Images
+    runs-on: ubuntu-latest
+    
+    permissions:
+      packages: write
+      
+    steps:
+    - name: Delete old container images
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const packages = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+            package_type: 'container',
+            package_name: 'rust-tour',
+            org: context.repo.owner,
+          });
+          
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - 30); // Keep images for 30 days
+          
+          // Keep the latest 10 images regardless of age
+          const sortedPackages = packages.data.sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+          );
+          
+          for (let i = 10; i < sortedPackages.length; i++) {
+            const pkg = sortedPackages[i];
+            if (new Date(pkg.created_at) < cutoff) {
+              console.log(`Deleting package version: ${pkg.name} (${pkg.created_at})`);
+              await github.rest.packages.deletePackageVersionForOrg({
+                package_type: 'container',
+                package_name: 'rust-tour',
+                org: context.repo.owner,
+                package_version_id: pkg.id,
+              });
+            }
+          }

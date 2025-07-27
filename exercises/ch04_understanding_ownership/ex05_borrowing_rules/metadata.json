@@ -1,0 +1,39 @@
+{
+  "id": "ch04-ex05-borrowing-rules",
+  "title": "Advanced Borrowing Rules - The Borrow Checker in Action",
+  "description": "Master complex borrowing scenarios including nested scopes, conditional borrowing, and understanding when references are dropped",
+  "chapter": 4,
+  "exercise_number": 5,
+  "difficulty": "advanced",
+  "estimated_time_minutes": 30,
+  "concepts": ["borrow_checker", "reference_lifetimes", "nested_scopes", "conditional_borrowing"],
+  "prerequisites": ["ch04-ex04-mutable-references"],
+  "exercise_type": "code_review",
+  "rust_book_refs": {
+    "primary_chapter": "4.2",
+    "supporting_chapters": ["10.3"],
+    "specific_sections": [
+      {
+        "chapter": "4.2",
+        "title": "The Rules of References",
+        "url": "https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html#the-rules-of-references",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "ch03-ex06-compound-types",
+  "title": "Compound Data Types",
+  "description": "Master Rust's compound types: tuples for grouping different types and arrays for collecting same-type elements. Learn destructuring, indexing, and practical applications.",
+  "chapter": 3,
+  "exercise_number": 6,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 25,
+  "concepts": [
+    "tuples",
+    "arrays",
+    "destructuring",
+    "indexing",
+    "slicing",
+    "pattern-matching"
+  ],
+  "prerequisites": ["ch03-ex05-booleans-chars"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.2",
+    "supporting_chapters": ["4.3"],
+    "specific_sections": [
+      {
+        "chapter": "3.2",
+        "title": "Data Types - Compound Types",
+        "url": "https://doc.rust-lang.org/book/ch03-02-data-types.html#compound-types",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "4.3",
+        "title": "The Slice Type",
+        "url": "https://doc.rust-lang.org/book/ch04-03-slices.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["uses_tuples", "uses_arrays", "demonstrates_destructuring"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_tuple_usage", "proper_array_usage"]
+  }
+}

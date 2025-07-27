@@ -69,16 +69,24 @@ impl HintSystem {
     }
 
     /// Load hints for an exercise from markdown file
-    pub fn load_exercise_hints(&mut self, exercise_id: &str, hints_content: &str) -> anyhow::Result<()> {
+    pub fn load_exercise_hints(
+        &mut self,
+        exercise_id: &str,
+        hints_content: &str,
+    ) -> anyhow::Result<()> {
         let hints = Self::parse_hints_from_markdown(hints_content)?;
         self.exercise_hints.insert(exercise_id.to_string(), hints);
         Ok(())
     }
 
     /// Get next available hint for an exercise
-    pub fn get_next_hint(&self, exercise_id: &str, current_level: Option<HintLevel>) -> Option<&Hint> {
+    pub fn get_next_hint(
+        &self,
+        exercise_id: &str,
+        current_level: Option<HintLevel>,
+    ) -> Option<&Hint> {
         let hints = self.exercise_hints.get(exercise_id)?;
-        
+
         let target_level = match current_level {
             None => HintLevel::Conceptual,
             Some(HintLevel::Conceptual) => HintLevel::Strategic,
@@ -202,7 +210,11 @@ impl HintSystem {
     }
 
     /// Generate contextual hints based on error patterns
-    pub fn generate_contextual_hint(&self, _exercise_id: &str, error_message: &str) -> Option<Hint> {
+    pub fn generate_contextual_hint(
+        &self,
+        _exercise_id: &str,
+        error_message: &str,
+    ) -> Option<Hint> {
         // Analyze common error patterns and provide targeted hints
         if error_message.contains("cannot borrow") {
             Some(Hint {
@@ -274,7 +286,8 @@ impl HintUsageTracker {
 
     /// Record hint usage
     pub fn record_usage(&mut self, exercise_id: &str, user_id: &str, level: HintLevel) {
-        let usage = self.usage_data
+        let usage = self
+            .usage_data
             .entry(exercise_id.to_string())
             .or_insert_with(Vec::new);
 
@@ -306,12 +319,14 @@ impl HintUsageTracker {
     /// Calculate hint effectiveness for an exercise
     pub fn calculate_effectiveness(&self, exercise_id: &str) -> HintEffectiveness {
         let usage_data = self.usage_data.get(exercise_id);
-        
+
         if let Some(data) = usage_data {
             let total_users = data.len() as f64;
-            let users_who_used_hints = data.iter().filter(|u| u.total_hints_used > 0).count() as f64;
-            let users_solved_after_hints = data.iter().filter(|u| u.solved_after_hints).count() as f64;
-            
+            let users_who_used_hints =
+                data.iter().filter(|u| u.total_hints_used > 0).count() as f64;
+            let users_solved_after_hints =
+                data.iter().filter(|u| u.solved_after_hints).count() as f64;
+
             let hint_usage_rate = users_who_used_hints / total_users;
             let success_rate_with_hints = if users_who_used_hints > 0.0 {
                 users_solved_after_hints / users_who_used_hints
@@ -353,7 +368,7 @@ impl HintUsageTracker {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HintEffectiveness {
     pub exercise_id: String,
-    pub hint_usage_rate: f64, // Percentage of users who use hints
+    pub hint_usage_rate: f64,         // Percentage of users who use hints
     pub success_rate_with_hints: f64, // Success rate for users who used hints
     pub average_hints_per_user: f64,
     pub most_requested_level: HintLevel,
@@ -365,8 +380,9 @@ impl Hint {
     /// Format hint for display in terminal
     pub fn format_for_terminal(&self) -> String {
         let mut formatted = String::new();
-        
-        formatted.push_str(&format!("💡 {} Hint: {}\n", 
+
+        formatted.push_str(&format!(
+            "💡 {} Hint: {}\n",
             match self.level {
                 HintLevel::Conceptual => "🔍",
                 HintLevel::Strategic => "🎯",
@@ -374,19 +390,19 @@ impl Hint {
             },
             self.title
         ));
-        
+
         formatted.push_str("─".repeat(50).as_str());
         formatted.push('\n');
         formatted.push_str(&self.content);
         formatted.push('\n');
-        
+
         if !self.rust_book_links.is_empty() {
             formatted.push_str("\n📚 Related Reading:\n");
             for link in &self.rust_book_links {
                 formatted.push_str(&format!("  {}\n", link));
             }
         }
-        
+
         if !self.code_snippets.is_empty() {
             formatted.push_str("\n💻 Code Example:\n");
             for snippet in &self.code_snippets {
@@ -398,7 +414,7 @@ impl Hint {
                 }
             }
         }
-        
+
         formatted
     }
 
@@ -413,7 +429,7 @@ impl Hint {
             </div>"#,
             match self.level {
                 HintLevel::Conceptual => "conceptual",
-                HintLevel::Strategic => "strategic", 
+                HintLevel::Strategic => "strategic",
                 HintLevel::Implementation => "implementation",
             },
             self.title,

@@ -1,0 +1,52 @@
+{
+  "id": "ch03-ex10-if-else",
+  "title": "If/Else Control Flow",
+  "description": "Master conditional logic in Rust using if expressions, else if chains, and boolean conditions. Learn to build complex decision-making logic.",
+  "chapter": 3,
+  "exercise_number": 10,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 20,
+  "concepts": [
+    "if-expressions",
+    "else-if-chains",
+    "boolean-conditions",
+    "conditional-assignment",
+    "nested-conditionals",
+    "logical-operators"
+  ],
+  "prerequisites": ["ch03-ex09-advanced-functions"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "3.5",
+    "supporting_chapters": ["6.1"],
+    "specific_sections": [
+      {
+        "chapter": "3.5",
+        "title": "Control Flow",
+        "url": "https://doc.rust-lang.org/book/ch03-05-control-flow.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "6.1",
+        "title": "Defining an Enum",
+        "url": "https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["demonstrates_conditionals", "uses_boolean_logic"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_conditional_logic"]
+  }
+}

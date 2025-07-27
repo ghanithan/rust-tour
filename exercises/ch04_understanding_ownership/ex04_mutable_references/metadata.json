@@ -1,0 +1,39 @@
+{
+  "id": "ch04-ex04-mutable-references",
+  "title": "Mutable References - Controlled Modification",
+  "description": "Learn to use mutable references to modify data safely while understanding borrowing rules and preventing data races",
+  "chapter": 4,
+  "exercise_number": 4,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 25,
+  "concepts": ["mutable_references", "borrowing_rules", "data_races", "mut_keyword"],
+  "prerequisites": ["ch04-ex03-references-borrowing"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "4.2",
+    "supporting_chapters": ["3.1"],
+    "specific_sections": [
+      {
+        "chapter": "4.2",
+        "title": "Mutable References",
+        "url": "https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html#mutable-references",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

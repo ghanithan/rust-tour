@@ -1,0 +1,45 @@
+{
+  "id": "ch04-ex02-move-semantics",
+  "title": "Move Semantics Deep Dive",
+  "description": "Master move semantics by building a string buffer manager that demonstrates ownership transfers in collections and functions",
+  "chapter": 4,
+  "exercise_number": 2,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 20,
+  "concepts": ["move_semantics", "collections", "ownership_transfer", "vec_ownership"],
+  "prerequisites": ["ch04-ex01-ownership-basics"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "4.1",
+    "supporting_chapters": ["8.1"],
+    "specific_sections": [
+      {
+        "chapter": "4.1",
+        "title": "The Stack and the Heap",
+        "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html#the-stack-and-the-heap",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "8.1",
+        "title": "Storing Lists of Values with Vectors",
+        "url": "https://doc.rust-lang.org/book/ch08-01-vectors.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

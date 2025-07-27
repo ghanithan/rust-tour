@@ -1,0 +1,53 @@
+{
+  "id": "ch03-ex11-loops",
+  "title": "Loop Constructs",
+  "description": "Master all of Rust's loop types: loop, while, and for. Learn loop control, iteration patterns, and when to use each loop type.",
+  "chapter": 3,
+  "exercise_number": 11,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 25,
+  "concepts": [
+    "loop-keyword",
+    "while-loops",
+    "for-loops",
+    "loop-control",
+    "break-continue",
+    "iteration-patterns",
+    "loop-labels"
+  ],
+  "prerequisites": ["ch03-ex10-if-else"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.5",
+    "supporting_chapters": ["13.2"],
+    "specific_sections": [
+      {
+        "chapter": "3.5",
+        "title": "Control Flow - Loops",
+        "url": "https://doc.rust-lang.org/book/ch03-05-control-flow.html#repetition-with-loops",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "13.2",
+        "title": "Processing a Series of Items with Iterators",
+        "url": "https://doc.rust-lang.org/book/ch13-02-iterators.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["demonstrates_all_loop_types", "uses_loop_control"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_loop_usage", "appropriate_loop_choice"]
+  }
+}

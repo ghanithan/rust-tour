@@ -1,0 +1,37 @@
+# Development Dockerfile for Rust Tour
+FROM rust:1.75
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
+# Install additional development tools
+RUN cargo install cargo-watch cargo-edit
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for development
+RUN useradd -m -u 1000 developer && \
+    chown -R developer:developer /app
+
+USER developer
+
+# Expose ports for development
+EXPOSE 3000 5173
+
+# Set environment variables for development
+ENV RUST_LOG=debug
+ENV RUST_BACKTRACE=1
+
+# Default command for development
+CMD ["./scripts/run.sh", "dev"]

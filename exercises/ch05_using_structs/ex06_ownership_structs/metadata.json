@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex06-ownership-structs",
+  "title": "Ownership Patterns with Structs",
+  "description": "Understand how ownership works with struct fields, borrowing struct fields, and lifetime implications",
+  "chapter": 5,
+  "exercise_number": 6,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 25,
+  "concepts": ["struct_ownership", "field_borrowing", "partial_moves", "clone_vs_move"],
+  "prerequisites": ["ch05-ex05-tuple-structs"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "4.1",
+    "supporting_chapters": ["5.1"],
+    "specific_sections": [
+      {
+        "chapter": "4.1",
+        "title": "Ownership and Functions",
+        "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html#ownership-and-functions",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

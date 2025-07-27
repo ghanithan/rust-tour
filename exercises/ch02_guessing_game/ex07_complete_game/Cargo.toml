@@ -1,0 +1,8 @@
+[package]
+name = "complete_game"
+version = "0.1.0"
+edition = "2021"
+
+# Complete guessing game using rand for random number generation
+[dependencies]
+rand = "0.8"

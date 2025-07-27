@@ -15,11 +15,11 @@ pub enum ExerciseDifficulty {
 /// Types of exercises available
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExerciseType {
-    CodeCompletion,  // Fill in the blanks
-    BugFixing,       // Fix intentional errors
-    FromScratch,     // Complete implementation
-    CodeReview,      // Improve existing code
-    Performance,     // Optimization challenge
+    CodeCompletion, // Fill in the blanks
+    BugFixing,      // Fix intentional errors
+    FromScratch,    // Complete implementation
+    CodeReview,     // Improve existing code
+    Performance,    // Optimization challenge
 }
 
 /// Main exercise structure
@@ -73,7 +73,7 @@ impl Exercise {
     /// Load an exercise from the filesystem
     pub fn load<P: AsRef<Path>>(exercises_root: P, exercise_id: &str) -> Result<Self> {
         let exercise_path = Self::find_exercise_path(&exercises_root, exercise_id)?;
-        
+
         // Load metadata
         let metadata_path = exercise_path.join("metadata.json");
         let metadata = ExerciseMetadata::load_from_file(&metadata_path)
@@ -81,13 +81,13 @@ impl Exercise {
 
         // Load source files
         let source_files = Self::load_source_files(&exercise_path)?;
-        
+
         // Load test files
         let test_files = Self::load_test_files(&exercise_path)?;
-        
+
         // Load hints
         let hints = Self::load_hints(&exercise_path)?;
-        
+
         // Load solutions
         let solutions = Self::load_solutions(&exercise_path)?;
 
@@ -112,22 +112,22 @@ impl Exercise {
         // Look for chapter directory
         let chapter_pattern = format!("ch{:02}_", chapter_num);
         let exercises_root = exercises_root.as_ref();
-        
+
         for entry in std::fs::read_dir(exercises_root)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().to_string();
-            
+
             if name.starts_with(&chapter_pattern) && entry.file_type()?.is_dir() {
                 // Look for exercise within chapter
                 let chapter_path = entry.path();
                 for exercise_entry in std::fs::read_dir(&chapter_path)? {
                     let exercise_entry = exercise_entry?;
                     let _exercise_name = exercise_entry.file_name().to_string_lossy();
-                    
+
                     // Check if this exercise matches the ID
                     let exercise_path = exercise_entry.path();
                     let metadata_path = exercise_path.join("metadata.json");
-                    
+
                     if metadata_path.exists() {
                         if let Ok(metadata) = ExerciseMetadata::load_from_file(&metadata_path) {
                             if metadata.id == exercise_id {
@@ -154,7 +154,8 @@ impl Exercise {
         for entry in WalkDir::new(&src_path).into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
             if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
-                let name = path.file_name()
+                let name = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -162,9 +163,9 @@ impl Exercise {
                 let content = std::fs::read_to_string(path)
                     .with_context(|| format!("Failed to read source file: {:?}", path))?;
 
-                let is_template = name.contains("_template") || 
-                                 content.contains("// TODO:") || 
-                                 content.contains("unimplemented!");
+                let is_template = name.contains("_template")
+                    || content.contains("// TODO:")
+                    || content.contains("unimplemented!");
 
                 source_files.push(SourceFile {
                     name,
@@ -190,7 +191,8 @@ impl Exercise {
         for entry in WalkDir::new(&tests_path).into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
             if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
-                let name = path.file_name()
+                let name = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -229,8 +231,7 @@ impl Exercise {
             return Ok(vec![]);
         }
 
-        let content = std::fs::read_to_string(&hints_path)
-            .context("Failed to read hints file")?;
+        let content = std::fs::read_to_string(&hints_path).context("Failed to read hints file")?;
 
         // Parse hints by looking for level markers
         let mut hints = Vec::new();
@@ -271,9 +272,10 @@ impl Exercise {
         for entry in std::fs::read_dir(&solutions_path)? {
             let entry = entry?;
             let path = entry.path();
-            
+
             if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
-                let name = path.file_stem()
+                let name = path
+                    .file_stem()
                     .and_then(|n| n.to_str())
                     .unwrap_or("unknown")
                     .to_string();
@@ -324,7 +326,8 @@ impl Exercise {
 
         // Sort by chapter and exercise number
         exercises.sort_by(|a, b| {
-            a.chapter.cmp(&b.chapter)
+            a.chapter
+                .cmp(&b.chapter)
                 .then_with(|| a.exercise_number.cmp(&b.exercise_number))
         });
 
@@ -346,9 +349,9 @@ impl Exercise {
     pub fn is_complete(&self) -> bool {
         // Simple heuristic: no TODO comments or unimplemented! macros
         self.source_files.iter().all(|file| {
-            !file.content.contains("TODO") && 
-            !file.content.contains("unimplemented!") &&
-            !file.content.contains("todo!")
+            !file.content.contains("TODO")
+                && !file.content.contains("unimplemented!")
+                && !file.content.contains("todo!")
         })
     }
 

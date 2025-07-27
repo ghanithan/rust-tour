@@ -1,0 +1,52 @@
+{
+  "id": "ch02-ex06-error-handling",
+  "title": "Error Handling with Result",
+  "description": "Learn proper error handling using the Result type instead of expect(). This exercise teaches how to handle errors gracefully without panicking the program.",
+  "chapter": 2,
+  "exercise_number": 6,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 30,
+  "concepts": [
+    "result-type",
+    "error-handling",
+    "match-on-result",
+    "graceful-recovery",
+    "no-panic-programming",
+    "ok-err-variants"
+  ],
+  "prerequisites": ["ch02-ex05-loops"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["9.2"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Handling Invalid Input",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#handling-invalid-input",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "9.2",
+        "title": "Recoverable Errors with Result",
+        "url": "https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 20,
+    "memory_limit_mb": 50,
+    "allow_std_only": false,
+    "custom_checks": ["handles_errors_gracefully"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["no_expect_calls", "uses_result_matching"]
+  }
+}

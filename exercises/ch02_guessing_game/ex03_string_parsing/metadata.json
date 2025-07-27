@@ -1,0 +1,52 @@
+{
+  "id": "ch02-ex03-string-parsing",
+  "title": "String Parsing and Type Conversion",
+  "description": "Learn how to convert strings to numbers and handle parsing errors. This exercise introduces type conversion, the parse method, and basic error handling patterns.",
+  "chapter": 2,
+  "exercise_number": 3,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 25,
+  "concepts": [
+    "string-parsing",
+    "type-conversion",
+    "parse-method",
+    "error-handling",
+    "expect-method",
+    "type-annotations"
+  ],
+  "prerequisites": ["ch02-ex01-user-input", "ch02-ex02-random-numbers"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["3.2"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Comparing the Guess to the Secret Number",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#comparing-the-guess-to-the-secret-number",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "3.2",
+        "title": "Data Types",
+        "url": "https://doc.rust-lang.org/book/ch03-02-data-types.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["parses_strings_correctly"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["handles_parsing_errors"]
+  }
+}

@@ -1,0 +1,6 @@
+[package]
+name = "ex02_struct_update_syntax"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

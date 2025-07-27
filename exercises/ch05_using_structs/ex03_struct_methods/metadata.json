@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex03-struct-methods",
+  "title": "Struct Methods - Adding Behavior to Data",
+  "description": "Learn to implement methods on structs using impl blocks, understand self parameters, and method call syntax",
+  "chapter": 5,
+  "exercise_number": 3,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 25,
+  "concepts": ["impl_blocks", "method_syntax", "self_parameters", "method_vs_function", "borrowing_self"],
+  "prerequisites": ["ch05-ex02-struct-update-syntax"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "5.3",
+    "supporting_chapters": ["5.1"],
+    "specific_sections": [
+      {
+        "chapter": "5.3",
+        "title": "Method Syntax",
+        "url": "https://doc.rust-lang.org/book/ch05-03-method-syntax.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

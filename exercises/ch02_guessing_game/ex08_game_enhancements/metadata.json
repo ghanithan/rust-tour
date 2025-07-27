@@ -1,0 +1,52 @@
+{
+  "id": "ch02-ex08-game-enhancements",
+  "title": "Game Enhancements and Advanced Features",
+  "description": "Enhance your guessing game with advanced features like difficulty levels, hints, statistics tracking, and configuration options. This exercise demonstrates professional software development practices.",
+  "chapter": 2,
+  "exercise_number": 8,
+  "difficulty": "advanced",
+  "estimated_time_minutes": 50,
+  "concepts": [
+    "advanced-features",
+    "configuration",
+    "statistics-tracking",
+    "difficulty-levels",
+    "hint-systems",
+    "professional-development"
+  ],
+  "prerequisites": ["ch02-ex07-complete-game"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["7.1", "10.2"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Complete Tutorial",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "7.1",
+        "title": "Packages and Crates",
+        "url": "https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 30,
+    "memory_limit_mb": 50,
+    "allow_std_only": false,
+    "custom_checks": ["enhanced_features_working"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["professional_code_quality"]
+  }
+}

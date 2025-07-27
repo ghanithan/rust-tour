@@ -347,6 +347,13 @@ export class ProgressTracker {
       (entry.completed_at || entry.status === 'completed')
     );
   }
+  
+  getCompletedExercises() {
+    if (!this.progress?.exercise_history) return [];
+    return this.progress.exercise_history
+      .filter(entry => entry.completed_at || entry.status === 'completed')
+      .map(entry => entry.exercise_id);
+  }
 
   getSessionStats() {
     if (!this.progress) return null;

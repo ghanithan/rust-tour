@@ -1,25 +1,6 @@
 import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 
-// Configure Monaco Environment for web workers
-self.MonacoEnvironment = {
-  getWorkerUrl: function (moduleId, label) {
-    if (label === 'json') {
-      return './monaco-editor/esm/vs/language/json/json.worker.js';
-    }
-    if (label === 'css' || label === 'scss' || label === 'less') {
-      return './monaco-editor/esm/vs/language/css/css.worker.js';
-    }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
-      return './monaco-editor/esm/vs/language/html/html.worker.js';
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return './monaco-editor/esm/vs/language/typescript/ts.worker.js';
-    }
-    return './monaco-editor/esm/vs/editor/editor.worker.js';
-  }
-};
-
 export class UI {
   constructor() {
     this.editor = null;
@@ -300,6 +281,7 @@ export class UI {
       this.toggleTheme();
     });
 
+
     // ESC key handler
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -430,9 +412,16 @@ export class UI {
       const chapterDiv = document.createElement('div');
       chapterDiv.className = 'chapter-group';
       
+      // Extract descriptive chapter title from the first exercise path in this chapter
+      const firstExercise = chapters[chapterNum][0];
+      const chapterDescriptiveTitle = this.extractChapterTitle(firstExercise.path);
+      
       const chapterTitle = document.createElement('div');
       chapterTitle.className = 'chapter-title';
-      chapterTitle.textContent = `Chapter ${chapterNum}`;
+      chapterTitle.innerHTML = `
+        <div class="chapter-number">Chapter ${chapterNum}</div>
+        <div class="chapter-name">${chapterDescriptiveTitle}</div>
+      `;
       chapterDiv.appendChild(chapterTitle);
 
       chapters[chapterNum].forEach(exercise => {
@@ -444,20 +433,20 @@ export class UI {
         const isCompleted = this.platform && this.platform.progressTracker ? 
           this.platform.progressTracker.isExerciseCompleted(exercise.id) : false;
         
-        const statusIcon = isCompleted ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-circle text-muted"></i>';
         const completedClass = isCompleted ? ' completed' : '';
         
-        exerciseDiv.className = `exercise-item${completedClass}`;
+        // Add difficulty indicators with icons
+        const difficultyIcon = this.getDifficultyIcon(exercise.difficulty);
+        const difficultyClass = `difficulty-${exercise.difficulty}`;
+        
+        exerciseDiv.className = `exercise-item${completedClass} ${difficultyClass}`;
         exerciseDiv.innerHTML = `
-          <div class="exercise-status">
-            <span class="status-icon">${statusIcon}</span>
-          </div>
           <div class="exercise-info">
             <div class="exercise-title">${exercise.title}</div>
             <div class="exercise-meta">
-              <span>${exercise.difficulty}</span>
-              <span>${exercise.estimated_time_minutes}min</span>
-              ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
+              <span class="difficulty-indicator">${difficultyIcon} ${exercise.difficulty}</span>
+              <span class="time-estimate"><i class="fas fa-clock"></i> ${exercise.estimated_time_minutes}min</span>
+              ${isCompleted ? '<span class="completed-badge"><i class="fas fa-trophy"></i> Completed</span>' : ''}
             </div>
           </div>
         `;
@@ -569,7 +558,7 @@ export class UI {
     `;
   }
 
-  updateBookPanel(bookRefs) {
+  async updateBookPanel(bookRefs) {
     const bookContainer = document.getElementById('book-links');
     
     if (!bookRefs || !bookRefs.specific_sections || bookRefs.specific_sections.length === 0) {
@@ -577,12 +566,119 @@ export class UI {
       return;
     }
 
-    bookContainer.innerHTML = bookRefs.specific_sections.map(section => `
-      <a href="${section.url}" target="_blank" class="book-link">
-        <h3 class="book-link-title"><i class="fas fa-external-link-alt"></i> ${section.title}</h3>
-        <h4 class="book-link-chapter">Chapter ${section.chapter} • ${section.relevance}</h4>
-      </a>
-    `).join('');
+    // Create accordion sections for each book reference
+    const accordionHtml = bookRefs.specific_sections.map((section, index) => {
+      const sectionId = `book-section-${index}`;
+      return `
+        <div class="book-accordion-item" data-chapter="${section.chapter}" data-url="${section.url}">
+          <div class="book-accordion-header" data-section-id="${sectionId}">
+            <h3 class="book-accordion-title">
+              <i class="fas fa-book"></i> ${section.title}
+              <span class="book-accordion-toggle"><i class="fas fa-chevron-down"></i></span>
+            </h3>
+            <div class="book-accordion-meta">
+              <span class="book-chapter">Chapter ${section.chapter}</span>
+              <span class="book-relevance ${section.relevance}">${section.relevance.replace('_', ' ')}</span>
+              <a href="${section.url}" target="_blank" class="book-external-link" title="Open in Rust Book">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </div>
+          </div>
+          <div class="book-accordion-content" id="${sectionId}">
+            <div class="book-content-loading">
+              <i class="fas fa-spinner fa-spin"></i> Loading content...
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    bookContainer.innerHTML = `<div class="book-accordion">${accordionHtml.join('')}</div>`;
+    
+    // Add click event listeners after DOM is updated
+    bookContainer.querySelectorAll('.book-accordion-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        // Don't toggle accordion if clicking on external link
+        if (e.target.closest('.book-external-link')) {
+          return; // Let the link work normally
+        }
+        e.preventDefault();
+        const sectionId = header.dataset.sectionId;
+        this.toggleBookSection(sectionId);
+      });
+    });
+  }
+
+  async toggleBookSection(sectionId) {
+    const contentEl = document.getElementById(sectionId);
+    const accordionItem = contentEl.closest('.book-accordion-item');
+    const toggleIcon = accordionItem.querySelector('.book-accordion-toggle i');
+    
+    if (contentEl.classList.contains('expanded')) {
+      // Collapse
+      contentEl.classList.remove('expanded');
+      toggleIcon.className = 'fas fa-chevron-down';
+    } else {
+      // Expand and load content if not already loaded
+      contentEl.classList.add('expanded');
+      toggleIcon.className = 'fas fa-chevron-up';
+      
+      if (!contentEl.dataset.loaded) {
+        await this.loadBookContent(contentEl, accordionItem.dataset.url, accordionItem.dataset.chapter);
+      }
+    }
+  }
+
+  async loadBookContent(contentEl, bookUrl, chapterDisplay) {
+    try {
+      // Encode the URL to safely pass it as a query parameter
+      const encodedUrl = encodeURIComponent(bookUrl);
+      const response = await fetch(`/api/book/fetch?url=${encodedUrl}`);
+      const bookData = await response.json();
+      
+      if (bookData.content) {
+        contentEl.innerHTML = `
+          <div class="book-content">
+            <div class="book-content-header">
+              <h4>${bookData.title || 'Rust Book Chapter'}</h4>
+            </div>
+            <div class="book-content-body">
+              ${bookData.content}
+            </div>
+          </div>
+        `;
+      } else {
+        // Fallback to link if content not available
+        contentEl.innerHTML = `
+          <div class="book-content-error">
+            <p><i class="fas fa-info-circle"></i> Content not available. ${bookData.error || 'Please use the external link above.'}</p>
+            <a href="${bookUrl}" target="_blank" class="btn btn-primary">
+              <i class="fas fa-external-link-alt"></i> Open in Rust Book
+            </a>
+          </div>
+        `;
+      }
+      
+      contentEl.dataset.loaded = 'true';
+    } catch (error) {
+      console.error('Error loading book content:', error);
+      contentEl.innerHTML = `
+        <div class="book-content-error">
+          <p><i class="fas fa-exclamation-triangle"></i> Failed to load content.</p>
+          <button class="btn btn-secondary book-retry-btn" data-url="${bookUrl}" data-chapter="${chapterDisplay}">
+            <i class="fas fa-retry"></i> Retry
+          </button>
+        </div>
+      `;
+      
+      // Add retry button event listener
+      const retryBtn = contentEl.querySelector('.book-retry-btn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          this.loadBookContent(contentEl, retryBtn.dataset.url, retryBtn.dataset.chapter);
+        });
+      }
+    }
   }
 
   switchOutputTab(tabName) {
@@ -1591,4 +1687,43 @@ export class UI {
       themeToggle.title = `Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} theme`;
     }
   }
+
+  getDifficultyIcon(difficulty) {
+    switch (difficulty?.toLowerCase()) {
+      case 'beginner':
+        return '<i class="fas fa-circle text-success"></i>';
+      case 'intermediate':
+        return '<i class="fas fa-circle text-warning"></i>';
+      case 'advanced':
+        return '<i class="fas fa-circle text-danger"></i>';
+      default:
+        return '<i class="fas fa-circle text-muted"></i>';
+    }
+  }
+
+  extractChapterTitle(exercisePath) {
+    // Extract chapter directory name from path like "exercises/ch01_getting_started/ex01_hello_world"
+    const pathParts = exercisePath.split('/');
+    const chapterDir = pathParts.find(part => part.startsWith('ch'));
+    
+    if (!chapterDir) {
+      return 'Unknown Chapter';
+    }
+    
+    // Extract descriptive part after chapter number
+    // ch01_getting_started -> getting_started -> Getting Started
+    const match = chapterDir.match(/^ch\d+_(.+)$/);
+    if (!match) {
+      return 'Unknown Chapter';
+    }
+    
+    const descriptivePart = match[1];
+    
+    // Convert underscores to spaces and apply title case
+    return descriptivePart
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
 }

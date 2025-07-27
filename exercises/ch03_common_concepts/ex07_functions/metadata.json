@@ -1,0 +1,19 @@
+{
+  "id": "ch03-ex07-functions",
+  "title": "Basic Functions",
+  "description": "Learn to define and call functions in Rust: parameters, return types, and function bodies.",
+  "chapter": 3,
+  "exercise_number": 7,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": ["functions", "parameters", "return-types", "function-calls"],
+  "prerequisites": ["ch03-ex05-booleans-chars"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.3",
+    "specific_sections": [{"chapter": "3.3", "title": "Functions", "url": "https://doc.rust-lang.org/book/ch03-03-how-functions-work.html", "relevance": "core_concept"}]
+  },
+  "hints": {"available": 3, "auto_unlock": false},
+  "testing": {"timeout_seconds": 10, "memory_limit_mb": 50, "allow_std_only": true},
+  "validation": {"clippy_level": "warn", "format_required": true, "custom_checks": []}
+}

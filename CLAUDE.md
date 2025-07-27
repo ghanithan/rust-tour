@@ -21,7 +21,10 @@ This is Rust Tour, an interactive Rust tutorial that provides progressive, exerc
 # Start development mode (Vite + Rust server)
 ./scripts/run.sh dev
 
-# Start Rust server only
+# Start Rust server only (development mode)
+cargo run --package rust-tour --no-default-features
+
+# Start Rust server only (with download capability for testing)
 ./scripts/run.sh server
 ```
 
@@ -44,6 +47,55 @@ cargo clippy -- -D warnings
 
 # Format code
 cargo fmt
+
+# Test Docker build
+docker build -t rust-tour-test .
+
+# Test CLI help system
+cargo run --package rust-tour -- --help
+
+# Test with custom options
+cargo run --package rust-tour -- --port 8080 --debug-websocket
+```
+
+### Publishing to crates.io
+```bash
+# Build with embedded assets and download features
+cargo build --release --package rust-tour --features "embed-assets,download-exercises"
+
+# Test the published binary workflow
+./target/release/rust-tour
+
+# Publish (dry run)
+cargo publish --package rust-tour --dry-run
+
+# Actual publish
+cargo publish --package rust-tour
+```
+
+### Docker Deployment
+```bash
+# Build production Docker image
+docker build -t rust-tour .
+
+# Run with port forwarding and progress persistence
+docker run -d \
+  --name rust-tour \
+  -p 3000:3000 \
+  -v $(pwd)/progress:/app/progress \
+  rust-tour
+
+# Development with exercise volume mount
+docker run -d \
+  --name rust-tour-dev \
+  -p 3000:3000 \
+  -v $(pwd)/exercises:/app/exercises:ro \
+  -v $(pwd)/progress:/app/progress \
+  rust-tour
+
+# View logs and manage container
+docker logs -f rust-tour
+docker stop rust-tour && docker rm rust-tour
 ```
 
 ### Progress Tracking

@@ -41,6 +41,10 @@ web/build/
 cli/target/
 exercise-framework/target/
 
+# Web server build artifacts (copied during publish)
+web-server/web-dist/
+web-server/monaco-editor/
+
 # Environment files
 .env
 .env.local

@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex08-student-manager",
+  "title": "Student Manager - Comprehensive Struct Design",
+  "description": "Design and implement a student management system using all struct concepts: definition, methods, associated functions, and ownership patterns",
+  "chapter": 5,
+  "exercise_number": 8,
+  "difficulty": "advanced",
+  "estimated_time_minutes": 45,
+  "concepts": ["comprehensive_design", "struct_composition", "method_design", "real_world_application"],
+  "prerequisites": ["ch05-ex07-rectangle-program"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "5.3",
+    "supporting_chapters": ["5.1", "5.2"],
+    "specific_sections": [
+      {
+        "chapter": "5.3",
+        "title": "Method Syntax",
+        "url": "https://doc.rust-lang.org/book/ch05-03-method-syntax.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 20,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

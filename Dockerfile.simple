@@ -1,0 +1,16 @@
+# Simple test Dockerfile to debug the copy issue
+FROM rust:1.75-alpine
+
+WORKDIR /app
+
+# Test if we can see the files
+RUN echo "Listing context files..."
+COPY . /tmp/context
+RUN ls -la /tmp/context/
+
+# Try copying the files individually
+COPY Cargo.toml ./
+COPY Cargo.lock ./
+
+RUN echo "Files copied successfully!"
+RUN ls -la ./

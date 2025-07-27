@@ -101,20 +101,24 @@ impl ExerciseValidator {
 
         // Validate metadata
         let metadata_check = self.validate_metadata(&exercise.metadata, &mut issues)?;
-        
+
         // Validate content
         let content_check = self.validate_content(exercise, &mut issues)?;
-        
+
         // Validate pedagogical aspects
         let pedagogical_check = self.validate_pedagogical_aspects(exercise, &mut issues)?;
 
         // Calculate overall score
-        let score = self.calculate_score(&metadata_check, &content_check, &pedagogical_check, &issues);
-        
+        let score =
+            self.calculate_score(&metadata_check, &content_check, &pedagogical_check, &issues);
+
         // Generate suggestions
         self.generate_suggestions(&issues, &mut suggestions);
 
-        let is_valid = score >= 0.7 && !issues.iter().any(|i| matches!(i.severity, IssueSeverity::Error));
+        let is_valid = score >= 0.7
+            && !issues
+                .iter()
+                .any(|i| matches!(i.severity, IssueSeverity::Error));
 
         Ok(ValidationResult {
             exercise_id: exercise.metadata.id.clone(),
@@ -129,25 +133,33 @@ impl ExerciseValidator {
     }
 
     /// Validate exercise metadata
-    fn validate_metadata(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> Result<MetadataValidation> {
+    fn validate_metadata(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> Result<MetadataValidation> {
         let mut valid = true;
 
         // Check required fields
         let required_fields_present = self.check_required_fields(metadata, issues);
-        if !required_fields_present { valid = false; }
+        if !required_fields_present {
+            valid = false;
+        }
 
         // Check difficulty appropriateness
         let difficulty_appropriate = self.check_difficulty_appropriateness(metadata, issues);
-        
+
         // Check time estimate
         let time_estimate_reasonable = self.check_time_estimate(metadata, issues);
-        
+
         // Check concepts
         let concepts_well_defined = self.check_concepts(metadata, issues);
-        
+
         // Check Rust Book references
         let rust_book_refs_valid = self.check_rust_book_refs(metadata, issues);
-        if !rust_book_refs_valid { valid = false; }
+        if !rust_book_refs_valid {
+            valid = false;
+        }
 
         Ok(MetadataValidation {
             valid,
@@ -160,7 +172,11 @@ impl ExerciseValidator {
     }
 
     /// Check if all required metadata fields are present
-    fn check_required_fields(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_required_fields(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         let mut all_present = true;
 
         if metadata.id.is_empty() {
@@ -194,7 +210,9 @@ impl ExerciseValidator {
                 message: "Exercise description is required".to_string(),
                 file: Some("metadata.json".to_string()),
                 line: None,
-                suggestion: Some("Add a clear description explaining what students will learn".to_string()),
+                suggestion: Some(
+                    "Add a clear description explaining what students will learn".to_string(),
+                ),
             });
             all_present = false;
         }
@@ -203,7 +221,11 @@ impl ExerciseValidator {
     }
 
     /// Check if difficulty level is appropriate
-    fn check_difficulty_appropriateness(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_difficulty_appropriateness(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         // Check if time estimate matches difficulty
         let expected_time = match metadata.difficulty.as_str() {
             "beginner" => (5, 25),
@@ -212,8 +234,9 @@ impl ExerciseValidator {
             _ => return false,
         };
 
-        if metadata.estimated_time_minutes < expected_time.0 || 
-           metadata.estimated_time_minutes > expected_time.1 {
+        if metadata.estimated_time_minutes < expected_time.0
+            || metadata.estimated_time_minutes > expected_time.1
+        {
             issues.push(ValidationIssue {
                 severity: IssueSeverity::Warning,
                 category: IssueCategory::Metadata,
@@ -235,7 +258,11 @@ impl ExerciseValidator {
     }
 
     /// Check if time estimate is reasonable
-    fn check_time_estimate(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_time_estimate(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         if metadata.estimated_time_minutes == 0 {
             issues.push(ValidationIssue {
                 severity: IssueSeverity::Error,
@@ -255,7 +282,9 @@ impl ExerciseValidator {
                 message: "Time estimate is very high (>3 hours)".to_string(),
                 file: Some("metadata.json".to_string()),
                 line: None,
-                suggestion: Some("Consider breaking this into multiple smaller exercises".to_string()),
+                suggestion: Some(
+                    "Consider breaking this into multiple smaller exercises".to_string(),
+                ),
             });
         }
 
@@ -263,7 +292,11 @@ impl ExerciseValidator {
     }
 
     /// Check if concepts are well-defined
-    fn check_concepts(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_concepts(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         if metadata.concepts.is_empty() {
             issues.push(ValidationIssue {
                 severity: IssueSeverity::Error,
@@ -294,7 +327,11 @@ impl ExerciseValidator {
     }
 
     /// Check if Rust Book references are valid
-    fn check_rust_book_refs(&self, metadata: &ExerciseMetadata, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_rust_book_refs(
+        &self,
+        metadata: &ExerciseMetadata,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         if metadata.rust_book_refs.primary_chapter.is_empty() {
             issues.push(ValidationIssue {
                 severity: IssueSeverity::Error,
@@ -308,14 +345,22 @@ impl ExerciseValidator {
         }
 
         // Validate chapter format
-        if !self.rust_book_chapters.contains(&metadata.rust_book_refs.primary_chapter) {
+        if !self
+            .rust_book_chapters
+            .contains(&metadata.rust_book_refs.primary_chapter)
+        {
             issues.push(ValidationIssue {
                 severity: IssueSeverity::Warning,
                 category: IssueCategory::Metadata,
-                message: format!("Chapter '{}' may not exist in the Rust Book", metadata.rust_book_refs.primary_chapter),
+                message: format!(
+                    "Chapter '{}' may not exist in the Rust Book",
+                    metadata.rust_book_refs.primary_chapter
+                ),
                 file: Some("metadata.json".to_string()),
                 line: None,
-                suggestion: Some("Verify the chapter reference against the official Rust Book".to_string()),
+                suggestion: Some(
+                    "Verify the chapter reference against the official Rust Book".to_string(),
+                ),
             });
         }
 
@@ -323,22 +368,28 @@ impl ExerciseValidator {
     }
 
     /// Validate exercise content
-    fn validate_content(&self, exercise: &Exercise, issues: &mut Vec<ValidationIssue>) -> Result<ContentValidation> {
+    fn validate_content(
+        &self,
+        exercise: &Exercise,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> Result<ContentValidation> {
         let mut valid = true;
 
         // Check if code compiles (basic check)
         let code_compiles = self.check_compilation(exercise, issues);
-        if !code_compiles { valid = false; }
+        if !code_compiles {
+            valid = false;
+        }
 
         // Check test comprehensiveness
         let tests_comprehensive = self.check_test_coverage(exercise, issues);
-        
+
         // Check hint quality
         let hints_helpful = self.check_hint_quality(exercise, issues);
-        
+
         // Check solution correctness
         let solutions_correct = self.check_solutions(exercise, issues);
-        
+
         // Check documentation clarity
         let documentation_clear = self.check_documentation(exercise, issues);
 
@@ -370,9 +421,11 @@ impl ExerciseValidator {
 
         // Check for missing main function in executable exercises
         if exercise.metadata.exercise_type_enum() != ExerciseType::Performance {
-            let has_main = exercise.source_files.iter()
+            let has_main = exercise
+                .source_files
+                .iter()
                 .any(|f| f.content.contains("fn main()"));
-            
+
             if !has_main && !exercise.source_files.iter().any(|f| f.name == "lib.rs") {
                 issues.push(ValidationIssue {
                     severity: IssueSeverity::Error,
@@ -380,7 +433,9 @@ impl ExerciseValidator {
                     message: "No main function found in executable exercise".to_string(),
                     file: Some("src/main.rs".to_string()),
                     line: None,
-                    suggestion: Some("Add a main function or convert to library exercise".to_string()),
+                    suggestion: Some(
+                        "Add a main function or convert to library exercise".to_string(),
+                    ),
                 });
                 return false;
             }
@@ -419,7 +474,9 @@ impl ExerciseValidator {
                 message: "No unit tests found in test files".to_string(),
                 file: Some("tests/".to_string()),
                 line: None,
-                suggestion: Some("Add #[test] functions to validate exercise implementation".to_string()),
+                suggestion: Some(
+                    "Add #[test] functions to validate exercise implementation".to_string(),
+                ),
             });
             return false;
         }
@@ -449,7 +506,9 @@ impl ExerciseValidator {
                 message: "Only one hint level provided".to_string(),
                 file: Some("src/hints.md".to_string()),
                 line: None,
-                suggestion: Some("Provide 3 levels of hints: conceptual, strategic, implementation".to_string()),
+                suggestion: Some(
+                    "Provide 3 levels of hints: conceptual, strategic, implementation".to_string(),
+                ),
             });
         }
 
@@ -465,7 +524,9 @@ impl ExerciseValidator {
                 message: "No reference solutions provided".to_string(),
                 file: Some("solutions/".to_string()),
                 line: None,
-                suggestion: Some("Add at least one reference solution with explanation".to_string()),
+                suggestion: Some(
+                    "Add at least one reference solution with explanation".to_string(),
+                ),
             });
             return false;
         }
@@ -497,7 +558,9 @@ impl ExerciseValidator {
                 message: "No README.md file found".to_string(),
                 file: Some("README.md".to_string()),
                 line: None,
-                suggestion: Some("Add a README.md with exercise description and instructions".to_string()),
+                suggestion: Some(
+                    "Add a README.md with exercise description and instructions".to_string(),
+                ),
             });
             return false;
         }
@@ -506,7 +569,11 @@ impl ExerciseValidator {
     }
 
     /// Validate pedagogical aspects
-    fn validate_pedagogical_aspects(&self, exercise: &Exercise, issues: &mut Vec<ValidationIssue>) -> Result<PedagogicalValidation> {
+    fn validate_pedagogical_aspects(
+        &self,
+        exercise: &Exercise,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> Result<PedagogicalValidation> {
         let learning_objectives_clear = self.check_learning_objectives(exercise, issues);
         let difficulty_progression_smooth = self.check_difficulty_progression(exercise, issues);
         let concepts_properly_introduced = self.check_concept_introduction(exercise, issues);
@@ -526,7 +593,11 @@ impl ExerciseValidator {
     }
 
     /// Check if learning objectives are clear
-    fn check_learning_objectives(&self, exercise: &Exercise, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_learning_objectives(
+        &self,
+        exercise: &Exercise,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         // Check if description explains what students will learn
         if exercise.metadata.description.len() < 50 {
             issues.push(ValidationIssue {
@@ -535,7 +606,9 @@ impl ExerciseValidator {
                 message: "Exercise description is very brief".to_string(),
                 file: Some("metadata.json".to_string()),
                 line: None,
-                suggestion: Some("Expand description to clearly explain learning objectives".to_string()),
+                suggestion: Some(
+                    "Expand description to clearly explain learning objectives".to_string(),
+                ),
             });
             return false;
         }
@@ -544,25 +617,41 @@ impl ExerciseValidator {
     }
 
     /// Check difficulty progression
-    fn check_difficulty_progression(&self, _exercise: &Exercise, _issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_difficulty_progression(
+        &self,
+        _exercise: &Exercise,
+        _issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         // TODO: Implement cross-exercise difficulty analysis
         true
     }
 
     /// Check concept introduction
-    fn check_concept_introduction(&self, _exercise: &Exercise, _issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_concept_introduction(
+        &self,
+        _exercise: &Exercise,
+        _issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         // TODO: Check if prerequisites are properly handled
         true
     }
 
     /// Check real-world relevance
-    fn check_real_world_relevance(&self, _exercise: &Exercise, _issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_real_world_relevance(
+        &self,
+        _exercise: &Exercise,
+        _issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         // TODO: Analyze if exercise teaches practical skills
         true
     }
 
     /// Check beginner-friendliness
-    fn check_beginner_friendliness(&self, exercise: &Exercise, issues: &mut Vec<ValidationIssue>) -> bool {
+    fn check_beginner_friendliness(
+        &self,
+        exercise: &Exercise,
+        issues: &mut Vec<ValidationIssue>,
+    ) -> bool {
         if exercise.metadata.difficulty == "beginner" {
             // Check for complex language in description
             let complex_words = ["polymorphism", "metaprogramming", "monomorphization"];
@@ -598,30 +687,40 @@ impl ExerciseValidator {
         let base_score = (metadata_score + content_score + pedagogical_score) / 3.0;
 
         // Penalize for issues
-        let error_penalty = issues.iter()
+        let error_penalty = issues
+            .iter()
             .filter(|i| matches!(i.severity, IssueSeverity::Error))
-            .count() as f64 * 0.2;
-        
-        let warning_penalty = issues.iter()
-            .filter(|i| matches!(i.severity, IssueSeverity::Warning))
-            .count() as f64 * 0.05;
+            .count() as f64
+            * 0.2;
 
-        (base_score - error_penalty - warning_penalty).max(0.0).min(1.0)
+        let warning_penalty = issues
+            .iter()
+            .filter(|i| matches!(i.severity, IssueSeverity::Warning))
+            .count() as f64
+            * 0.05;
+
+        (base_score - error_penalty - warning_penalty)
+            .max(0.0)
+            .min(1.0)
     }
 
     /// Generate actionable suggestions
     fn generate_suggestions(&self, issues: &[ValidationIssue], suggestions: &mut Vec<String>) {
         // Group issues by category and provide category-specific advice
-        let errors: Vec<_> = issues.iter()
+        let errors: Vec<_> = issues
+            .iter()
             .filter(|i| matches!(i.severity, IssueSeverity::Error))
             .collect();
 
         if !errors.is_empty() {
-            suggestions.push("Fix all error-level issues before publishing this exercise".to_string());
+            suggestions
+                .push("Fix all error-level issues before publishing this exercise".to_string());
         }
 
         if issues.len() > 5 {
-            suggestions.push("Consider reviewing exercise design - many validation issues found".to_string());
+            suggestions.push(
+                "Consider reviewing exercise design - many validation issues found".to_string(),
+            );
         }
 
         // Add specific suggestions based on common patterns
@@ -630,7 +729,8 @@ impl ExerciseValidator {
         }
 
         if issues.iter().any(|i| i.message.contains("hint")) {
-            suggestions.push("Enhance the hint system with progressive difficulty levels".to_string());
+            suggestions
+                .push("Enhance the hint system with progressive difficulty levels".to_string());
         }
     }
 
@@ -638,18 +738,13 @@ impl ExerciseValidator {
     fn load_rust_book_chapters() -> HashSet<String> {
         // In a real implementation, this would load from a configuration file
         let chapters = vec![
-            "1", "2", "3.1", "3.2", "3.3", "3.4", "3.5",
-            "4.1", "4.2", "4.3", "5.1", "5.2", "5.3",
-            "6.1", "6.2", "6.3", "7.1", "7.2", "7.3", "7.4", "7.5",
-            "8.1", "8.2", "8.3", "9.1", "9.2", "9.3",
-            "10.1", "10.2", "10.3", "11.1", "11.2", "11.3",
-            "12", "13.1", "13.2", "13.3", "13.4",
-            "14.1", "14.2", "14.3", "14.4", "14.5",
-            "15.1", "15.2", "15.3", "15.4", "15.5", "15.6",
-            "16.1", "16.2", "16.3", "16.4",
-            "17.1", "17.2", "17.3", "18.1", "18.2", "18.3",
-            "19.1", "19.2", "19.3", "19.4", "19.5", "19.6",
-            "20.1", "20.2", "20.3", "20.4", "20.5", "20.6"
+            "1", "2", "3.1", "3.2", "3.3", "3.4", "3.5", "4.1", "4.2", "4.3", "5.1", "5.2", "5.3",
+            "6.1", "6.2", "6.3", "7.1", "7.2", "7.3", "7.4", "7.5", "8.1", "8.2", "8.3", "9.1",
+            "9.2", "9.3", "10.1", "10.2", "10.3", "11.1", "11.2", "11.3", "12", "13.1", "13.2",
+            "13.3", "13.4", "14.1", "14.2", "14.3", "14.4", "14.5", "15.1", "15.2", "15.3", "15.4",
+            "15.5", "15.6", "16.1", "16.2", "16.3", "16.4", "17.1", "17.2", "17.3", "18.1", "18.2",
+            "18.3", "19.1", "19.2", "19.3", "19.4", "19.5", "19.6", "20.1", "20.2", "20.3", "20.4",
+            "20.5", "20.6",
         ];
 
         chapters.into_iter().map(String::from).collect()
@@ -659,12 +754,36 @@ impl ExerciseValidator {
     fn load_concept_taxonomy() -> HashSet<String> {
         // Standard Rust concepts
         let concepts = vec![
-            "variables", "mutability", "data-types", "functions", "control-flow",
-            "ownership", "borrowing", "references", "lifetimes", "slices",
-            "structs", "methods", "enums", "pattern-matching", "collections",
-            "error-handling", "generics", "traits", "testing", "iterators",
-            "closures", "smart-pointers", "concurrency", "async", "macros",
-            "modules", "packages", "crates", "workspaces", "documentation"
+            "variables",
+            "mutability",
+            "data-types",
+            "functions",
+            "control-flow",
+            "ownership",
+            "borrowing",
+            "references",
+            "lifetimes",
+            "slices",
+            "structs",
+            "methods",
+            "enums",
+            "pattern-matching",
+            "collections",
+            "error-handling",
+            "generics",
+            "traits",
+            "testing",
+            "iterators",
+            "closures",
+            "smart-pointers",
+            "concurrency",
+            "async",
+            "macros",
+            "modules",
+            "packages",
+            "crates",
+            "workspaces",
+            "documentation",
         ];
 
         concepts.into_iter().map(String::from).collect()

@@ -1,0 +1,7 @@
+[package]
+name = "string_parsing"
+version = "0.1.0"
+edition = "2021"
+
+# This exercise focuses on string parsing without external dependencies
+[dependencies]

@@ -101,7 +101,13 @@ impl ExerciseMetadata {
         }
 
         // Validate exercise type
-        let valid_types = ["code_completion", "bug_fixing", "from_scratch", "code_review", "performance"];
+        let valid_types = [
+            "code_completion",
+            "bug_fixing",
+            "from_scratch",
+            "code_review",
+            "performance",
+        ];
         if !valid_types.contains(&self.exercise_type.as_str()) {
             anyhow::bail!("Invalid exercise type: {}", self.exercise_type);
         }
@@ -155,16 +161,25 @@ impl ExerciseMetadata {
     pub fn prerequisite_chapters(&self) -> Vec<u32> {
         self.prerequisites
             .iter()
-            .filter_map(|prereq| {
-                prereq
-                    .strip_prefix("ch")
-                    .and_then(|s| s[..2].parse().ok())
-            })
+            .filter_map(|prereq| prereq.strip_prefix("ch").and_then(|s| s[..2].parse().ok()))
             .collect()
     }
 
-    /// Check if this exercise is unlocked given completed exercises
-    pub fn is_unlocked(&self, completed_exercises: &[String]) -> bool {
+    /// Get missing prerequisites for guidance (not enforcement)
+    pub fn get_missing_prerequisites(&self, completed_exercises: &[String]) -> Vec<String> {
+        if !self.has_prerequisites() {
+            return Vec::new();
+        }
+
+        self.prerequisites
+            .iter()
+            .filter(|prereq| !completed_exercises.contains(prereq))
+            .cloned()
+            .collect()
+    }
+
+    /// Check if exercise has all prerequisites completed (for recommendation scoring)
+    pub fn prerequisites_completed(&self, completed_exercises: &[String]) -> bool {
         if !self.has_prerequisites() {
             return true;
         }

@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex01-struct-definition",
+  "title": "Struct Definition - Building Your First Data Structure",
+  "description": "Learn to define and instantiate structs, understand field access, and work with struct ownership",
+  "chapter": 5,
+  "exercise_number": 1,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": ["struct_definition", "struct_instantiation", "field_access", "struct_ownership"],
+  "prerequisites": ["ch04-ex01-ownership-basics"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "5.1",
+    "supporting_chapters": ["5.0"],
+    "specific_sections": [
+      {
+        "chapter": "5.1",
+        "title": "Defining and Instantiating Structs",
+        "url": "https://doc.rust-lang.org/book/ch05-01-defining-structs.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

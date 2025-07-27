@@ -1,0 +1,33 @@
+# Development Docker Compose for Rust Tour
+# Usage: docker-compose -f docker-compose.dev.yml up
+# This is for development ONLY and should NOT be published
+
+version: '3.8'
+
+services:
+  rust-tour-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"    # Rust server
+      - "5173:5173"    # Vite dev server (hot reload)
+    volumes:
+      # Mount entire project for live development
+      - .:/app
+      # Use named volumes for caches to improve performance
+      - rust_target_cache:/app/target
+      - node_modules_cache:/app/web/node_modules
+    environment:
+      - RUST_LOG=debug
+      - RUST_TOUR_HOST=0.0.0.0
+      - RUST_TOUR_PORT=3000
+    working_dir: /app
+    command: ["./scripts/run.sh", "dev"]
+    # Add development tools
+    stdin_open: true
+    tty: true
+
+volumes:
+  rust_target_cache:
+  node_modules_cache:

@@ -1,0 +1,52 @@
+{
+  "id": "ch03-ex12-control-flow-practice",
+  "title": "Control Flow Practice",
+  "description": "Comprehensive practice combining all control flow concepts: conditionals, loops, functions, and boolean logic in a practical number guessing game implementation.",
+  "chapter": 3,
+  "exercise_number": 12,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 30,
+  "concepts": [
+    "control-flow-integration",
+    "conditional-logic",
+    "loop-implementation",
+    "function-design",
+    "boolean-logic",
+    "practical-application"
+  ],
+  "prerequisites": ["ch03-ex11-loops"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "3.5",
+    "supporting_chapters": ["2.0"],
+    "specific_sections": [
+      {
+        "chapter": "3.5",
+        "title": "Control Flow",
+        "url": "https://doc.rust-lang.org/book/ch03-05-control-flow.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["implements_game_logic", "demonstrates_control_flow"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["complete_implementation", "good_code_structure"]
+  }
+}

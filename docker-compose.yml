@@ -1,0 +1,26 @@
+# Production Docker Compose for Rust Tour
+# For development, use: docker-compose -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  rust-tour:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - RUST_TOUR_HOST=0.0.0.0
+      - RUST_TOUR_PORT=3000
+    volumes:
+      # Mount progress directory for persistence
+      - ./progress:/app/progress
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

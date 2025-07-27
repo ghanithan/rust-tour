@@ -6,6 +6,7 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
   },
+  plugins: [],
   server: {
     port: 8000,
     proxy: {

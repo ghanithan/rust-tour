@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex04-associated-functions",
+  "title": "Associated Functions - Constructor Patterns",
+  "description": "Learn to create associated functions for struct construction, understand the difference between methods and associated functions",
+  "chapter": 5,
+  "exercise_number": 4,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 20,
+  "concepts": ["associated_functions", "constructor_patterns", "new_function", "static_methods", "namespace_syntax"],
+  "prerequisites": ["ch05-ex03-struct-methods"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "5.3",
+    "supporting_chapters": ["5.1"],
+    "specific_sections": [
+      {
+        "chapter": "5.3",
+        "title": "Associated Functions",
+        "url": "https://doc.rust-lang.org/book/ch05-03-method-syntax.html#associated-functions",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

@@ -4,14 +4,18 @@ use axum::{
         Path as AxumPath, Query, State,
     },
     http::{header, HeaderValue, Method, StatusCode},
-    response::{Html, IntoResponse, Response},
+    response::{IntoResponse, Response},
     routing::{get, post, put},
     Json, Router,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
+use clap::Parser;
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use regex::Regex;
+use reqwest;
+use scraper::{Html as ScraperHtml, Selector};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -26,7 +30,6 @@ use std::{
 };
 use tokio::{
     fs,
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::Command,
     sync::{broadcast, RwLock, Mutex},
     time::timeout,
@@ -45,15 +48,44 @@ use walkdir::WalkDir;
 #[cfg(feature = "embed-assets")]
 use rust_embed::RustEmbed;
 
-#[cfg(feature = "embed-assets")]
-#[derive(RustEmbed)]
-#[folder = "../web/dist/"]
-struct Assets;
+#[cfg(feature = "download-exercises")]
+use dialoguer::{Confirm, Input};
+#[cfg(feature = "download-exercises")]
+use git2::Repository;
+#[cfg(feature = "download-exercises")]
+use tempfile::TempDir;
 
 #[cfg(feature = "embed-assets")]
 #[derive(RustEmbed)]
-#[folder = "../web/node_modules/monaco-editor/"]
-struct MonacoAssets;
+#[folder = "web-dist/"]
+struct Assets;
+
+#[cfg(not(feature = "embed-assets"))]
+struct Assets;
+
+/// Rust Tour - An interactive Rust learning platform
+/// 
+/// Rust Tour provides a structured pathway to learn Rust through progressive,
+/// test-driven exercises aligned with "The Rust Programming Language" book.
+/// 
+/// When installed via cargo, exercises will be downloaded on first run to a
+/// directory of your choice. Your progress is tracked locally and persists
+/// between sessions.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Port to run the server on
+    #[arg(short, long, default_value = "3000", env = "PORT")]
+    port: u16,
+    
+    /// Enable debug logging for WebSocket connections
+    #[arg(long, env = "DEBUG_WEBSOCKET")]
+    debug_websocket: bool,
+    
+    /// Custom path to exercises directory (for development)
+    #[arg(long)]
+    exercises_path: Option<PathBuf>,
+}
 
 // Application state
 #[derive(Clone)]
@@ -161,17 +193,29 @@ struct ExerciseDetails {
 #[derive(Debug, Serialize, Deserialize)]
 struct ProgressData {
     user_id: String,
+    #[serde(default = "default_created_at")]
     created_at: String,
+    #[serde(default)]
     overall_progress: f64,
+    #[serde(default)]
     chapters_completed: u32,
+    #[serde(default)]
     exercises_completed: u32,
+    #[serde(default = "default_total_exercises")]
     total_exercises: u32,
+    #[serde(default)]
     current_streak: u32,
+    #[serde(default)]
     longest_streak: u32,
+    #[serde(default)]
     total_time_minutes: u32,
+    #[serde(default = "default_chapters")]
     chapters: serde_json::Value,
+    #[serde(default)]
     exercise_history: Vec<ExerciseHistoryEntry>,
+    #[serde(default)]
     achievements: Vec<serde_json::Value>,
+    #[serde(default)]
     session_stats: SessionStats,
 }
 
@@ -193,10 +237,68 @@ struct ExerciseHistoryEntry {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionStats {
+    #[serde(default)]
     exercises_viewed: u32,
+    #[serde(default)]
     exercises_completed: u32,
+    #[serde(default)]
     hints_used: u32,
+    #[serde(default)]
     time_spent: u32,
+}
+
+// Default functions for serde
+fn default_created_at() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
+
+fn default_total_exercises() -> u32 {
+    3 // Default based on current exercises
+}
+
+fn default_chapters() -> serde_json::Value {
+    serde_json::Value::Object(serde_json::Map::new())
+}
+
+impl Default for SessionStats {
+    fn default() -> Self {
+        Self {
+            exercises_viewed: 0,
+            exercises_completed: 0,
+            hints_used: 0,
+            time_spent: 0,
+        }
+    }
+}
+
+// Helper trait for string case conversion
+trait ToTitleCase {
+    fn to_title_case(&self) -> String;
+}
+
+impl ToTitleCase for str {
+    fn to_title_case(&self) -> String {
+        self.split_whitespace()
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct ChapterInfo {
+    chapter_number: u32,
+    title: String,
+    exercises_completed: u32,
+    total_exercises: u32,
+    completion_percentage: f64,
+    time_spent_minutes: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -222,9 +324,12 @@ struct ViewRequest {
 }
 
 #[derive(Debug, Serialize)]
-struct BookResponse {
+struct BookContentResponse {
     url: String,
     chapter: String,
+    content: Option<String>,
+    title: Option<String>,
+    error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -275,6 +380,9 @@ impl<T> ApiResponse<T> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Parse CLI arguments
+    let cli = Cli::parse();
+    
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -283,19 +391,27 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let port = env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
-        .parse::<u16>()
-        .unwrap_or(3000);
-
-    let debug_websocket = env::var("DEBUG_WEBSOCKET")
-        .map(|v| v == "true")
-        .unwrap_or(false);
+    let port = cli.port;
+    let debug_websocket = cli.debug_websocket;
 
     // Set up paths
     let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let exercises_path = current_dir.join("exercises");
-    let progress_path = current_dir.join("progress").join("user_progress.json");
+    let exercises_path = cli.exercises_path.unwrap_or_else(|| current_dir.join("exercises"));
+
+    // Check if exercises exist, download if needed (only for published binaries)
+    #[cfg(feature = "download-exercises")]
+    let exercises_path = {
+        ensure_exercises_available(exercises_path).await?
+    };
+    
+    #[cfg(not(feature = "download-exercises"))]
+    let exercises_path = exercises_path;
+
+    // Progress file goes in the parent directory (alongside exercises/)
+    let progress_path = exercises_path.parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join("progress")
+        .join("user_progress.json");
 
     // Create broadcast channel for WebSocket messages
     let (broadcast_tx, _) = broadcast::channel(100);
@@ -308,7 +424,7 @@ async fn main() -> anyhow::Result<()> {
         broadcast_tx: broadcast_tx.clone(),
         debug_websocket,
         exercises_path: exercises_path.clone(),
-        progress_path,
+        progress_path: progress_path.clone(),
     };
 
     // Initialize progress system
@@ -318,14 +434,25 @@ async fn main() -> anyhow::Result<()> {
     setup_file_watcher(state.clone()).await?;
 
     // Build the application router
-    let app = create_router(state);
+    let app = create_router(state.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    info!("🌐 Rust Tour server running on http://localhost:{}", port);
-    info!("📡 WebSocket available at ws://localhost:{}/ws", port);
-    info!("🦀 Ready to serve Rust tutorial exercises!");
+    println!("\n🚀 Rust Tour is running!");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+    println!("  🌐 Web interface:    http://localhost:{}", port);
+    println!("  📡 WebSocket:        ws://localhost:{}/ws", port);
+    println!("  🩺 Health check:     http://localhost:{}/health", port);
+    println!();
+    println!("  📚 Exercises path:   {}", exercises_path.display());
+    println!("  💾 Progress path:    {}", progress_path.display());
+    println!();
+    println!("  Press Ctrl+C to stop the server");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    info!("Server started on port {}", port);
 
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
@@ -334,8 +461,20 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Health check handler
+async fn health_check() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "healthy",
+        "service": "rust-tour",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
 fn create_router(state: AppState) -> Router {
     Router::new()
+        // Health check route
+        .route("/health", get(health_check))
+        
         // WebSocket route
         .route("/ws", get(websocket_handler))
         
@@ -351,9 +490,9 @@ fn create_router(state: AppState) -> Router {
         .route("/api/progress/hint", post(track_hint_usage))
         .route("/api/progress/view", post(track_exercise_view))
         .route("/api/book/:chapter", get(get_book_chapter))
+        .route("/api/book/fetch", get(get_book_by_url))
         
         // Static file routes
-        .route("/monaco/*path", get(serve_monaco_files))
         .fallback(serve_static_files)
         
         .layer(
@@ -394,7 +533,7 @@ async fn websocket_connection(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
     
     // Spawn task to handle broadcast messages
-    let broadcast_state = state.clone();
+    let _broadcast_state = state.clone();
     let broadcast_task = tokio::spawn(async move {
         while let Ok(msg) = broadcast_rx.recv().await {
             if let Ok(json) = serde_json::to_string(&msg) {
@@ -717,7 +856,7 @@ async fn resize_terminal(
         
         // Move resizing to blocking task since PTY operations are not async
         tokio::task::spawn_blocking(move || {
-            if let Ok(mut master) = master.try_lock() {
+            if let Ok(master) = master.try_lock() {
                 let new_size = PtySize {
                     rows,
                     cols,
@@ -822,9 +961,12 @@ async fn get_exercise(
     AxumPath((chapter, exercise)): AxumPath<(String, String)>,
     State(state): State<AppState>,
 ) -> Result<Json<ExerciseDetails>, StatusCode> {
-    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    // The client sends chapter="ch01_getting_started" and exercise="ex01_hello_world"
+    // We need to join them correctly to match the directory structure
+    let exercise_dir_path = state.exercises_path.join(&chapter).join(&exercise);
+    let exercise_id = format!("{}/{}", chapter, exercise);
     
-    match load_exercise_details(&exercise_path, &format!("{}/{}", chapter, exercise)).await {
+    match load_exercise_details(&exercise_dir_path, &exercise_id).await {
         Ok(details) => Ok(Json(details)),
         Err(e) => {
             error!("Error loading exercise {}/{}: {}", chapter, exercise, e);
@@ -965,14 +1107,170 @@ async fn track_exercise_view(
     }
 }
 
+async fn fetch_book_content(url: &str) -> anyhow::Result<(String, String)> {
+    // Fetch the HTML content
+    let client = reqwest::Client::new();
+    let response = client
+        .get(url)
+        .header("User-Agent", "Rust-Tour/1.0")
+        .send()
+        .await?;
+    
+    let html_content = response.text().await?;
+    let document = ScraperHtml::parse_document(&html_content);
+    
+    // Debug: Log some HTML structure to understand the page layout
+    debug!("HTML title: {:?}", document.select(&Selector::parse("title").unwrap()).next().map(|el| el.text().collect::<String>()));
+    debug!("Found body: {}", document.select(&Selector::parse("body").unwrap()).next().is_some());
+    
+    // Extract the main content - try multiple selectors for mdBook structure
+    let selectors = [
+        "main",
+        ".content", 
+        "#content",
+        ".page-content",
+        ".book-content", 
+        ".chapter",
+        "#page-wrapper",
+        ".page",
+        "section",
+        "article",
+        "[role='main']",
+        ".light"  // mdBook often uses this class for content
+    ];
+    
+    let mut content_element = None;
+    for selector_str in &selectors {
+        if let Ok(selector) = Selector::parse(selector_str) {
+            if let Some(element) = document.select(&selector).next() {
+                content_element = Some(element);
+                break;
+            }
+        }
+    }
+    
+    let content_element = content_element.unwrap_or_else(|| {
+        // Fallback: use body if no specific content container found
+        warn!("No specific content container found, using body as fallback");
+        document.select(&Selector::parse("body").unwrap()).next()
+            .expect("Every HTML document should have a body")
+    });
+    
+    // Extract title
+    let title_selector = Selector::parse("h1").unwrap();
+    let title = content_element
+        .select(&title_selector)
+        .next()
+        .map(|el| el.text().collect::<String>())
+        .unwrap_or_else(|| "Rust Book Chapter".to_string());
+    
+    // Get the HTML content and clean it up
+    let mut content_html = content_element.html();
+    
+    // Clean up common navigation and UI elements
+    let cleanups = [
+        (r"<nav[^>]*>.*?</nav>", ""),
+        (r"<header[^>]*>.*?</header>", ""),
+        (r"<footer[^>]*>.*?</footer>", ""),
+        (r"<aside[^>]*>.*?</aside>", ""),
+        (r#"<div[^>]*class="[^"]*nav[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<div[^>]*class="[^"]*sidebar[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<div[^>]*class="[^"]*menu[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<button[^>]*>.*?</button>"#, ""),  // Remove navigation buttons
+        (r#"<script[^>]*>.*?</script>"#, ""),  // Remove scripts
+        (r#"<style[^>]*>.*?</style>"#, ""),    // Remove inline styles
+    ];
+    
+    for (pattern, replacement) in cleanups {
+        if let Ok(regex) = Regex::new(pattern) {
+            content_html = regex.replace_all(&content_html, replacement).to_string();
+        }
+    }
+    
+    // Convert relative links to absolute URLs
+    content_html = content_html.replace("href=\"/", "href=\"https://doc.rust-lang.org/");
+    content_html = content_html.replace("src=\"/", "src=\"https://doc.rust-lang.org/");
+    content_html = content_html.replace("href=\"ch", "href=\"https://doc.rust-lang.org/book/ch");
+    
+    // Remove empty paragraphs and extra whitespace
+    content_html = content_html.replace("<p></p>", "");
+    content_html = content_html.replace("<p> </p>", "");
+    
+    // Clean up excessive whitespace
+    let whitespace_regex = Regex::new(r"\s+").unwrap();
+    content_html = whitespace_regex.replace_all(&content_html, " ").to_string();
+    
+    Ok((content_html, title))
+}
+
 async fn get_book_chapter(
     AxumPath(chapter): AxumPath<String>,
-) -> Result<Json<BookResponse>, StatusCode> {
+) -> Result<Json<BookContentResponse>, StatusCode> {
     let book_url = format!("https://doc.rust-lang.org/book/ch{}.html", chapter);
-    Ok(Json(BookResponse {
-        url: book_url,
-        chapter,
-    }))
+    
+    match fetch_book_content(&book_url).await {
+        Ok((content, title)) => {
+            Ok(Json(BookContentResponse {
+                url: book_url,
+                chapter,
+                content: Some(content),
+                title: Some(title),
+                error: None,
+            }))
+        }
+        Err(e) => {
+            warn!("Failed to fetch book content for chapter {}: {}", chapter, e);
+            // Fallback to URL-only response
+            Ok(Json(BookContentResponse {
+                url: book_url,
+                chapter,
+                content: None,
+                title: None,
+                error: Some(format!("Failed to fetch content: {}", e)),
+            }))
+        }
+    }
+}
+
+async fn get_book_by_url(
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<BookContentResponse>, StatusCode> {
+    let url = params.get("url")
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    match fetch_book_content(url).await {
+        Ok((content, title)) => {
+            // Extract chapter identifier from URL for response
+            let chapter = url.split('/').last()
+                .and_then(|filename| filename.strip_suffix(".html"))
+                .unwrap_or("unknown")
+                .to_string();
+            
+            Ok(Json(BookContentResponse {
+                url: url.clone(),
+                chapter,
+                content: Some(content),
+                title: Some(title),
+                error: None,
+            }))
+        }
+        Err(e) => {
+            warn!("Failed to fetch book content from URL {}: {}", url, e);
+            // Fallback to URL-only response
+            let chapter = url.split('/').last()
+                .and_then(|filename| filename.strip_suffix(".html"))
+                .unwrap_or("unknown")
+                .to_string();
+                
+            Ok(Json(BookContentResponse {
+                url: url.clone(),
+                chapter,
+                content: None,
+                title: None,
+                error: Some(format!("Failed to fetch content: {}", e)),
+            }))
+        }
+    }
 }
 
 // Static file handlers
@@ -1050,50 +1348,7 @@ async fn serve_static_files(uri: axum::http::Uri) -> Result<Response, StatusCode
     Err(StatusCode::NOT_FOUND)
 }
 
-#[cfg(feature = "embed-assets")]
-async fn serve_monaco_files(
-    AxumPath(path): AxumPath<String>,
-) -> Result<Response, StatusCode> {
-    if let Some(content) = MonacoAssets::get(&path) {
-        let mime = mime_guess::from_path(&path).first_or_octet_stream();
-        Ok((
-            [(header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap())],
-            content.data,
-        ).into_response())
-    } else {
-        Err(StatusCode::NOT_FOUND)
-    }
-}
 
-#[cfg(not(feature = "embed-assets"))]
-async fn serve_monaco_files(
-    AxumPath(path): AxumPath<String>,
-) -> Result<Response, StatusCode> {
-    use tokio::fs;
-    use std::path::Path;
-    
-    // Security check: prevent directory traversal
-    if path.contains("..") {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    
-    let file_path = Path::new("web/node_modules/monaco-editor").join(&path);
-    
-    if file_path.exists() && file_path.is_file() {
-        match fs::read(&file_path).await {
-            Ok(content) => {
-                let mime = mime_guess::from_path(&file_path).first_or_octet_stream();
-                Ok((
-                    [(header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap())],
-                    content,
-                ).into_response())
-            }
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        Err(StatusCode::NOT_FOUND)
-    }
-}
 
 // Helper functions
 async fn scan_exercises(exercises_path: &std::path::Path) -> anyhow::Result<Vec<ExerciseWithPath>> {
@@ -1228,11 +1483,12 @@ async fn run_cargo_command(
     })
 }
 
-async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Result<u32> {
-    let mut count = 0;
+async fn discover_chapters(exercises_path: &std::path::Path) -> anyhow::Result<(HashMap<u32, ChapterInfo>, u32)> {
+    let mut chapters = HashMap::new();
+    let mut total_exercises = 0;
     
     if !exercises_path.exists() {
-        return Ok(50); // Fallback
+        return Ok((chapters, 0));
     }
     
     for chapter_entry in WalkDir::new(exercises_path).max_depth(1) {
@@ -1246,6 +1502,20 @@ async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Resu
             continue;
         }
         
+        // Extract chapter number
+        let chapter_number = chapter_name
+            .strip_prefix("ch")
+            .and_then(|s| s.split('_').next())
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or_else(|| {
+                warn!("Could not parse chapter number from: {}", chapter_name);
+                1
+            });
+        
+        // Count exercises in this chapter and get chapter title
+        let mut exercise_count = 0;
+        let mut chapter_title = format!("Chapter {}", chapter_number);
+        
         for exercise_entry in WalkDir::new(chapter_entry.path()).max_depth(1) {
             let exercise_entry = exercise_entry?;
             if !exercise_entry.file_type().is_dir() {
@@ -1254,12 +1524,47 @@ async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Resu
             
             let exercise_name = exercise_entry.file_name().to_string_lossy();
             if exercise_name.starts_with("ex") {
-                count += 1;
+                exercise_count += 1;
+                
+                // Try to get chapter title from first exercise metadata
+                if exercise_count == 1 {
+                    let metadata_path = exercise_entry.path().join("metadata.json");
+                    if let Ok(metadata_content) = fs::read_to_string(&metadata_path).await {
+                        if let Ok(_metadata) = serde_json::from_str::<ExerciseMetadata>(&metadata_content) {
+                            // Extract chapter title from chapter name, clean it up
+                            chapter_title = chapter_name
+                                .strip_prefix("ch")
+                                .and_then(|s| s.split_once('_'))
+                                .map(|(_, title)| title.replace('_', " ").to_title_case())
+                                .unwrap_or_else(|| format!("Chapter {}", chapter_number));
+                        }
+                    }
+                }
             }
+        }
+        
+        if exercise_count > 0 {
+            total_exercises += exercise_count;
+            
+            let chapter_info = ChapterInfo {
+                chapter_number,
+                title: chapter_title,
+                exercises_completed: 0,
+                total_exercises: exercise_count,
+                completion_percentage: 0.0,
+                time_spent_minutes: 0,
+            };
+            
+            chapters.insert(chapter_number, chapter_info);
         }
     }
     
-    Ok(if count > 0 { count } else { 50 })
+    Ok((chapters, total_exercises))
+}
+
+async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Result<u32> {
+    let (_, total) = discover_chapters(exercises_path).await?;
+    Ok(if total > 0 { total } else { 50 })
 }
 
 async fn ensure_progress_file(
@@ -1271,11 +1576,14 @@ async fn ensure_progress_file(
         fs::create_dir_all(parent).await?;
     }
     
-    let total_exercises = count_total_exercises(exercises_path).await?;
+    let (discovered_chapters, total_exercises) = discover_chapters(exercises_path).await?;
     
     if !progress_path.exists() {
         info!("Creating new progress file: {:?}", progress_path);
-        info!("Detected {} total exercises", total_exercises);
+        info!("Detected {} total exercises across {} chapters", total_exercises, discovered_chapters.len());
+        
+        // Convert discovered chapters to JSON Value
+        let chapters_json = serde_json::to_value(&discovered_chapters)?;
         
         let default_progress = ProgressData {
             user_id: "default".to_string(),
@@ -1287,7 +1595,7 @@ async fn ensure_progress_file(
             current_streak: 0,
             longest_streak: 0,
             total_time_minutes: 0,
-            chapters: serde_json::Value::Object(serde_json::Map::new()),
+            chapters: chapters_json,
             exercise_history: Vec::new(),
             achievements: Vec::new(),
             session_stats: SessionStats {
@@ -1319,12 +1627,27 @@ async fn ensure_progress_file(
         };
     }
     
-    // Update total exercises count if it's wrong or missing
-    if progress.total_exercises == 0 || progress.total_exercises == 200 {
+    // Update total exercises count and chapters if needed
+    let mut should_save = false;
+    
+    if progress.total_exercises == 0 || progress.total_exercises == 200 || progress.total_exercises != total_exercises {
         progress.total_exercises = total_exercises;
+        should_save = true;
+        info!("Updated total exercises count to {}", total_exercises);
+    }
+    
+    // Update chapters if empty or if we have new chapters discovered
+    if progress.chapters.as_object().map_or(true, |obj| obj.is_empty()) || discovered_chapters.len() > 0 {
+        let chapters_json = serde_json::to_value(&discovered_chapters)?;
+        progress.chapters = chapters_json;
+        should_save = true;
+        info!("Updated chapters structure with {} chapters", discovered_chapters.len());
+    }
+    
+    if should_save {
         let content = serde_json::to_string_pretty(&progress)?;
         fs::write(progress_path, content).await?;
-        info!("Updated total exercises count to {}", total_exercises);
+        info!("Progress file updated successfully");
     }
     
     Ok(progress)
@@ -1564,10 +1887,240 @@ async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
+            println!("\n\n🛑 Shutdown signal received");
+            println!("   Saving progress and closing connections...");
             info!("Shutting down gracefully...");
         },
         _ = terminate => {
+            println!("\n\n🛑 Shutdown signal received");
+            println!("   Saving progress and closing connections...");
             info!("Shutting down gracefully...");
         },
     }
+}
+
+#[cfg(feature = "download-exercises")]
+async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<PathBuf> {
+    use std::path::Path;
+    
+    // Check if exercises directory exists and has content
+    if exercises_path.exists() && has_exercises(&exercises_path).await? {
+        return Ok(exercises_path);
+    }
+
+    // Check if user has a config file with a custom exercises path
+    if let Ok(base_path) = get_config_exercises_path().await {
+        let exercises_subdir = base_path.join("exercises");
+        if exercises_subdir.exists() && has_exercises(&exercises_subdir).await? {
+            return Ok(exercises_subdir);
+        }
+    }
+
+    // No exercises found, prompt user to download
+    println!("\n🦀 Welcome to Rust Tour!");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+    println!("This appears to be your first time running Rust Tour!");
+    println!("We need to download the exercise files to get started.");
+    println!();
+    println!("📚 The exercises include:");
+    println!("   • 200+ hands-on coding challenges");
+    println!("   • Test-driven exercises aligned with The Rust Book");
+    println!("   • Progressive difficulty from beginner to advanced");
+    println!("   • Complete with hints and solutions");
+    println!();
+    println!("📦 Download size: ~5MB");
+    println!("⏱️  Estimated time: 10-30 seconds");
+    println!();
+
+    let should_download = Confirm::new()
+        .with_prompt("Download exercises from GitHub?")
+        .default(true)
+        .interact()?;
+
+    if !should_download {
+        println!("\n❌ Rust Tour requires exercises to run.");
+        println!("   You can:");
+        println!("   • Run this command again and choose to download");
+        println!("   • Clone the repository manually from https://github.com/rust-tour/rust-tour");
+        println!("   • Use --exercises-path to specify a custom location");
+        anyhow::bail!("Exiting without exercises.");
+    }
+
+    // Get download directory from user
+    println!("\n📍 Choose where to store your exercises and progress:");
+    println!("   This will create a 'rust-tour-exercises' folder at your chosen location.");
+    println!("   Your progress will be saved here between sessions.");
+    println!();
+    
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let default_path = home_dir.join("rust-tour-exercises");
+    
+    let download_path: String = Input::new()
+        .with_prompt("Location")
+        .default(default_path.to_string_lossy().to_string())
+        .validate_with(|input: &String| {
+            let path = PathBuf::from(input);
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    return Err(format!("Parent directory '{}' does not exist", parent.display()));
+                }
+            }
+            Ok(())
+        })
+        .interact_text()?;
+
+    let download_path = PathBuf::from(download_path);
+
+    // Confirm the full path
+    println!("\n📂 Full path: {}", download_path.display());
+    let confirm_path = Confirm::new()
+        .with_prompt("Is this correct?")
+        .default(true)
+        .interact()?;
+    
+    if !confirm_path {
+        anyhow::bail!("Download cancelled. Please run again with your preferred location.");
+    }
+
+    // Download exercises
+    println!("\n🌐 Connecting to GitHub...");
+    println!("📦 Downloading exercises from https://github.com/rust-tour/rust-tour...");
+    download_exercises(&download_path).await?;
+
+    // Save config for future use (save the base directory)
+    save_config_exercises_path(&download_path).await?;
+
+    println!("\n✅ Success! Rust Tour is ready to use.");
+    println!("\n📂 Your Rust Tour directory structure:");
+    println!("   {}/", download_path.display());
+    println!("   ├── exercises/     # All learning exercises");
+    println!("   └── progress/      # Your progress tracking");
+    println!("\n🎯 Starting Rust Tour server...");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+
+    // Return the exercises subdirectory path
+    Ok(download_path.join("exercises"))
+}
+
+#[cfg(feature = "download-exercises")]
+async fn has_exercises(path: &std::path::Path) -> anyhow::Result<bool> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    // Check if there's at least one chapter directory with exercises
+    let mut entries = tokio::fs::read_dir(path).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if entry.file_type().await?.is_dir() {
+            let name = entry.file_name();
+            if let Some(name_str) = name.to_str() {
+                if name_str.starts_with("ch") && name_str.contains("_") {
+                    // Found a chapter directory, check if it has exercises
+                    let chapter_path = entry.path();
+                    let mut chapter_entries = tokio::fs::read_dir(&chapter_path).await?;
+                    while let Some(ex_entry) = chapter_entries.next_entry().await? {
+                        if ex_entry.file_type().await?.is_dir() {
+                            let ex_name = ex_entry.file_name();
+                            if let Some(ex_name_str) = ex_name.to_str() {
+                                if ex_name_str.starts_with("ex") {
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+#[cfg(feature = "download-exercises")]
+async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()> {
+
+    // Create target directory
+    tokio::fs::create_dir_all(target_path).await?;
+
+    // Repository URL
+    let repo_url = "https://github.com/rust-tour/rust-tour.git";
+    
+    // Clone the repository to a temporary directory
+    let temp_dir = TempDir::new()?;
+    let _repo = Repository::clone(repo_url, temp_dir.path())?;
+    
+    println!("   ✓ Repository cloned");
+    println!("📂 Extracting exercise files...");
+    
+    // Copy exercises directory from temp to target/exercises
+    let source_exercises = temp_dir.path().join("exercises");
+    let target_exercises = target_path.join("exercises");
+    
+    if source_exercises.exists() {
+        copy_dir_recursive(source_exercises, target_exercises).await?;
+        println!("   ✓ Exercise files extracted");
+    } else {
+        anyhow::bail!("No exercises directory found in repository");
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
+async fn copy_dir_recursive(src: std::path::PathBuf, dst: std::path::PathBuf) -> anyhow::Result<()> {
+    tokio::fs::create_dir_all(&dst).await?;
+    
+    let mut entries = tokio::fs::read_dir(&src).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        
+        if entry.file_type().await?.is_dir() {
+            Box::pin(copy_dir_recursive(src_path, dst_path)).await?;
+        } else {
+            tokio::fs::copy(&src_path, &dst_path).await?;
+        }
+    }
+    
+    Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
+async fn get_config_exercises_path() -> anyhow::Result<PathBuf> {
+    let config_dir = dirs::config_dir()
+        .or_else(|| dirs::home_dir().map(|p| p.join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    
+    let config_file = config_dir.join("rust-tour").join("config.json");
+    
+    if config_file.exists() {
+        let content = tokio::fs::read_to_string(&config_file).await?;
+        let config: serde_json::Value = serde_json::from_str(&content)?;
+        
+        if let Some(path_str) = config.get("exercises_path").and_then(|v| v.as_str()) {
+            return Ok(PathBuf::from(path_str));
+        }
+    }
+    
+    anyhow::bail!("No config found")
+}
+
+#[cfg(feature = "download-exercises")]
+async fn save_config_exercises_path(exercises_path: &std::path::Path) -> anyhow::Result<()> {
+    let config_dir = dirs::config_dir()
+        .or_else(|| dirs::home_dir().map(|p| p.join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    
+    let config_dir = config_dir.join("rust-tour");
+    tokio::fs::create_dir_all(&config_dir).await?;
+    
+    let config_file = config_dir.join("config.json");
+    let config = serde_json::json!({
+        "exercises_path": exercises_path.to_string_lossy()
+    });
+    
+    tokio::fs::write(&config_file, serde_json::to_string_pretty(&config)?).await?;
+    Ok(())
 }
