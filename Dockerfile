@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Rust Tour
-FROM node:18-alpine AS web-builder
+FROM node:20-alpine AS web-builder
 
 # Install build dependencies for native modules like node-pty
 RUN apk add --no-cache \
@@ -20,7 +20,7 @@ COPY web/ ./
 RUN npm run build
 
 # Rust build stage
-FROM rust:1.75-alpine AS rust-builder
+FROM rust:1.83-alpine AS rust-builder
 
 # Install system dependencies for building
 RUN apk add --no-cache \
@@ -33,7 +33,8 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copy Cargo files first for better caching
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
+# Note: Skip Cargo.lock initially for dependency caching, will be regenerated
 COPY exercise-framework/Cargo.toml ./exercise-framework/
 COPY web-server/Cargo.toml ./web-server/
 
@@ -55,6 +56,9 @@ RUN mv Cargo.toml.original Cargo.toml
 # Copy actual source code
 COPY exercise-framework/ ./exercise-framework/
 COPY web-server/ ./web-server/
+
+# Copy Cargo.lock for final build
+COPY Cargo.lock ./
 
 # Copy exercises for final build
 COPY exercises/ ./exercises/
