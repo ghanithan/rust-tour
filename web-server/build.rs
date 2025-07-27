@@ -50,14 +50,7 @@ fn main() {
                 }
             }
             
-            // Copy Monaco editor assets
-            let monaco_src = web_dir.join("node_modules/monaco-editor");
-            if !local_monaco.exists() && monaco_src.exists() {
-                println!("cargo:warning=Copying Monaco editor assets...");
-                if let Err(e) = copy_dir_all(&monaco_src, local_monaco) {
-                    println!("cargo:warning=Failed to copy monaco: {}", e);
-                }
-            }
+            // Monaco editor will be loaded from CDN - no need to copy
         } else {
             // For packaged builds, assets should already be copied
             println!("cargo:warning=Using pre-copied assets for packaging");

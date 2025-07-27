@@ -53,10 +53,6 @@ use rust_embed::RustEmbed;
 #[folder = "web-dist/"]
 struct Assets;
 
-#[cfg(feature = "embed-assets")]
-#[derive(RustEmbed)]
-#[folder = "monaco-editor/"]
-struct MonacoAssets;
 
 // Application state
 #[derive(Clone)]
@@ -442,7 +438,6 @@ fn create_router(state: AppState) -> Router {
         .route("/api/book/fetch", get(get_book_by_url))
         
         // Static file routes
-        .route("/monaco/*path", get(serve_monaco_files))
         .fallback(serve_static_files)
         
         .layer(
@@ -1298,50 +1293,7 @@ async fn serve_static_files(uri: axum::http::Uri) -> Result<Response, StatusCode
     Err(StatusCode::NOT_FOUND)
 }
 
-#[cfg(feature = "embed-assets")]
-async fn serve_monaco_files(
-    AxumPath(path): AxumPath<String>,
-) -> Result<Response, StatusCode> {
-    if let Some(content) = MonacoAssets::get(&path) {
-        let mime = mime_guess::from_path(&path).first_or_octet_stream();
-        Ok((
-            [(header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap())],
-            content.data,
-        ).into_response())
-    } else {
-        Err(StatusCode::NOT_FOUND)
-    }
-}
 
-#[cfg(not(feature = "embed-assets"))]
-async fn serve_monaco_files(
-    AxumPath(path): AxumPath<String>,
-) -> Result<Response, StatusCode> {
-    use tokio::fs;
-    use std::path::Path;
-    
-    // Security check: prevent directory traversal
-    if path.contains("..") {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    
-    let file_path = Path::new("web/node_modules/monaco-editor").join(&path);
-    
-    if file_path.exists() && file_path.is_file() {
-        match fs::read(&file_path).await {
-            Ok(content) => {
-                let mime = mime_guess::from_path(&file_path).first_or_octet_stream();
-                Ok((
-                    [(header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap())],
-                    content,
-                ).into_response())
-            }
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        Err(StatusCode::NOT_FOUND)
-    }
-}
 
 // Helper functions
 async fn scan_exercises(exercises_path: &std::path::Path) -> anyhow::Result<Vec<ExerciseWithPath>> {
