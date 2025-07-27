@@ -1942,7 +1942,7 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
         println!("\n❌ Rust Tour requires exercises to run.");
         println!("   You can:");
         println!("   • Run this command again and choose to download");
-        println!("   • Clone the repository manually from https://github.com/rust-tour/rust-tour");
+        println!("   • Clone the repository manually from https://github.com/ghanithan/rust-tour");
         println!("   • Use --exercises-path to specify a custom location");
         anyhow::bail!("Exiting without exercises.");
     }
@@ -1985,7 +1985,7 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
 
     // Download exercises
     println!("\n🌐 Connecting to GitHub...");
-    println!("📦 Downloading exercises from https://github.com/rust-tour/rust-tour...");
+    println!("📦 Downloading exercises from https://github.com/ghanithan/rust-tour...");
     download_exercises(&download_path).await?;
 
     // Save config for future use (save the base directory)
@@ -2045,7 +2045,7 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     tokio::fs::create_dir_all(target_path).await?;
 
     // Repository URL
-    let repo_url = "https://github.com/rust-tour/rust-tour.git";
+    let repo_url = "https://github.com/ghanithan/rust-tour.git";
     
     // Clone the repository to a temporary directory
     let temp_dir = TempDir::new()?;
