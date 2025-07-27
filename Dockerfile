@@ -37,28 +37,38 @@ COPY Cargo.toml Cargo.lock ./
 COPY exercise-framework/Cargo.toml ./exercise-framework/
 COPY web-server/Cargo.toml ./web-server/
 
+# Create temporary workspace config without exercises for dependency caching
+RUN cp Cargo.toml Cargo.toml.original && \
+    sed 's/"exercises\/ch\*\/ex\[0-9\]\[0-9\]\*",//g' Cargo.toml > Cargo.toml.temp && \
+    mv Cargo.toml.temp Cargo.toml
+
 # Create dummy source files for dependency caching
 RUN mkdir -p exercise-framework/src web-server/src && \
     echo "fn main() {}" > exercise-framework/src/lib.rs && \
     echo "fn main() {}" > web-server/src/main.rs
 
-# Build dependencies
+# Build dependencies (without exercises)
 RUN cargo build --release --package rust-tour
+
+# Restore original workspace config
+RUN mv Cargo.toml.original Cargo.toml
 
 # Copy actual source code
 COPY exercise-framework/ ./exercise-framework/
 COPY web-server/ ./web-server/
 
+# Copy exercises for final build
+COPY exercises/ ./exercises/
+
 # Copy built web assets
 COPY --from=web-builder /app/web/dist ./web/dist
+
+# Copy scripts
+COPY scripts/ ./scripts/
 
 # Build the actual application
 RUN touch exercise-framework/src/lib.rs web-server/src/main.rs && \
     cargo build --release --package rust-tour
-
-# Copy exercises for runtime
-COPY exercises/ ./exercises/
-COPY scripts/ ./scripts/
 
 # Copy solutions if they exist (optional)
 RUN mkdir -p ./solutions/

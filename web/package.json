@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Web interface for Rust Tour",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "dev": "concurrently  \"npm run client\"",
     "server": "nodemon server.js",
