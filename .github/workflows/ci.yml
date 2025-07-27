@@ -40,3 +40,8 @@ jobs:
     
     - name: Verify Rust Book references
       run: ./scripts/check-book-references.sh
+    
+    - name: Test Docker build
+      run: |
+        echo "🐳 Testing Docker build (no push)..."
+        docker build -t rust-tour-test .

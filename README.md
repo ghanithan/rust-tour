@@ -353,10 +353,21 @@ docker build -t rust-tour-test .
 ### Docker Development Commands
 
 ```bash
-# Build Docker image
-docker build -t rust-tour .
+# Build Docker image with automated script
+./scripts/build-docker.sh
 
-# Run with development volume mounts
+# Test the built image
+./scripts/test-docker.sh
+
+# Manual build and run
+docker build -t rust-tour .
+docker run -d \
+  --name rust-tour \
+  -p 3000:3000 \
+  -v $(pwd)/progress:/app/progress \
+  rust-tour
+
+# Development with volume mounts
 docker run -d \
   --name rust-tour-dev \
   -p 3000:3000 \
@@ -364,16 +375,10 @@ docker run -d \
   -v $(pwd)/progress:/app/progress \
   rust-tour
 
-# View container logs
-docker logs -f rust-tour-dev
-
-# Execute commands inside container
-docker exec -it rust-tour-dev sh
-
-# Clean rebuild
-docker stop rust-tour-dev && docker rm rust-tour-dev
-docker build -t rust-tour .
-docker run -d --name rust-tour-dev -p 3000:3000 -v $(pwd)/progress:/app/progress rust-tour
+# View container logs and management
+docker logs -f rust-tour
+docker exec -it rust-tour sh
+docker stop rust-tour && docker rm rust-tour
 ```
 
 ### Creating New Exercises
