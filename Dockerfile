@@ -39,60 +39,7 @@ COPY web-server/Cargo.toml ./web-server/
 
 # Create temporary workspace config without exercises for dependency caching
 RUN cp Cargo.toml Cargo.toml.original && \
-    cat > Cargo.toml.temp << 'EOF'
-[workspace]
-members = [
-    "exercise-framework",
-    "web-server"
-]
-resolver = "2"
-
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-authors = ["Rust Tour Contributors"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/rust-tour/rust-tour"
-homepage = "https://github.com/rust-tour/rust-tour"
-
-[workspace.dependencies]
-# Common dependencies
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
-
-# Exercise framework dependencies  
-criterion = "0.5"
-tempfile = "3.8"
-walkdir = "2.4"
-
-# Web server dependencies
-axum = { version = "0.7", features = ["ws", "macros"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "fs", "trace", "compression-gzip", "limit"] }
-hyper = { version = "1.0", features = ["full"] }
-tokio-tungstenite = "0.20"
-futures-util = "0.3"
-portable-pty = "0.8"
-notify = "6.0"
-rust-embed = "8.0"
-mime_guess = "2.0"
-path-absolutize = "3.1"
-uuid = { version = "1.0", features = ["v4"] }
-chrono = { version = "0.4", features = ["serde"] }
-
-# Common dependencies
-thiserror = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
-EOF
-    mv Cargo.toml.temp Cargo.toml
+    printf '[workspace]\nmembers = [\n    "exercise-framework",\n    "web-server"\n]\nresolver = "2"\n\n[workspace.package]\nversion = "0.1.0"\nedition = "2021"\nauthors = ["Rust Tour Contributors"]\nlicense = "MIT OR Apache-2.0"\nrepository = "https://github.com/rust-tour/rust-tour"\nhomepage = "https://github.com/rust-tour/rust-tour"\n\n[workspace.dependencies]\nserde = { version = "1.0", features = ["derive"] }\nserde_json = "1.0"\ntokio = { version = "1.0", features = ["full"] }\nanyhow = "1.0"\ncriterion = "0.5"\ntempfile = "3.8"\nwalkdir = "2.4"\naxum = { version = "0.7", features = ["ws", "macros"] }\ntower = "0.4"\ntower-http = { version = "0.5", features = ["cors", "fs", "trace", "compression-gzip", "limit"] }\nhyper = { version = "1.0", features = ["full"] }\ntokio-tungstenite = "0.20"\nfutures-util = "0.3"\nportable-pty = "0.8"\nnotify = "6.0"\nrust-embed = "8.0"\nmime_guess = "2.0"\npath-absolutize = "3.1"\nuuid = { version = "1.0", features = ["v4"] }\nchrono = { version = "0.4", features = ["serde"] }\nthiserror = "1.0"\ntracing = "0.1"\ntracing-subscriber = "0.3"\n\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = "abort"\n' > Cargo.toml
 
 # Create dummy source files for dependency caching
 RUN mkdir -p exercise-framework/src web-server/src && \
