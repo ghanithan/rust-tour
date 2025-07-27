@@ -10,6 +10,11 @@ description = "Interactive web-based Rust tutorial with exercises, progress trac
 keywords = ["rust", "learning", "education", "tutorial", "programming"]
 categories = ["command-line-utilities", "development-tools", "web-programming"]
 readme = "../README.md"
+include = [
+    "src/**/*",
+    "build.rs",
+    "../web/dist/**/*"
+]
 
 [[bin]]
 name = "rust-tour"
