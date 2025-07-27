@@ -47,6 +47,27 @@ cargo fmt
 
 # Test Docker build
 docker build -t rust-tour-test .
+
+# Test CLI help system
+cargo run --package rust-tour -- --help
+
+# Test with custom options
+cargo run --package rust-tour -- --port 8080 --debug-websocket
+```
+
+### Publishing to crates.io
+```bash
+# Build with embedded assets and download features
+cargo build --release --package rust-tour --features "embed-assets,download-exercises"
+
+# Test the published binary workflow
+./target/release/rust-tour
+
+# Publish (dry run)
+cargo publish --package rust-tour --dry-run
+
+# Actual publish
+cargo publish --package rust-tour
 ```
 
 ### Docker Deployment

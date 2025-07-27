@@ -49,19 +49,93 @@ This comprehensive guide covers all installation methods for Rust Tour, troubles
 
 ### Method 2: Cargo Installation (Simplest Local Setup)
 
-**Advantages**: Single command installation, offline capability, lightweight
+**Advantages**: Single command installation, automatic updates, progress persistence, lightweight
+
+#### Installation
 
 ```bash
-# Install Rust Tour
+# Install Rust Tour from crates.io
 cargo install rust-tour
 
 # Start learning
 rust-tour
 ```
 
-The application will be available at `http://localhost:3000`
+#### First Run Experience
 
-**Note**: This provides a standalone binary with embedded content, perfect for offline learning.
+When you run `rust-tour` for the first time:
+
+1. **Welcome Screen**: You'll see a welcome message explaining the exercise system
+2. **Exercise Download**: Prompted to download exercises from GitHub (~5MB)
+3. **Location Selection**: Choose where to store exercises (default: `~/rust-tour-exercises`)
+4. **Automatic Setup**: Exercises download and extract automatically
+5. **Server Start**: Web interface opens at `http://localhost:3000`
+
+#### Directory Structure
+
+After setup, your chosen directory will contain:
+```
+~/rust-tour-exercises/
+├── exercises/          # All learning exercises
+│   ├── ch01_getting_started/
+│   ├── ch02_guessing_game/
+│   └── ...
+└── progress/          # Your progress tracking
+    └── user_progress.json
+```
+
+#### Daily Usage
+
+- **Starting**: Just run `rust-tour` - it remembers your exercise location
+- **Progress**: Automatically saved in your chosen directory
+- **Updates**: Use `cargo install --force rust-tour` to update
+- **Multiple Machines**: Copy your progress folder to sync between devices
+
+#### Command-Line Options
+
+```bash
+# Show all available options
+rust-tour --help
+
+# Use a custom port
+rust-tour --port 8080
+rust-tour -p 8080
+
+# Use exercises from a specific location (for development)
+rust-tour --exercises-path /path/to/exercises
+
+# Enable debug logging for WebSocket connections
+rust-tour --debug-websocket
+
+# Environment variables (alternative to CLI flags)
+PORT=8080 rust-tour
+DEBUG_WEBSOCKET=true rust-tour
+```
+
+#### Troubleshooting First Run
+
+**Issue: Download fails**
+- Check your internet connection
+- Ensure GitHub is accessible from your network
+- Try again - temporary network issues may resolve
+
+**Issue: Permission denied when creating directory**
+- Choose a directory where you have write permissions
+- Default location (`~/rust-tour-exercises`) should work for most users
+
+**Issue: Exercises already exist message**
+- If you've run Rust Tour before, it will use existing exercises
+- To re-download, delete the exercises directory and run again
+
+#### Offline Usage
+
+After initial setup:
+- Rust Tour works completely offline
+- All exercises are stored locally
+- Progress is saved locally
+- Only the initial download requires internet
+
+**Note**: This method provides the best experience for learners who want a simple installation with persistent progress tracking.
 
 ### Method 3: Docker Installation
 

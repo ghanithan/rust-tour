@@ -4,11 +4,12 @@ use axum::{
         Path as AxumPath, Query, State,
     },
     http::{header, HeaderValue, Method, StatusCode},
-    response::{Html, IntoResponse, Response},
+    response::{IntoResponse, Response},
     routing::{get, post, put},
     Json, Router,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
+use clap::Parser;
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
@@ -29,7 +30,6 @@ use std::{
 };
 use tokio::{
     fs,
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::Command,
     sync::{broadcast, RwLock, Mutex},
     time::timeout,
@@ -60,6 +60,32 @@ use tempfile::TempDir;
 #[folder = "web-dist/"]
 struct Assets;
 
+#[cfg(not(feature = "embed-assets"))]
+struct Assets;
+
+/// Rust Tour - An interactive Rust learning platform
+/// 
+/// Rust Tour provides a structured pathway to learn Rust through progressive,
+/// test-driven exercises aligned with "The Rust Programming Language" book.
+/// 
+/// When installed via cargo, exercises will be downloaded on first run to a
+/// directory of your choice. Your progress is tracked locally and persists
+/// between sessions.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Port to run the server on
+    #[arg(short, long, default_value = "3000", env = "PORT")]
+    port: u16,
+    
+    /// Enable debug logging for WebSocket connections
+    #[arg(long, env = "DEBUG_WEBSOCKET")]
+    debug_websocket: bool,
+    
+    /// Custom path to exercises directory (for development)
+    #[arg(long)]
+    exercises_path: Option<PathBuf>,
+}
 
 // Application state
 #[derive(Clone)]
@@ -354,6 +380,9 @@ impl<T> ApiResponse<T> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Parse CLI arguments
+    let cli = Cli::parse();
+    
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -362,18 +391,12 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let port = env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
-        .parse::<u16>()
-        .unwrap_or(3000);
-
-    let debug_websocket = env::var("DEBUG_WEBSOCKET")
-        .map(|v| v == "true")
-        .unwrap_or(false);
+    let port = cli.port;
+    let debug_websocket = cli.debug_websocket;
 
     // Set up paths
     let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let exercises_path = current_dir.join("exercises");
+    let exercises_path = cli.exercises_path.unwrap_or_else(|| current_dir.join("exercises"));
 
     // Check if exercises exist, download if needed (only for published binaries)
     #[cfg(feature = "download-exercises")]
@@ -401,7 +424,7 @@ async fn main() -> anyhow::Result<()> {
         broadcast_tx: broadcast_tx.clone(),
         debug_websocket,
         exercises_path: exercises_path.clone(),
-        progress_path,
+        progress_path: progress_path.clone(),
     };
 
     // Initialize progress system
@@ -411,14 +434,25 @@ async fn main() -> anyhow::Result<()> {
     setup_file_watcher(state.clone()).await?;
 
     // Build the application router
-    let app = create_router(state);
+    let app = create_router(state.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    info!("🌐 Rust Tour server running on http://localhost:{}", port);
-    info!("📡 WebSocket available at ws://localhost:{}/ws", port);
-    info!("🦀 Ready to serve Rust tutorial exercises!");
+    println!("\n🚀 Rust Tour is running!");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+    println!("  🌐 Web interface:    http://localhost:{}", port);
+    println!("  📡 WebSocket:        ws://localhost:{}/ws", port);
+    println!("  🩺 Health check:     http://localhost:{}/health", port);
+    println!();
+    println!("  📚 Exercises path:   {}", exercises_path.display());
+    println!("  💾 Progress path:    {}", progress_path.display());
+    println!();
+    println!("  Press Ctrl+C to stop the server");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    info!("Server started on port {}", port);
 
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
@@ -499,7 +533,7 @@ async fn websocket_connection(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
     
     // Spawn task to handle broadcast messages
-    let broadcast_state = state.clone();
+    let _broadcast_state = state.clone();
     let broadcast_task = tokio::spawn(async move {
         while let Ok(msg) = broadcast_rx.recv().await {
             if let Ok(json) = serde_json::to_string(&msg) {
@@ -822,7 +856,7 @@ async fn resize_terminal(
         
         // Move resizing to blocking task since PTY operations are not async
         tokio::task::spawn_blocking(move || {
-            if let Ok(mut master) = master.try_lock() {
+            if let Ok(master) = master.try_lock() {
                 let new_size = PtySize {
                     rows,
                     cols,
@@ -1496,7 +1530,7 @@ async fn discover_chapters(exercises_path: &std::path::Path) -> anyhow::Result<(
                 if exercise_count == 1 {
                     let metadata_path = exercise_entry.path().join("metadata.json");
                     if let Ok(metadata_content) = fs::read_to_string(&metadata_path).await {
-                        if let Ok(metadata) = serde_json::from_str::<ExerciseMetadata>(&metadata_content) {
+                        if let Ok(_metadata) = serde_json::from_str::<ExerciseMetadata>(&metadata_content) {
                             // Extract chapter title from chapter name, clean it up
                             chapter_title = chapter_name
                                 .strip_prefix("ch")
@@ -1853,9 +1887,13 @@ async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
+            println!("\n\n🛑 Shutdown signal received");
+            println!("   Saving progress and closing connections...");
             info!("Shutting down gracefully...");
         },
         _ = terminate => {
+            println!("\n\n🛑 Shutdown signal received");
+            println!("   Saving progress and closing connections...");
             info!("Shutting down gracefully...");
         },
     }
@@ -1879,8 +1917,20 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
     }
 
     // No exercises found, prompt user to download
-    println!("🦀 Welcome to Rust Tour!");
-    println!("No exercises found. Let's download them from GitHub.");
+    println!("\n🦀 Welcome to Rust Tour!");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+    println!("This appears to be your first time running Rust Tour!");
+    println!("We need to download the exercise files to get started.");
+    println!();
+    println!("📚 The exercises include:");
+    println!("   • 200+ hands-on coding challenges");
+    println!("   • Test-driven exercises aligned with The Rust Book");
+    println!("   • Progressive difficulty from beginner to advanced");
+    println!("   • Complete with hints and solutions");
+    println!();
+    println!("📦 Download size: ~5MB");
+    println!("⏱️  Estimated time: 10-30 seconds");
     println!();
 
     let should_download = Confirm::new()
@@ -1889,31 +1939,65 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
         .interact()?;
 
     if !should_download {
-        anyhow::bail!("Cannot run Rust Tour without exercises. Please download them manually or restart the application.");
+        println!("\n❌ Rust Tour requires exercises to run.");
+        println!("   You can:");
+        println!("   • Run this command again and choose to download");
+        println!("   • Clone the repository manually from https://github.com/rust-tour/rust-tour");
+        println!("   • Use --exercises-path to specify a custom location");
+        anyhow::bail!("Exiting without exercises.");
     }
 
     // Get download directory from user
+    println!("\n📍 Choose where to store your exercises and progress:");
+    println!("   This will create a 'rust-tour-exercises' folder at your chosen location.");
+    println!("   Your progress will be saved here between sessions.");
+    println!();
+    
     let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     let default_path = home_dir.join("rust-tour-exercises");
     
     let download_path: String = Input::new()
-        .with_prompt("Download exercises to")
+        .with_prompt("Location")
         .default(default_path.to_string_lossy().to_string())
+        .validate(|input: &String| {
+            let path = PathBuf::from(input);
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    return Err(format!("Parent directory '{}' does not exist", parent.display()));
+                }
+            }
+            Ok(())
+        })
         .interact_text()?;
 
     let download_path = PathBuf::from(download_path);
 
+    // Confirm the full path
+    println!("\n📂 Full path: {}", download_path.display());
+    let confirm_path = Confirm::new()
+        .with_prompt("Is this correct?")
+        .default(true)
+        .interact()?;
+    
+    if !confirm_path {
+        anyhow::bail!("Download cancelled. Please run again with your preferred location.");
+    }
+
     // Download exercises
-    println!("📦 Downloading exercises...");
+    println!("\n🌐 Connecting to GitHub...");
+    println!("📦 Downloading exercises from https://github.com/rust-tour/rust-tour...");
     download_exercises(&download_path).await?;
 
     // Save config for future use (save the base directory)
     save_config_exercises_path(&download_path).await?;
 
-    println!("✅ Exercises downloaded successfully!");
-    println!("📂 Location: {}", download_path.display());
-    println!("📂 Exercises: {}", download_path.join("exercises").display());
-    println!("📂 Progress: {}", download_path.join("progress").display());
+    println!("\n✅ Success! Rust Tour is ready to use.");
+    println!("\n📂 Your Rust Tour directory structure:");
+    println!("   {}/", download_path.display());
+    println!("   ├── exercises/     # All learning exercises");
+    println!("   └── progress/      # Your progress tracking");
+    println!("\n🎯 Starting Rust Tour server...");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     // Return the exercises subdirectory path
@@ -1960,16 +2044,15 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     // Create target directory
     tokio::fs::create_dir_all(target_path).await?;
 
-    // Repository URL - you'll need to update this to your actual repo
+    // Repository URL
     let repo_url = "https://github.com/rust-tour/rust-tour.git";
-    
-    println!("🌐 Cloning repository...");
     
     // Clone the repository to a temporary directory
     let temp_dir = TempDir::new()?;
-    let repo = Repository::clone(repo_url, temp_dir.path())?;
+    let _repo = Repository::clone(repo_url, temp_dir.path())?;
     
-    println!("📂 Extracting exercises...");
+    println!("   ✓ Repository cloned");
+    println!("📂 Extracting exercise files...");
     
     // Copy exercises directory from temp to target/exercises
     let source_exercises = temp_dir.path().join("exercises");
@@ -1977,6 +2060,7 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     
     if source_exercises.exists() {
         copy_dir_recursive(source_exercises, target_exercises).await?;
+        println!("   ✓ Exercise files extracted");
     } else {
         anyhow::bail!("No exercises directory found in repository");
     }

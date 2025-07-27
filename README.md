@@ -165,7 +165,7 @@ docker-compose -f docker-compose.dev.yml up
 # - Both Rust server (3000) and Vite dev server (5173)
 ```
 
-### Cargo Installation
+### Cargo Installation (Recommended for End Users)
 
 ```bash
 # Install Rust Tour
@@ -175,7 +175,30 @@ cargo install rust-tour
 rust-tour
 ```
 
-This will launch the Rust Tour application locally, serving the web interface at `http://localhost:3000`. The cargo installation provides a standalone binary that includes both the web server and exercise content, allowing you to learn Rust offline without needing to clone the repository.
+**First-time setup:**
+- On first run, Rust Tour will guide you through downloading the exercises
+- You'll choose where to store your exercises and progress (default: `~/rust-tour-exercises`)
+- Download size is approximately 5MB and takes 10-30 seconds
+- Your progress is automatically saved between sessions
+
+**What happens on first run:**
+1. Welcome screen with information about the exercises
+2. Prompt to download exercises from GitHub
+3. Choose your preferred storage location
+4. Automatic download and setup
+5. Server starts with the web interface at `http://localhost:3000`
+
+**Subsequent runs:**
+- Rust Tour remembers your exercise location
+- Starts immediately without any prompts
+- All your progress is preserved
+
+**Command-line options:**
+```bash
+rust-tour --help                    # Show help and available options
+rust-tour --port 8080              # Use a custom port
+rust-tour --exercises-path /path   # Use exercises from a specific location
+```
 
 ### Local Repository Installation (End Users)
 

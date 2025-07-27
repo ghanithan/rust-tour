@@ -12,7 +12,7 @@ fn main() {
         let web_dir = Path::new("../web");
         let dist_dir = web_dir.join("dist");
         let local_dist = Path::new("web-dist");
-        let local_monaco = Path::new("monaco-editor");
+        let _local_monaco = Path::new("monaco-editor");
         
         // Check if web directory exists (for local builds)
         if web_dir.exists() {
