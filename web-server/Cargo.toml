@@ -23,6 +23,7 @@ path = "src/main.rs"
 [features]
 default = []
 embed-assets = ["rust-embed"]
+download-exercises = ["git2", "dialoguer", "tempfile", "zip", "dirs"]
 
 [dependencies]
 # Web framework and middleware
@@ -78,3 +79,14 @@ reqwest = { version = "0.11", features = ["json"] }
 # HTML parsing for book content extraction
 scraper = "0.15"
 regex = "1.0"
+
+# Git support for downloading exercises (only for published binaries)
+git2 = { version = "0.19", optional = true }
+
+# User interaction (only for published binaries)
+dialoguer = { version = "0.11", optional = true }
+
+# File operations (only for published binaries)
+tempfile = { version = "3.8", optional = true }
+zip = { version = "0.6", optional = true }
+dirs = { version = "5.0", optional = true }

@@ -48,6 +48,13 @@ use walkdir::WalkDir;
 #[cfg(feature = "embed-assets")]
 use rust_embed::RustEmbed;
 
+#[cfg(feature = "download-exercises")]
+use dialoguer::{Confirm, Input};
+#[cfg(feature = "download-exercises")]
+use git2::Repository;
+#[cfg(feature = "download-exercises")]
+use tempfile::TempDir;
+
 #[cfg(feature = "embed-assets")]
 #[derive(RustEmbed)]
 #[folder = "web-dist/"]
@@ -368,6 +375,15 @@ async fn main() -> anyhow::Result<()> {
     let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let exercises_path = current_dir.join("exercises");
     let progress_path = current_dir.join("progress").join("user_progress.json");
+
+    // Check if exercises exist, download if needed (only for published binaries)
+    #[cfg(feature = "download-exercises")]
+    let exercises_path = {
+        ensure_exercises_available(exercises_path).await?
+    };
+    
+    #[cfg(not(feature = "download-exercises"))]
+    let exercises_path = exercises_path;
 
     // Create broadcast channel for WebSocket messages
     let (broadcast_tx, _) = broadcast::channel(100);
@@ -1838,4 +1854,178 @@ async fn shutdown_signal() {
             info!("Shutting down gracefully...");
         },
     }
+}
+
+#[cfg(feature = "download-exercises")]
+async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<PathBuf> {
+    use std::path::Path;
+    
+    // Check if exercises directory exists and has content
+    if exercises_path.exists() && has_exercises(&exercises_path).await? {
+        return Ok(exercises_path);
+    }
+
+    // Check if user has a config file with a custom exercises path
+    if let Ok(config_path) = get_config_exercises_path().await {
+        if config_path.exists() && has_exercises(&config_path).await? {
+            return Ok(config_path);
+        }
+    }
+
+    // No exercises found, prompt user to download
+    println!("🦀 Welcome to Rust Tour!");
+    println!("No exercises found. Let's download them from GitHub.");
+    println!();
+
+    let should_download = Confirm::new()
+        .with_prompt("Download exercises from GitHub?")
+        .default(true)
+        .interact()?;
+
+    if !should_download {
+        anyhow::bail!("Cannot run Rust Tour without exercises. Please download them manually or restart the application.");
+    }
+
+    // Get download directory from user
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let default_path = home_dir.join("rust-tour-exercises");
+    
+    let download_path: String = Input::new()
+        .with_prompt("Download exercises to")
+        .default(default_path.to_string_lossy().to_string())
+        .interact_text()?;
+
+    let download_path = PathBuf::from(download_path);
+
+    // Download exercises
+    println!("📦 Downloading exercises...");
+    download_exercises(&download_path).await?;
+
+    // Save config for future use
+    save_config_exercises_path(&download_path).await?;
+
+    println!("✅ Exercises downloaded successfully!");
+    println!("📂 Location: {}", download_path.display());
+    println!();
+
+    Ok(download_path)
+}
+
+#[cfg(feature = "download-exercises")]
+async fn has_exercises(path: &std::path::Path) -> anyhow::Result<bool> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    // Check if there's at least one chapter directory with exercises
+    let mut entries = tokio::fs::read_dir(path).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if entry.file_type().await?.is_dir() {
+            let name = entry.file_name();
+            if let Some(name_str) = name.to_str() {
+                if name_str.starts_with("ch") && name_str.contains("_") {
+                    // Found a chapter directory, check if it has exercises
+                    let chapter_path = entry.path();
+                    let mut chapter_entries = tokio::fs::read_dir(&chapter_path).await?;
+                    while let Some(ex_entry) = chapter_entries.next_entry().await? {
+                        if ex_entry.file_type().await?.is_dir() {
+                            let ex_name = ex_entry.file_name();
+                            if let Some(ex_name_str) = ex_name.to_str() {
+                                if ex_name_str.starts_with("ex") {
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+#[cfg(feature = "download-exercises")]
+async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()> {
+
+    // Create target directory
+    tokio::fs::create_dir_all(target_path).await?;
+
+    // Repository URL - you'll need to update this to your actual repo
+    let repo_url = "https://github.com/rust-tour/rust-tour.git";
+    
+    println!("🌐 Cloning repository...");
+    
+    // Clone the repository to a temporary directory
+    let temp_dir = TempDir::new()?;
+    let repo = Repository::clone(repo_url, temp_dir.path())?;
+    
+    println!("📂 Extracting exercises...");
+    
+    // Copy exercises directory from temp to target
+    let source_exercises = temp_dir.path().join("exercises");
+    if source_exercises.exists() {
+        copy_dir_recursive(source_exercises, target_path.to_path_buf()).await?;
+    } else {
+        anyhow::bail!("No exercises directory found in repository");
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
+async fn copy_dir_recursive(src: std::path::PathBuf, dst: std::path::PathBuf) -> anyhow::Result<()> {
+    tokio::fs::create_dir_all(&dst).await?;
+    
+    let mut entries = tokio::fs::read_dir(&src).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        
+        if entry.file_type().await?.is_dir() {
+            Box::pin(copy_dir_recursive(src_path, dst_path)).await?;
+        } else {
+            tokio::fs::copy(&src_path, &dst_path).await?;
+        }
+    }
+    
+    Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
+async fn get_config_exercises_path() -> anyhow::Result<PathBuf> {
+    let config_dir = dirs::config_dir()
+        .or_else(|| dirs::home_dir().map(|p| p.join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    
+    let config_file = config_dir.join("rust-tour").join("config.json");
+    
+    if config_file.exists() {
+        let content = tokio::fs::read_to_string(&config_file).await?;
+        let config: serde_json::Value = serde_json::from_str(&content)?;
+        
+        if let Some(path_str) = config.get("exercises_path").and_then(|v| v.as_str()) {
+            return Ok(PathBuf::from(path_str));
+        }
+    }
+    
+    anyhow::bail!("No config found")
+}
+
+#[cfg(feature = "download-exercises")]
+async fn save_config_exercises_path(exercises_path: &std::path::Path) -> anyhow::Result<()> {
+    let config_dir = dirs::config_dir()
+        .or_else(|| dirs::home_dir().map(|p| p.join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    
+    let config_dir = config_dir.join("rust-tour");
+    tokio::fs::create_dir_all(&config_dir).await?;
+    
+    let config_file = config_dir.join("config.json");
+    let config = serde_json::json!({
+        "exercises_path": exercises_path.to_string_lossy()
+    });
+    
+    tokio::fs::write(&config_file, serde_json::to_string_pretty(&config)?).await?;
+    Ok(())
 }

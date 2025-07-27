@@ -63,7 +63,7 @@ case "$1" in
         echo "🌐 Building frontend..."
         cd web && npm run build && cd ..
         echo "🦀 Building Rust server with embedded assets..."
-        cargo build --release --package rust-tour --features embed-assets
+        cargo build --release --package rust-tour --features "embed-assets,download-exercises"
         echo "✅ Build complete! Binary at: target/release/rust-tour"
         ;;
     *)
