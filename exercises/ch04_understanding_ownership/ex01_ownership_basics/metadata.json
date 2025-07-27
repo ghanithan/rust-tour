@@ -1,0 +1,39 @@
+{
+  "id": "ch04-ex01-ownership-basics",
+  "title": "Ownership Basics - The Foundation",
+  "description": "Learn the fundamental rules of Rust's ownership system by fixing common move and ownership errors",
+  "chapter": 4,
+  "exercise_number": 1,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": ["ownership", "move_semantics", "stack_heap", "ownership_rules"],
+  "prerequisites": ["ch03-ex01-variables"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "4.1",
+    "supporting_chapters": ["4.0"],
+    "specific_sections": [
+      {
+        "chapter": "4.1",
+        "title": "What is Ownership?",
+        "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

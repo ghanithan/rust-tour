@@ -1,0 +1,7 @@
+[package]
+name = "match_expressions"
+version = "0.1.0"
+edition = "2021"
+
+# This exercise demonstrates pattern matching without external dependencies
+[dependencies]

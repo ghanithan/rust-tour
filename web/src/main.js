@@ -138,7 +138,7 @@ class RustTour {
       
       // Update UI
       this.ui.updateExercise(exercise);
-      this.ui.updateBookPanel(exercise.metadata.rust_book_refs);
+      await this.ui.updateBookPanel(exercise.metadata.rust_book_refs);
       
       // Update progress
       await this.progressTracker.trackExerciseViewed(exercise.metadata.id);

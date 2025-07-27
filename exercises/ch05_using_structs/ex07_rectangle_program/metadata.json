@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex07-rectangle-program",
+  "title": "Rectangle Program - Practical Struct Example",
+  "description": "Build a complete program using structs following the Rust Book's rectangle example with area calculation and debug output",
+  "chapter": 5,
+  "exercise_number": 7,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 30,
+  "concepts": ["practical_structs", "debug_trait", "area_calculation", "program_structure"],
+  "prerequisites": ["ch05-ex06-ownership-structs"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "5.2",
+    "supporting_chapters": ["5.1", "5.3"],
+    "specific_sections": [
+      {
+        "chapter": "5.2",
+        "title": "An Example Program Using Structs",
+        "url": "https://doc.rust-lang.org/book/ch05-02-example-structs.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

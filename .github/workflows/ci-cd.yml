@@ -1,0 +1,372 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Stage 1: Code Quality and Testing
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust-version: [stable, beta]
+        include:
+          - rust-version: stable
+            can-fail: false
+          - rust-version: beta
+            can-fail: true
+    continue-on-error: ${{ matrix.can-fail }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust-version }}
+        components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.rust-version }}
+
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+
+    - name: Install web dependencies
+      run: |
+        cd web
+        npm ci
+
+    - name: Lint Rust code
+      run: |
+        cargo fmt --all -- --check
+        cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Lint web code
+      run: |
+        cd web
+        npm run lint
+
+    - name: Run Rust tests
+      run: |
+        cargo test --workspace --verbose
+
+    - name: Run web tests
+      run: |
+        cd web
+        npm test
+
+    - name: Build web frontend
+      run: |
+        cd web
+        npm run build
+
+    - name: Test exercise framework
+      run: |
+        # Test a sample of exercises to ensure they work
+        cd exercises/ch01_getting_started/ex01_hello_world
+        cargo test
+        cd ../../..
+        
+        # Run exercise validation script if it exists
+        if [ -f "./scripts/run.sh" ]; then
+          ./scripts/run.sh test
+        fi
+
+  # Stage 2: Security Audit
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run Cargo audit
+      run: |
+        cargo install cargo-audit
+        cargo audit
+
+    - name: Run npm audit
+      run: |
+        cd web
+        npm audit --audit-level=moderate
+
+  # Stage 3: Build for Publishing
+  build:
+    name: Build Release Artifacts
+    runs-on: ${{ matrix.os }}
+    needs: [test, security]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.target }}
+
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+
+    - name: Build web frontend
+      run: |
+        cd web
+        npm ci
+        npm run build
+
+    - name: Build Rust binary
+      run: |
+        cargo build --release --target ${{ matrix.target }} --package rust-tour --features embed-assets
+
+    - name: Create release archive
+      shell: bash
+      run: |
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          BINARY_NAME="rust-tour.exe"
+          ARCHIVE_NAME="rust-tour-${{ matrix.target }}.zip"
+          7z a $ARCHIVE_NAME target/${{ matrix.target }}/release/$BINARY_NAME
+        else
+          BINARY_NAME="rust-tour"
+          ARCHIVE_NAME="rust-tour-${{ matrix.target }}.tar.gz"
+          tar -czf $ARCHIVE_NAME -C target/${{ matrix.target }}/release $BINARY_NAME
+        fi
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-tour-${{ matrix.target }}
+        path: rust-tour-${{ matrix.target }}.*
+
+  # Stage 4: Docker Build and Publish
+  docker:
+    name: Build and Publish Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Stage 5: Publish to Cargo (for tags only)
+  publish-cargo:
+    name: Publish to Cargo
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install Node.js and build web assets
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+
+    - name: Build web frontend
+      run: |
+        cd web
+        npm ci
+        npm run build
+
+    - name: Publish to crates.io
+      run: |
+        cargo publish --package rust-tour --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # Stage 6: Create GitHub Release (for tags only)
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        files: artifacts/**/*
+        generate_release_notes: true
+        body: |
+          ## Installation Options
+
+          ### Docker (Recommended)
+          ```bash
+          docker run -d -p 3000:3000 -v $(pwd)/progress:/app/progress ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          ```
+
+          ### Cargo
+          ```bash
+          cargo install rust-tour
+          ```
+
+          ### Binary Downloads
+          Download the appropriate binary for your platform from the assets below.
+
+          ## What's Changed
+          See the full changelog below for details.
+
+  # Stage 7: Deploy to Staging (main branch only)
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+    
+    steps:
+    - name: Deploy to staging environment
+      run: |
+        echo "Deploying to staging environment..."
+        echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
+        # Add your deployment script here
+        # For example, update a deployment in your staging cluster
+
+  # Stage 8: Performance and Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    
+    services:
+      rust-tour:
+        image: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        ports:
+          - 3000:3000
+        options: --health-cmd="curl -f http://localhost:3000/health || exit 1" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Wait for service to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+    - name: Run integration tests
+      run: |
+        # Test basic endpoints
+        curl -f http://localhost:3000/health
+        curl -f http://localhost:3000/
+        
+        # Test exercise loading
+        curl -f http://localhost:3000/api/exercises
+        
+        # Add more comprehensive integration tests here
+        echo "Integration tests passed!"
+
+    - name: Run performance tests
+      run: |
+        # Basic performance test with curl
+        echo "Running basic performance test..."
+        time curl -f http://localhost:3000/
+        
+        # Add more sophisticated performance tests here
+        echo "Performance tests completed!"

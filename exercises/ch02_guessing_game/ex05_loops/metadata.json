@@ -1,0 +1,52 @@
+{
+  "id": "ch02-ex05-loops",
+  "title": "Infinite Loops and Breaking",
+  "description": "Learn how to create infinite loops with the loop keyword and how to break out of them conditionally. This exercise introduces loop control flow essential for game programming.",
+  "chapter": 2,
+  "exercise_number": 5,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 25,
+  "concepts": [
+    "loop-keyword",
+    "infinite-loops",
+    "break-statement",
+    "continue-statement",
+    "loop-control-flow",
+    "conditional-breaking"
+  ],
+  "prerequisites": ["ch02-ex04-match-expressions"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["3.5"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Allowing Multiple Guesses with Looping",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#allowing-multiple-guesses-with-looping",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "3.5",
+        "title": "Control Flow - Repetition with Loops",
+        "url": "https://doc.rust-lang.org/book/ch03-05-control-flow.html#repetition-with-loops",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 20,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["uses_loop_with_break"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_loop_control"]
+  }
+}

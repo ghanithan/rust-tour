@@ -1,0 +1,207 @@
+name: Release Build
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Release Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Extract version from tag (remove 'v' prefix)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+          echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
+          echo "patch=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Latest tag for releases (overwrites previous latest)
+            type=raw,value=latest
+            # Full semver version
+            type=semver,pattern=v{{version}}
+            # Major.minor version  
+            type=semver,pattern={{major}}.{{minor}}
+            # Major version
+            type=semver,pattern={{major}}
+            # SHA for traceability
+            type=sha,prefix={{branch}}-
+          labels: |
+            org.opencontainers.image.title=Rust Tour
+            org.opencontainers.image.description=Interactive Rust learning platform
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.vendor=Rust Tour
+            org.opencontainers.image.licenses=MIT OR Apache-2.0
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Test release image
+        run: |
+          echo "🧪 Testing release image..."
+          
+          # Test the specific version
+          docker run --rm -d \
+            --name rust-tour-release-test \
+            -p 3002:3000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}
+          
+          # Wait for startup
+          sleep 30
+          
+          # Test health endpoint
+          curl -f http://localhost:3002/health || exit 1
+          echo "✅ Health check passed"
+          
+          # Test main page
+          curl -f http://localhost:3002/ || exit 1
+          echo "✅ Main page accessible"
+          
+          # Cleanup
+          docker stop rust-tour-release-test
+          
+          echo "🎉 Release image v${{ steps.version.outputs.version }} tested successfully!"
+
+  update-documentation:
+    name: Update Release Documentation
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update docker-compose.ghcr.yml with latest version
+        run: |
+          sed -i 's|ghcr.io/ghanithan/rust-tour:.*|ghcr.io/ghanithan/rust-tour:v${{ steps.version.outputs.version }}|' docker-compose.ghcr.yml
+          
+          # Also update latest reference in comments
+          sed -i 's|# - latest.*|# - latest (v${{ steps.version.outputs.version }})|' docker-compose.ghcr.yml
+
+      - name: Commit documentation updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet; then
+            echo "No documentation changes needed"
+          else
+            git add docker-compose.ghcr.yml
+            git commit -m "docs: update GHCR references to v${{ steps.version.outputs.version }}"
+            git push origin main
+          fi
+
+  release-summary:
+    name: Release Summary
+    needs: [build-and-publish, update-documentation]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release summary
+        run: |
+          echo "## 🚀 Release v${{ steps.version.outputs.version }} Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.build-and-publish.result }}" == "success" ]; then
+            echo "### ✅ Docker Images Published Successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Available tags:**" >> $GITHUB_STEP_SUMMARY
+            echo "- \`ghcr.io/ghanithan/rust-tour:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`ghcr.io/ghanithan/rust-tour:v${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`ghcr.io/ghanithan/rust-tour:$(echo ${{ steps.version.outputs.version }} | cut -d. -f1-2)\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`ghcr.io/ghanithan/rust-tour:$(echo ${{ steps.version.outputs.version }} | cut -d. -f1)\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Supported platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Docker Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Check the build logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Quick Start" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Using Docker Compose" >> $GITHUB_STEP_SUMMARY
+          echo "docker-compose -f docker-compose.ghcr.yml up -d" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or direct Docker run" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --name rust-tour \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -p 3000:3000 \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -v \$(pwd)/progress:/app/progress \\" >> $GITHUB_STEP_SUMMARY
+          echo "  ghcr.io/ghanithan/rust-tour:v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Notes:** [View on GitHub](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Hub:** [View on GHCR](https://github.com/${{ github.repository }}/pkgs/container/rust-tour)" >> $GITHUB_STEP_SUMMARY

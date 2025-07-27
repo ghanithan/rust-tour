@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex05-tuple-structs",
+  "title": "Tuple Structs and Unit-Like Structs",
+  "description": "Learn tuple structs for type safety, unit-like structs for traits, and when to use each struct variant",
+  "chapter": 5,
+  "exercise_number": 5,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 20,
+  "concepts": ["tuple_structs", "unit_structs", "newtype_pattern", "type_safety", "struct_variants"],
+  "prerequisites": ["ch05-ex04-associated-functions"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "5.1",
+    "supporting_chapters": ["5.0"],
+    "specific_sections": [
+      {
+        "chapter": "5.1",
+        "title": "Using Tuple Structs without Named Fields to Create Different Types",
+        "url": "https://doc.rust-lang.org/book/ch05-01-defining-structs.html#using-tuple-structs-without-named-fields-to-create-different-types",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

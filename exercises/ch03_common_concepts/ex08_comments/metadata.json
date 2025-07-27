@@ -1,0 +1,51 @@
+{
+  "id": "ch03-ex08-comments",
+  "title": "Comments in Rust",
+  "description": "Master different types of comments in Rust: line comments, block comments, and documentation comments. Learn best practices for writing clear, helpful comments.",
+  "chapter": 3,
+  "exercise_number": 8,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": [
+    "line-comments",
+    "block-comments",
+    "documentation-comments",
+    "comment-best-practices",
+    "code-documentation"
+  ],
+  "prerequisites": ["ch03-ex07-functions"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.4",
+    "supporting_chapters": ["14.2"],
+    "specific_sections": [
+      {
+        "chapter": "3.4",
+        "title": "Comments",
+        "url": "https://doc.rust-lang.org/book/ch03-04-comments.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "14.2",
+        "title": "Publishing a Crate to Crates.io",
+        "url": "https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["has_proper_comments", "demonstrates_comment_types"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["good_comment_practices"]
+  }
+}

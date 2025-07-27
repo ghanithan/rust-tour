@@ -1,0 +1,46 @@
+{
+  "id": "ch02-ex07-complete-game",
+  "title": "Complete Guessing Game",
+  "description": "Build a complete, robust guessing game that combines all concepts learned: user input, random numbers, parsing, match expressions, loops, and error handling.",
+  "chapter": 2,
+  "exercise_number": 7,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 40,
+  "concepts": [
+    "complete-application",
+    "integration",
+    "all-chapter-concepts",
+    "game-development",
+    "user-experience",
+    "robust-programming"
+  ],
+  "prerequisites": ["ch02-ex06-error-handling"],
+  "exercise_type": "from_scratch",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": [],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Complete Tutorial",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 25,
+    "memory_limit_mb": 50,
+    "allow_std_only": false,
+    "custom_checks": ["complete_game_functionality"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["all_concepts_integrated"]
+  }
+}

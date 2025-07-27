@@ -1,0 +1,39 @@
+{
+  "id": "ch04-ex03-references-borrowing",
+  "title": "References and Borrowing - Read Without Taking",
+  "description": "Learn to use references to access data without taking ownership, solving the limitations of move semantics",
+  "chapter": 4,
+  "exercise_number": 3,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 18,
+  "concepts": ["references", "borrowing", "immutable_references", "borrow_checker"],
+  "prerequisites": ["ch04-ex02-move-semantics"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "4.2",
+    "supporting_chapters": ["4.1"],
+    "specific_sections": [
+      {
+        "chapter": "4.2",
+        "title": "References and Borrowing",
+        "url": "https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "ch03-ex04-data-types",
+  "title": "Data Types - Integers and Floats",
+  "description": "Master Rust's numeric data types: integer sizes, signed vs unsigned, floating point precision, type conversions, and overflow handling.",
+  "chapter": 3,
+  "exercise_number": 4,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 25,
+  "concepts": [
+    "integer-types",
+    "floating-point-types",
+    "type-conversion",
+    "overflow-handling",
+    "string-parsing"
+  ],
+  "prerequisites": ["ch03-ex01-variables", "ch03-ex02-mutability", "ch03-ex03-shadowing"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "3.2",
+    "supporting_chapters": ["Appendix B"],
+    "specific_sections": [
+      {
+        "chapter": "3.2",
+        "title": "Data Types",
+        "url": "https://doc.rust-lang.org/book/ch03-02-data-types.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "Appendix B",
+        "title": "Operators and Symbols",
+        "url": "https://doc.rust-lang.org/book/appendix-02-operators.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["handles_large_integers", "proper_type_conversions"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["no_integer_overflow", "appropriate_numeric_types"]
+  }
+}

@@ -1,0 +1,6 @@
+[package]
+name = "ex01_ownership_basics"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

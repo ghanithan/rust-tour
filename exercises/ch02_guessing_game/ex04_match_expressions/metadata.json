@@ -1,0 +1,52 @@
+{
+  "id": "ch02-ex04-match-expressions",
+  "title": "Match Expressions and Pattern Matching",
+  "description": "Learn pattern matching with match expressions to handle different comparison results. This exercise introduces one of Rust's most powerful control flow constructs.",
+  "chapter": 2,
+  "exercise_number": 4,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 30,
+  "concepts": [
+    "match-expressions",
+    "pattern-matching",
+    "ordering",
+    "control-flow",
+    "exhaustive-matching",
+    "arms"
+  ],
+  "prerequisites": ["ch02-ex03-string-parsing"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["6.2"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game - Comparing the Guess to the Secret Number",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#comparing-the-guess-to-the-secret-number",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "6.2",
+        "title": "The match Control Flow Construct",
+        "url": "https://doc.rust-lang.org/book/ch06-02-match.html",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["uses_match_expressions"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["exhaustive_pattern_matching"]
+  }
+}

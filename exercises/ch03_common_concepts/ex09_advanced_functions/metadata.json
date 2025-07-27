@@ -1,0 +1,58 @@
+{
+  "id": "ch03-ex09-advanced-functions",
+  "title": "Advanced Function Concepts",
+  "description": "Master advanced function concepts: statements vs expressions, early returns, parameter ownership, Option returns, and function composition in Rust.",
+  "chapter": 3,
+  "exercise_number": 9,
+  "difficulty": "intermediate",
+  "estimated_time_minutes": 30,
+  "concepts": [
+    "statements-vs-expressions",
+    "early-returns",
+    "mutable-references",
+    "option-returns",
+    "recursion",
+    "function-composition"
+  ],
+  "prerequisites": ["ch03-ex08-comments"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.3",
+    "supporting_chapters": ["4.2", "6.1"],
+    "specific_sections": [
+      {
+        "chapter": "3.3",
+        "title": "Functions",
+        "url": "https://doc.rust-lang.org/book/ch03-03-how-functions-work.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "3.5",
+        "title": "Control Flow - Expressions",
+        "url": "https://doc.rust-lang.org/book/ch03-05-control-flow.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "4.2",
+        "title": "References and Borrowing",
+        "url": "https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["demonstrates_expressions", "uses_early_returns", "implements_recursion"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_function_design", "appropriate_return_types"]
+  }
+}

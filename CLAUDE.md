@@ -44,6 +44,34 @@ cargo clippy -- -D warnings
 
 # Format code
 cargo fmt
+
+# Test Docker build
+docker build -t rust-tour-test .
+```
+
+### Docker Deployment
+```bash
+# Build production Docker image
+docker build -t rust-tour .
+
+# Run with port forwarding and progress persistence
+docker run -d \
+  --name rust-tour \
+  -p 3000:3000 \
+  -v $(pwd)/progress:/app/progress \
+  rust-tour
+
+# Development with exercise volume mount
+docker run -d \
+  --name rust-tour-dev \
+  -p 3000:3000 \
+  -v $(pwd)/exercises:/app/exercises:ro \
+  -v $(pwd)/progress:/app/progress \
+  rust-tour
+
+# View logs and manage container
+docker logs -f rust-tour
+docker stop rust-tour && docker rm rust-tour
 ```
 
 ### Progress Tracking

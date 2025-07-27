@@ -1,0 +1,241 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.1.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validation Suite
+    runs-on: ubuntu-latest
+    outputs:
+      validation_passed: ${{ steps.validation.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format. Use semantic versioning (e.g., 0.1.0)"
+            exit 1
+          fi
+          echo "✅ Version format valid: ${{ inputs.version }}"
+
+      - name: Check if tag already exists
+        run: |
+          if git tag | grep -q "^v${{ inputs.version }}$"; then
+            echo "❌ Tag v${{ inputs.version }} already exists"
+            exit 1
+          fi
+          echo "✅ Tag v${{ inputs.version }} is available"
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Node.js dependencies
+        run: cd web && npm ci
+
+      - name: Run full test suite
+        run: |
+          echo "🧪 Running Rust tests..."
+          cargo test --workspace
+          
+          echo "🎨 Checking Rust formatting..."
+          cargo fmt --all -- --check
+          
+          echo "📎 Running Clippy..."
+          cargo clippy --all-targets --all-features -- -D warnings
+          
+          echo "🌐 Building web frontend..."
+          cd web && npm run build && cd ..
+          
+          echo "📝 Validating exercises..."
+          ./scripts/run.sh test
+
+      - name: Test Docker build
+        run: |
+          echo "🐳 Testing Docker build..."
+          docker build -t rust-tour-test .
+          
+          echo "🚀 Testing Docker run..."
+          docker run --rm -d --name rust-tour-test -p 3001:3000 rust-tour-test
+          sleep 30
+          
+          # Test health endpoint
+          curl -f http://localhost:3001/health || exit 1
+          echo "✅ Docker build and health check passed"
+          
+          docker stop rust-tour-test
+
+      - name: Set validation status
+        id: validation
+        run: echo "passed=true" >> $GITHUB_OUTPUT
+
+  create-release:
+    name: Create Release
+    needs: validate
+    runs-on: ubuntu-latest
+    if: needs.validate.outputs.validation_passed == 'true'
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "📝 First release - generating initial release notes"
+            COMMIT_RANGE="HEAD"
+          else
+            echo "📝 Generating release notes since $LATEST_TAG"
+            COMMIT_RANGE="$LATEST_TAG..HEAD"
+          fi
+          
+          # Generate changelog
+          echo "# Release v${{ inputs.version }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "## What's Changed" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          # Get commits and categorize them
+          git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --no-merges | while read line; do
+            if [[ $line =~ ^-.*[Ff]eat ]]; then
+              echo "### ✨ New Features" >> features.md
+              echo "$line" >> features.md
+            elif [[ $line =~ ^-.*[Ff]ix ]]; then
+              echo "### 🐛 Bug Fixes" >> fixes.md  
+              echo "$line" >> fixes.md
+            elif [[ $line =~ ^-.*[Dd]ocs ]]; then
+              echo "### 📚 Documentation" >> docs.md
+              echo "$line" >> docs.md
+            else
+              echo "### 🔧 Other Changes" >> other.md
+              echo "$line" >> other.md
+            fi
+          done
+          
+          # Combine all sections
+          for file in features.md fixes.md docs.md other.md; do
+            if [ -f "$file" ]; then
+              cat "$file" >> release_notes.md
+              echo "" >> release_notes.md
+              rm "$file"
+            fi
+          done
+          
+          # Add Docker installation instructions
+          echo "## 🐳 Docker Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo '```bash' >> release_notes.md
+          echo "# Using Docker Compose (Recommended)" >> release_notes.md
+          echo "docker-compose -f docker-compose.ghcr.yml up -d" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Or direct Docker run" >> release_notes.md
+          echo "docker run -d \\" >> release_notes.md
+          echo "  --name rust-tour \\" >> release_notes.md
+          echo "  -p 3000:3000 \\" >> release_notes.md
+          echo "  -v \$(pwd)/progress:/app/progress \\" >> release_notes.md
+          echo "  ghcr.io/ghanithan/rust-tour:v${{ inputs.version }}" >> release_notes.md
+          echo '```' >> release_notes.md
+          echo "" >> release_notes.md
+          echo "🚀 **Full Changelog**: [v${{ inputs.version }}](https://github.com/${{ github.repository }}/compare/$LATEST_TAG...v${{ inputs.version }})" >> release_notes.md
+          
+          # Set output for GitHub release
+          echo 'RELEASE_NOTES<<EOF' >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          echo "🏷️ Creating tag v${{ inputs.version }}"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ inputs.version }}
+          release_name: Release v${{ inputs.version }}
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+
+      - name: Release Summary
+        run: |
+          echo "## 🎉 Release v${{ inputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Completed Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Full validation suite passed" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Docker build tested" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Git tag v${{ inputs.version }} created" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] GitHub release published" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Docker images will be built automatically" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Images will be available at:" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`ghcr.io/ghanithan/rust-tour:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`ghcr.io/ghanithan/rust-tour:v${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📖 Release Notes:" >> $GITHUB_STEP_SUMMARY
+          echo "[View full release notes](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY

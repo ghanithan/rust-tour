@@ -4,7 +4,7 @@
   "description": "Web interface for Rust Tour",
   "main": "server.js",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently  \"npm run client\"",
     "server": "nodemon server.js",
     "client": "vite",
     "build": "vite build",

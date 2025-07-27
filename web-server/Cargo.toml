@@ -66,3 +66,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Directory walking
 walkdir = "2.4"
+
+# HTTP client for fetching book content
+reqwest = { version = "0.11", features = ["json"] }
+
+# HTML parsing for book content extraction
+scraper = "0.15"
+regex = "1.0"

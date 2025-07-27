@@ -35,7 +35,6 @@ pub struct ChapterProgress {
     pub first_started: Option<chrono::DateTime<chrono::Utc>>,
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     pub concept_mastery: HashMap<String, ConceptMastery>,
-    pub is_unlocked: bool,
 }
 
 /// Mastery level for individual concepts
@@ -267,7 +266,6 @@ impl ProgressTracker {
                 first_started: Some(now),
                 completed_at: None,
                 concept_mastery: HashMap::new(),
-                is_unlocked: true,
             });
 
         chapter_progress.exercises_completed += 1;
@@ -399,15 +397,20 @@ impl ProgressTracker {
         Ok(vec![format!("ch{:02}-ex01", next_chapter)])
     }
 
-    /// Check if exercise is unlocked for user
-    pub fn is_exercise_unlocked(&self, exercise_id: &str) -> bool {
-        // TODO: Implement based on prerequisites and current progress
-        // For now, allow first 3 chapters
-        let chapter = exercise_id
-            .strip_prefix("ch")
-            .and_then(|s| s[..2].parse::<u32>().ok())
-            .unwrap_or(1);
+    /// Get exercise recommendations based on current progress and prerequisites
+    pub fn get_exercise_recommendations(&self, limit: usize) -> Result<Vec<String>> {
+        // Simple recommendation algorithm: suggest exercises from current or next chapter
+        let next_chapter = self.current_progress.chapters_completed + 1;
+        let mut recommendations = Vec::new();
         
-        chapter <= 3 || chapter <= self.current_progress.chapters_completed + 2
+        // Suggest from current chapter first, then next
+        for chapter in [next_chapter, next_chapter + 1] {
+            recommendations.push(format!("ch{:02}-ex01", chapter));
+            if recommendations.len() >= limit {
+                break;
+            }
+        }
+        
+        Ok(recommendations)
     }
 }

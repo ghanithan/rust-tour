@@ -12,6 +12,9 @@ use chrono::{DateTime, Utc};
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use regex::Regex;
+use reqwest;
+use scraper::{Html as ScraperHtml, Selector};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -161,17 +164,29 @@ struct ExerciseDetails {
 #[derive(Debug, Serialize, Deserialize)]
 struct ProgressData {
     user_id: String,
+    #[serde(default = "default_created_at")]
     created_at: String,
+    #[serde(default)]
     overall_progress: f64,
+    #[serde(default)]
     chapters_completed: u32,
+    #[serde(default)]
     exercises_completed: u32,
+    #[serde(default = "default_total_exercises")]
     total_exercises: u32,
+    #[serde(default)]
     current_streak: u32,
+    #[serde(default)]
     longest_streak: u32,
+    #[serde(default)]
     total_time_minutes: u32,
+    #[serde(default = "default_chapters")]
     chapters: serde_json::Value,
+    #[serde(default)]
     exercise_history: Vec<ExerciseHistoryEntry>,
+    #[serde(default)]
     achievements: Vec<serde_json::Value>,
+    #[serde(default)]
     session_stats: SessionStats,
 }
 
@@ -193,10 +208,68 @@ struct ExerciseHistoryEntry {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionStats {
+    #[serde(default)]
     exercises_viewed: u32,
+    #[serde(default)]
     exercises_completed: u32,
+    #[serde(default)]
     hints_used: u32,
+    #[serde(default)]
     time_spent: u32,
+}
+
+// Default functions for serde
+fn default_created_at() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
+
+fn default_total_exercises() -> u32 {
+    3 // Default based on current exercises
+}
+
+fn default_chapters() -> serde_json::Value {
+    serde_json::Value::Object(serde_json::Map::new())
+}
+
+impl Default for SessionStats {
+    fn default() -> Self {
+        Self {
+            exercises_viewed: 0,
+            exercises_completed: 0,
+            hints_used: 0,
+            time_spent: 0,
+        }
+    }
+}
+
+// Helper trait for string case conversion
+trait ToTitleCase {
+    fn to_title_case(&self) -> String;
+}
+
+impl ToTitleCase for str {
+    fn to_title_case(&self) -> String {
+        self.split_whitespace()
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct ChapterInfo {
+    chapter_number: u32,
+    title: String,
+    exercises_completed: u32,
+    total_exercises: u32,
+    completion_percentage: f64,
+    time_spent_minutes: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -222,9 +295,12 @@ struct ViewRequest {
 }
 
 #[derive(Debug, Serialize)]
-struct BookResponse {
+struct BookContentResponse {
     url: String,
     chapter: String,
+    content: Option<String>,
+    title: Option<String>,
+    error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -351,6 +427,7 @@ fn create_router(state: AppState) -> Router {
         .route("/api/progress/hint", post(track_hint_usage))
         .route("/api/progress/view", post(track_exercise_view))
         .route("/api/book/:chapter", get(get_book_chapter))
+        .route("/api/book/fetch", get(get_book_by_url))
         
         // Static file routes
         .route("/monaco/*path", get(serve_monaco_files))
@@ -822,9 +899,12 @@ async fn get_exercise(
     AxumPath((chapter, exercise)): AxumPath<(String, String)>,
     State(state): State<AppState>,
 ) -> Result<Json<ExerciseDetails>, StatusCode> {
-    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    // The client sends chapter="ch01_getting_started" and exercise="ex01_hello_world"
+    // We need to join them correctly to match the directory structure
+    let exercise_dir_path = state.exercises_path.join(&chapter).join(&exercise);
+    let exercise_id = format!("{}/{}", chapter, exercise);
     
-    match load_exercise_details(&exercise_path, &format!("{}/{}", chapter, exercise)).await {
+    match load_exercise_details(&exercise_dir_path, &exercise_id).await {
         Ok(details) => Ok(Json(details)),
         Err(e) => {
             error!("Error loading exercise {}/{}: {}", chapter, exercise, e);
@@ -965,14 +1045,170 @@ async fn track_exercise_view(
     }
 }
 
+async fn fetch_book_content(url: &str) -> anyhow::Result<(String, String)> {
+    // Fetch the HTML content
+    let client = reqwest::Client::new();
+    let response = client
+        .get(url)
+        .header("User-Agent", "Rust-Tour/1.0")
+        .send()
+        .await?;
+    
+    let html_content = response.text().await?;
+    let document = ScraperHtml::parse_document(&html_content);
+    
+    // Debug: Log some HTML structure to understand the page layout
+    debug!("HTML title: {:?}", document.select(&Selector::parse("title").unwrap()).next().map(|el| el.text().collect::<String>()));
+    debug!("Found body: {}", document.select(&Selector::parse("body").unwrap()).next().is_some());
+    
+    // Extract the main content - try multiple selectors for mdBook structure
+    let selectors = [
+        "main",
+        ".content", 
+        "#content",
+        ".page-content",
+        ".book-content", 
+        ".chapter",
+        "#page-wrapper",
+        ".page",
+        "section",
+        "article",
+        "[role='main']",
+        ".light"  // mdBook often uses this class for content
+    ];
+    
+    let mut content_element = None;
+    for selector_str in &selectors {
+        if let Ok(selector) = Selector::parse(selector_str) {
+            if let Some(element) = document.select(&selector).next() {
+                content_element = Some(element);
+                break;
+            }
+        }
+    }
+    
+    let content_element = content_element.unwrap_or_else(|| {
+        // Fallback: use body if no specific content container found
+        warn!("No specific content container found, using body as fallback");
+        document.select(&Selector::parse("body").unwrap()).next()
+            .expect("Every HTML document should have a body")
+    });
+    
+    // Extract title
+    let title_selector = Selector::parse("h1").unwrap();
+    let title = content_element
+        .select(&title_selector)
+        .next()
+        .map(|el| el.text().collect::<String>())
+        .unwrap_or_else(|| "Rust Book Chapter".to_string());
+    
+    // Get the HTML content and clean it up
+    let mut content_html = content_element.html();
+    
+    // Clean up common navigation and UI elements
+    let cleanups = [
+        (r"<nav[^>]*>.*?</nav>", ""),
+        (r"<header[^>]*>.*?</header>", ""),
+        (r"<footer[^>]*>.*?</footer>", ""),
+        (r"<aside[^>]*>.*?</aside>", ""),
+        (r#"<div[^>]*class="[^"]*nav[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<div[^>]*class="[^"]*sidebar[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<div[^>]*class="[^"]*menu[^"]*"[^>]*>.*?</div>"#, ""),
+        (r#"<button[^>]*>.*?</button>"#, ""),  // Remove navigation buttons
+        (r#"<script[^>]*>.*?</script>"#, ""),  // Remove scripts
+        (r#"<style[^>]*>.*?</style>"#, ""),    // Remove inline styles
+    ];
+    
+    for (pattern, replacement) in cleanups {
+        if let Ok(regex) = Regex::new(pattern) {
+            content_html = regex.replace_all(&content_html, replacement).to_string();
+        }
+    }
+    
+    // Convert relative links to absolute URLs
+    content_html = content_html.replace("href=\"/", "href=\"https://doc.rust-lang.org/");
+    content_html = content_html.replace("src=\"/", "src=\"https://doc.rust-lang.org/");
+    content_html = content_html.replace("href=\"ch", "href=\"https://doc.rust-lang.org/book/ch");
+    
+    // Remove empty paragraphs and extra whitespace
+    content_html = content_html.replace("<p></p>", "");
+    content_html = content_html.replace("<p> </p>", "");
+    
+    // Clean up excessive whitespace
+    let whitespace_regex = Regex::new(r"\s+").unwrap();
+    content_html = whitespace_regex.replace_all(&content_html, " ").to_string();
+    
+    Ok((content_html, title))
+}
+
 async fn get_book_chapter(
     AxumPath(chapter): AxumPath<String>,
-) -> Result<Json<BookResponse>, StatusCode> {
+) -> Result<Json<BookContentResponse>, StatusCode> {
     let book_url = format!("https://doc.rust-lang.org/book/ch{}.html", chapter);
-    Ok(Json(BookResponse {
-        url: book_url,
-        chapter,
-    }))
+    
+    match fetch_book_content(&book_url).await {
+        Ok((content, title)) => {
+            Ok(Json(BookContentResponse {
+                url: book_url,
+                chapter,
+                content: Some(content),
+                title: Some(title),
+                error: None,
+            }))
+        }
+        Err(e) => {
+            warn!("Failed to fetch book content for chapter {}: {}", chapter, e);
+            // Fallback to URL-only response
+            Ok(Json(BookContentResponse {
+                url: book_url,
+                chapter,
+                content: None,
+                title: None,
+                error: Some(format!("Failed to fetch content: {}", e)),
+            }))
+        }
+    }
+}
+
+async fn get_book_by_url(
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<BookContentResponse>, StatusCode> {
+    let url = params.get("url")
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    match fetch_book_content(url).await {
+        Ok((content, title)) => {
+            // Extract chapter identifier from URL for response
+            let chapter = url.split('/').last()
+                .and_then(|filename| filename.strip_suffix(".html"))
+                .unwrap_or("unknown")
+                .to_string();
+            
+            Ok(Json(BookContentResponse {
+                url: url.clone(),
+                chapter,
+                content: Some(content),
+                title: Some(title),
+                error: None,
+            }))
+        }
+        Err(e) => {
+            warn!("Failed to fetch book content from URL {}: {}", url, e);
+            // Fallback to URL-only response
+            let chapter = url.split('/').last()
+                .and_then(|filename| filename.strip_suffix(".html"))
+                .unwrap_or("unknown")
+                .to_string();
+                
+            Ok(Json(BookContentResponse {
+                url: url.clone(),
+                chapter,
+                content: None,
+                title: None,
+                error: Some(format!("Failed to fetch content: {}", e)),
+            }))
+        }
+    }
 }
 
 // Static file handlers
@@ -1228,11 +1464,12 @@ async fn run_cargo_command(
     })
 }
 
-async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Result<u32> {
-    let mut count = 0;
+async fn discover_chapters(exercises_path: &std::path::Path) -> anyhow::Result<(HashMap<u32, ChapterInfo>, u32)> {
+    let mut chapters = HashMap::new();
+    let mut total_exercises = 0;
     
     if !exercises_path.exists() {
-        return Ok(50); // Fallback
+        return Ok((chapters, 0));
     }
     
     for chapter_entry in WalkDir::new(exercises_path).max_depth(1) {
@@ -1246,6 +1483,20 @@ async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Resu
             continue;
         }
         
+        // Extract chapter number
+        let chapter_number = chapter_name
+            .strip_prefix("ch")
+            .and_then(|s| s.split('_').next())
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or_else(|| {
+                warn!("Could not parse chapter number from: {}", chapter_name);
+                1
+            });
+        
+        // Count exercises in this chapter and get chapter title
+        let mut exercise_count = 0;
+        let mut chapter_title = format!("Chapter {}", chapter_number);
+        
         for exercise_entry in WalkDir::new(chapter_entry.path()).max_depth(1) {
             let exercise_entry = exercise_entry?;
             if !exercise_entry.file_type().is_dir() {
@@ -1254,12 +1505,47 @@ async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Resu
             
             let exercise_name = exercise_entry.file_name().to_string_lossy();
             if exercise_name.starts_with("ex") {
-                count += 1;
+                exercise_count += 1;
+                
+                // Try to get chapter title from first exercise metadata
+                if exercise_count == 1 {
+                    let metadata_path = exercise_entry.path().join("metadata.json");
+                    if let Ok(metadata_content) = fs::read_to_string(&metadata_path).await {
+                        if let Ok(metadata) = serde_json::from_str::<ExerciseMetadata>(&metadata_content) {
+                            // Extract chapter title from chapter name, clean it up
+                            chapter_title = chapter_name
+                                .strip_prefix("ch")
+                                .and_then(|s| s.split_once('_'))
+                                .map(|(_, title)| title.replace('_', " ").to_title_case())
+                                .unwrap_or_else(|| format!("Chapter {}", chapter_number));
+                        }
+                    }
+                }
             }
+        }
+        
+        if exercise_count > 0 {
+            total_exercises += exercise_count;
+            
+            let chapter_info = ChapterInfo {
+                chapter_number,
+                title: chapter_title,
+                exercises_completed: 0,
+                total_exercises: exercise_count,
+                completion_percentage: 0.0,
+                time_spent_minutes: 0,
+            };
+            
+            chapters.insert(chapter_number, chapter_info);
         }
     }
     
-    Ok(if count > 0 { count } else { 50 })
+    Ok((chapters, total_exercises))
+}
+
+async fn count_total_exercises(exercises_path: &std::path::Path) -> anyhow::Result<u32> {
+    let (_, total) = discover_chapters(exercises_path).await?;
+    Ok(if total > 0 { total } else { 50 })
 }
 
 async fn ensure_progress_file(
@@ -1271,11 +1557,14 @@ async fn ensure_progress_file(
         fs::create_dir_all(parent).await?;
     }
     
-    let total_exercises = count_total_exercises(exercises_path).await?;
+    let (discovered_chapters, total_exercises) = discover_chapters(exercises_path).await?;
     
     if !progress_path.exists() {
         info!("Creating new progress file: {:?}", progress_path);
-        info!("Detected {} total exercises", total_exercises);
+        info!("Detected {} total exercises across {} chapters", total_exercises, discovered_chapters.len());
+        
+        // Convert discovered chapters to JSON Value
+        let chapters_json = serde_json::to_value(&discovered_chapters)?;
         
         let default_progress = ProgressData {
             user_id: "default".to_string(),
@@ -1287,7 +1576,7 @@ async fn ensure_progress_file(
             current_streak: 0,
             longest_streak: 0,
             total_time_minutes: 0,
-            chapters: serde_json::Value::Object(serde_json::Map::new()),
+            chapters: chapters_json,
             exercise_history: Vec::new(),
             achievements: Vec::new(),
             session_stats: SessionStats {
@@ -1319,12 +1608,27 @@ async fn ensure_progress_file(
         };
     }
     
-    // Update total exercises count if it's wrong or missing
-    if progress.total_exercises == 0 || progress.total_exercises == 200 {
+    // Update total exercises count and chapters if needed
+    let mut should_save = false;
+    
+    if progress.total_exercises == 0 || progress.total_exercises == 200 || progress.total_exercises != total_exercises {
         progress.total_exercises = total_exercises;
+        should_save = true;
+        info!("Updated total exercises count to {}", total_exercises);
+    }
+    
+    // Update chapters if empty or if we have new chapters discovered
+    if progress.chapters.as_object().map_or(true, |obj| obj.is_empty()) || discovered_chapters.len() > 0 {
+        let chapters_json = serde_json::to_value(&discovered_chapters)?;
+        progress.chapters = chapters_json;
+        should_save = true;
+        info!("Updated chapters structure with {} chapters", discovered_chapters.len());
+    }
+    
+    if should_save {
         let content = serde_json::to_string_pretty(&progress)?;
         fs::write(progress_path, content).await?;
-        info!("Updated total exercises count to {}", total_exercises);
+        info!("Progress file updated successfully");
     }
     
     Ok(progress)

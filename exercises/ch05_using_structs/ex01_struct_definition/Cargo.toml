@@ -1,0 +1,6 @@
+[package]
+name = "ex01_struct_definition"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

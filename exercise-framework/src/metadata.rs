@@ -163,8 +163,21 @@ impl ExerciseMetadata {
             .collect()
     }
 
-    /// Check if this exercise is unlocked given completed exercises
-    pub fn is_unlocked(&self, completed_exercises: &[String]) -> bool {
+    /// Get missing prerequisites for guidance (not enforcement)
+    pub fn get_missing_prerequisites(&self, completed_exercises: &[String]) -> Vec<String> {
+        if !self.has_prerequisites() {
+            return Vec::new();
+        }
+
+        self.prerequisites
+            .iter()
+            .filter(|prereq| !completed_exercises.contains(prereq))
+            .cloned()
+            .collect()
+    }
+
+    /// Check if exercise has all prerequisites completed (for recommendation scoring)
+    pub fn prerequisites_completed(&self, completed_exercises: &[String]) -> bool {
         if !self.has_prerequisites() {
             return true;
         }

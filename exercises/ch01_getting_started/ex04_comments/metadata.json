@@ -1,0 +1,51 @@
+{
+  "id": "ch01-ex04-comments",
+  "title": "Documentation and Code Comments",
+  "description": "Learn about Rust's commenting styles, documentation comments, and best practices for writing clear, maintainable code with proper documentation.",
+  "chapter": 1,
+  "exercise_number": 4,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 20,
+  "concepts": [
+    "comments",
+    "documentation",
+    "doc-comments", 
+    "code-clarity",
+    "best-practices"
+  ],
+  "prerequisites": ["ch01-ex01-hello-world", "ch01-ex02-hello-cargo", "ch01-ex03-compilation"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "3.4",
+    "supporting_chapters": ["14.2"],
+    "specific_sections": [
+      {
+        "chapter": "3.4",
+        "title": "Comments",
+        "url": "https://doc.rust-lang.org/book/ch03-04-comments.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "14.2",
+        "title": "Publishing a Crate to Crates.io",
+        "url": "https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["has_documentation", "demonstrates_comment_types"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["proper_documentation", "meaningful_comments"]
+  }
+}

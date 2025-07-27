@@ -1,0 +1,39 @@
+{
+  "id": "ch05-ex02-struct-update-syntax",
+  "title": "Struct Update Syntax - Efficient Struct Creation",
+  "description": "Master struct update syntax, field init shorthand, and creating structs from other structs",
+  "chapter": 5,
+  "exercise_number": 2,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 20,
+  "concepts": ["struct_update_syntax", "field_init_shorthand", "struct_from_struct", "ownership_with_updates"],
+  "prerequisites": ["ch05-ex01-struct-definition"],
+  "exercise_type": "bug_fixing",
+  "rust_book_refs": {
+    "primary_chapter": "5.1",
+    "supporting_chapters": ["4.1"],
+    "specific_sections": [
+      {
+        "chapter": "5.1",
+        "title": "Creating Instances From Other Instances With Struct Update Syntax",
+        "url": "https://doc.rust-lang.org/book/ch05-01-defining-structs.html#creating-instances-from-other-instances-with-struct-update-syntax",
+        "relevance": "core_concept"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": []
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": []
+  }
+}

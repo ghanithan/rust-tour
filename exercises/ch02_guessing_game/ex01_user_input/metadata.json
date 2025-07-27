@@ -1,0 +1,51 @@
+{
+  "id": "ch02-ex01-user-input",
+  "title": "Reading User Input",
+  "description": "Learn how to read user input from stdin using std::io and handle basic input/output operations. This is the foundation for interactive programs in Rust.",
+  "chapter": 2,
+  "exercise_number": 1,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 15,
+  "concepts": [
+    "stdin",
+    "std::io",
+    "user-input",
+    "string-variables",
+    "mutable-variables"
+  ],
+  "prerequisites": ["ch01-ex01-hello-world", "ch01-ex02-hello-cargo"],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "2.0",
+    "supporting_chapters": ["1.2", "3.1"],
+    "specific_sections": [
+      {
+        "chapter": "2.0",
+        "title": "Programming a Guessing Game",
+        "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html",
+        "relevance": "core_concept"
+      },
+      {
+        "chapter": "3.1",
+        "title": "Variables and Mutability",
+        "url": "https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html",
+        "relevance": "supporting"
+      }
+    ]
+  },
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
+  },
+  "testing": {
+    "timeout_seconds": 15,
+    "memory_limit_mb": 50,
+    "allow_std_only": true,
+    "custom_checks": ["accepts_user_input"]
+  },
+  "validation": {
+    "clippy_level": "warn",
+    "format_required": true,
+    "custom_checks": ["uses_stdin_properly"]
+  }
+}
