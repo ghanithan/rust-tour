@@ -410,8 +410,20 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Health check handler
+async fn health_check() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "healthy",
+        "service": "rust-tour",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
 fn create_router(state: AppState) -> Router {
     Router::new()
+        // Health check route
+        .route("/health", get(health_check))
+        
         // WebSocket route
         .route("/ws", get(websocket_handler))
         

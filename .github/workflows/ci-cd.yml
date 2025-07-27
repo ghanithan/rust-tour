@@ -162,17 +162,17 @@ jobs:
 
     - name: Build Rust binary
       run: |
-        cargo build --release --target ${{ matrix.target }} --package rust-tour --features embed-assets
+        cargo build --release --target ${{ matrix.target }} --package web-server
 
     - name: Create release archive
       shell: bash
       run: |
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          BINARY_NAME="rust-tour.exe"
+          BINARY_NAME="web-server.exe"
           ARCHIVE_NAME="rust-tour-${{ matrix.target }}.zip"
           7z a $ARCHIVE_NAME target/${{ matrix.target }}/release/$BINARY_NAME
         else
-          BINARY_NAME="rust-tour"
+          BINARY_NAME="web-server"
           ARCHIVE_NAME="rust-tour-${{ matrix.target }}.tar.gz"
           tar -czf $ARCHIVE_NAME -C target/${{ matrix.target }}/release $BINARY_NAME
         fi
@@ -265,7 +265,7 @@ jobs:
 
     - name: Publish to crates.io
       run: |
-        cargo publish --package rust-tour --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        cargo publish --package web-server --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # Stage 6: Create GitHub Release (for tags only)
   release:
@@ -303,7 +303,7 @@ jobs:
 
           ### Cargo
           ```bash
-          cargo install rust-tour
+          cargo install web-server
           ```
 
           ### Binary Downloads
