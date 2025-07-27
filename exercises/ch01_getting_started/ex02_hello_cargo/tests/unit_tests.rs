@@ -40,13 +40,13 @@ fn test_program_produces_colored_output() {
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        
+
         // Test that program produces meaningful output
         assert!(
             !stdout.trim().is_empty(),
             "Program should produce visible output"
         );
-        
+
         // Since we can't directly test color codes in a simple way,
         // we test that the program runs and uses the colored crate functionality
         assert!(
@@ -84,14 +84,14 @@ fn test_project_structure_is_valid() {
         std::path::Path::new("src/main.rs").exists(),
         "Project should have a src/main.rs file"
     );
-    
+
     // Test that Cargo.toml is valid by attempting to parse it
     let cargo_output = Command::new("cargo")
         .args(&["metadata", "--format-version=1"])
         .current_dir(".")
         .output()
         .expect("Failed to execute cargo metadata");
-    
+
     assert!(
         cargo_output.status.success(),
         "Cargo.toml should be valid and parseable"
@@ -110,33 +110,35 @@ fn test_external_crate_integration() {
     if output.status.success() {
         // If a program compiles and runs with dependencies, it likely uses them
         // This is more reliable than checking source code patterns
-        let cargo_toml = std::fs::read_to_string("Cargo.toml")
-            .expect("Failed to read Cargo.toml");
-        
+        let cargo_toml = std::fs::read_to_string("Cargo.toml").expect("Failed to read Cargo.toml");
+
         // Check that dependencies exist in Cargo.toml
         assert!(
             cargo_toml.contains("[dependencies]"),
             "Cargo.toml should have a [dependencies] section"
         );
-        
+
         // Test that dependency resolution works by building
         let build_output = Command::new("cargo")
             .args(&["build", "--verbose"])
             .current_dir(".")
             .output()
             .expect("Failed to execute cargo build");
-            
+
         let build_log = String::from_utf8_lossy(&build_output.stderr);
-        
+
         // Successful build with dependencies means external crates are integrated
         assert!(
             build_output.status.success(),
             "Build should succeed with external dependencies"
         );
-        
+
         // Check that external crates were actually compiled (visible in verbose output)
         assert!(
-            build_log.contains("Compiling") || cargo_toml.contains("colored") || cargo_toml.contains("rand") || cargo_toml.contains("serde"),
+            build_log.contains("Compiling")
+                || cargo_toml.contains("colored")
+                || cargo_toml.contains("rand")
+                || cargo_toml.contains("serde"),
             "Should demonstrate integration with external crates"
         );
     }
@@ -155,7 +157,7 @@ fn test_cargo_run_vs_direct_execution() {
         cargo_run_output.status.success(),
         "cargo run should work, demonstrating Cargo's build and execution capabilities"
     );
-    
+
     // Test that cargo build produces an executable
     let build_output = Command::new("cargo")
         .args(&["build"])
@@ -167,7 +169,7 @@ fn test_cargo_run_vs_direct_execution() {
         build_output.status.success(),
         "cargo build should create an executable"
     );
-    
+
     // Verify the executable was created
     let target_debug_path = std::path::Path::new("target/debug");
     assert!(
@@ -185,10 +187,7 @@ fn test_dependency_management_works() {
         .output()
         .expect("Failed to execute cargo clean");
 
-    assert!(
-        clean_output.status.success(),
-        "cargo clean should work"
-    );
+    assert!(clean_output.status.success(), "cargo clean should work");
 
     // After cleaning, build should still work (re-downloading dependencies)
     let rebuild_output = Command::new("cargo")

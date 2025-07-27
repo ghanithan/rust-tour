@@ -14,5 +14,6 @@
     "specific_sections": [{"chapter": "3.2", "title": "Data Types", "url": "https://doc.rust-lang.org/book/ch03-02-data-types.html", "relevance": "core_concept"}]
   },
   "hints": {"available": 3, "auto_unlock": false},
-  "testing": {"timeout_seconds": 10, "memory_limit_mb": 50, "allow_std_only": true}
+  "testing": {"timeout_seconds": 10, "memory_limit_mb": 50, "allow_std_only": true},
+  "validation": {"clippy_level": "warn", "format_required": true, "custom_checks": []}
 }

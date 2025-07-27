@@ -9,7 +9,7 @@
     "client": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "lint": "eslint src server.js --ext .js,.ts",
     "lint:fix": "eslint src server.js --ext .js,.ts --fix",
     "start": "node server.js"

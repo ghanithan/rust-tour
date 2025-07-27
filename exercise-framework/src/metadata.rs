@@ -101,7 +101,13 @@ impl ExerciseMetadata {
         }
 
         // Validate exercise type
-        let valid_types = ["code_completion", "bug_fixing", "from_scratch", "code_review", "performance"];
+        let valid_types = [
+            "code_completion",
+            "bug_fixing",
+            "from_scratch",
+            "code_review",
+            "performance",
+        ];
         if !valid_types.contains(&self.exercise_type.as_str()) {
             anyhow::bail!("Invalid exercise type: {}", self.exercise_type);
         }
@@ -155,11 +161,7 @@ impl ExerciseMetadata {
     pub fn prerequisite_chapters(&self) -> Vec<u32> {
         self.prerequisites
             .iter()
-            .filter_map(|prereq| {
-                prereq
-                    .strip_prefix("ch")
-                    .and_then(|s| s[..2].parse().ok())
-            })
+            .filter_map(|prereq| prereq.strip_prefix("ch").and_then(|s| s[..2].parse().ok()))
             .collect()
     }
 

@@ -1,17 +1,17 @@
 pub mod exercise;
+pub mod hints;
 pub mod metadata;
 pub mod progress;
 pub mod testing;
 pub mod validation;
-pub mod hints;
 
 // Re-export main types
-pub use exercise::{Exercise, ExerciseType, ExerciseDifficulty};
+pub use exercise::{Exercise, ExerciseDifficulty, ExerciseType};
+pub use hints::{HintLevel, HintSystem};
 pub use metadata::ExerciseMetadata;
 pub use progress::{ProgressTracker, UserProgress};
-pub use testing::{TestRunner, TestResult};
+pub use testing::{TestResult, TestRunner};
 pub use validation::{ExerciseValidator, ValidationResult};
-pub use hints::{HintSystem, HintLevel};
 
 use anyhow::Result;
 use std::path::Path;
@@ -27,7 +27,7 @@ impl Framework {
     /// Create a new framework instance
     pub fn new<P: AsRef<Path>>(exercises_root: P) -> Result<Self> {
         let exercises_root = exercises_root.as_ref().to_path_buf();
-        
+
         Ok(Self {
             exercises_root: exercises_root.clone(),
             progress_tracker: ProgressTracker::new(&exercises_root)?,
@@ -74,7 +74,8 @@ impl Framework {
 
     /// Update progress for completed exercise
     pub fn complete_exercise(&mut self, exercise_id: &str, time_taken_minutes: u32) -> Result<()> {
-        self.progress_tracker.complete_exercise(exercise_id, time_taken_minutes)
+        self.progress_tracker
+            .complete_exercise(exercise_id, time_taken_minutes)
     }
 }
 

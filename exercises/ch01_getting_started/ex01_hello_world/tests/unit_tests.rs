@@ -59,13 +59,13 @@ fn test_output_is_properly_formatted() {
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stdout_trimmed = stdout.trim();
-        
+
         // Test that output contains the greeting
         assert!(
             stdout_trimmed.contains("Hello, world!"),
             "Output should contain the greeting 'Hello, world!'"
         );
-        
+
         // Test that output doesn't contain compilation or debug information
         assert!(
             !stdout_trimmed.contains("Compiling") && !stdout_trimmed.contains("Finished"),
@@ -99,16 +99,18 @@ fn test_program_produces_text_output() {
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        
+
         // Test that program actually produces output (not silent)
         assert!(
             !stdout.trim().is_empty(),
             "Program should produce visible output, not run silently"
         );
-        
+
         // Test that output is text-based (contains printable characters)
         assert!(
-            stdout.chars().any(|c| c.is_ascii_graphic() || c.is_whitespace()),
+            stdout
+                .chars()
+                .any(|c| c.is_ascii_graphic() || c.is_whitespace()),
             "Program should produce readable text output"
         );
     }
@@ -126,14 +128,16 @@ fn test_program_behavior_is_consistent() {
 
         assert!(
             output.status.success(),
-            "Program should run consistently on iteration {}", i
+            "Program should run consistently on iteration {}",
+            i
         );
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             assert!(
                 stdout.contains("Hello, world!"),
-                "Program should produce consistent output on iteration {}", i
+                "Program should produce consistent output on iteration {}",
+                i
             );
         }
     }

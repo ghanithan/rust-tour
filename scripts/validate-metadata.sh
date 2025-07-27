@@ -98,10 +98,10 @@ validate_metadata() {
         return 1
     fi
     
-    # Check if URLs in rust_book_refs are valid
+    # Check if URLs in rust_book_refs are valid (allow multiple Rust documentation sites)
     local urls=$(jq -r '.rust_book_refs.specific_sections[]?.url // empty' "$metadata_file")
     for url in $urls; do
-        if [[ ! "$url" =~ ^https://doc\.rust-lang\.org/book/ ]]; then
+        if [[ ! "$url" =~ ^https://doc\.rust-lang\.org/(book|edition-guide|std|reference|cargo)/ ]]; then
             echo "❌ Invalid Rust Book URL: $url"
             FAILED=1
             return 1

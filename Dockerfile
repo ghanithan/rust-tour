@@ -51,8 +51,10 @@ RUN touch exercise-framework/src/lib.rs web-server/src/main.rs && \
 
 # Copy exercises for runtime
 COPY exercises/ ./exercises/
-COPY solutions/ ./solutions/
 COPY scripts/ ./scripts/
+
+# Copy solutions if they exist (optional)
+RUN mkdir -p ./solutions/
 
 # Final runtime stage
 FROM alpine:3.18
@@ -75,7 +77,6 @@ COPY --from=rust-builder /app/target/release/rust-tour /usr/local/bin/rust-tour
 
 # Copy exercise content and scripts
 COPY --from=rust-builder --chown=rustuser:rustuser /app/exercises ./exercises
-COPY --from=rust-builder --chown=rustuser:rustuser /app/solutions ./solutions
 COPY --from=rust-builder --chown=rustuser:rustuser /app/scripts ./scripts
 
 # Create progress directory

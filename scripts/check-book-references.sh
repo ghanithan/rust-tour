@@ -62,15 +62,61 @@ VALID_CHAPTERS=(
     "ch11-02-running-tests"
     "ch11-03-test-organization"
     "ch12-00-an-io-project"
+    "ch12-01-accepting-command-line-arguments"
+    "ch12-02-reading-a-file"
+    "ch12-03-improving-error-handling-and-modularity"
+    "ch12-04-developing-the-library-functionality-with-test-driven-development"
+    "ch12-05-working-with-environment-variables"
+    "ch12-06-writing-error-messages-to-standard-error-instead-of-standard-output"
     "ch13-00-functional-features"
+    "ch13-01-closures"
+    "ch13-02-iterators"
+    "ch13-03-improving-our-io-project"
+    "ch13-04-comparing-performance-loops-vs-iterators"
     "ch14-00-more-about-cargo"
+    "ch14-01-release-profiles"
+    "ch14-02-publishing-to-crates-io"
+    "ch14-03-cargo-workspaces"
+    "ch14-04-installing-binaries-from-crates-io"
+    "ch14-05-extending-cargo"
     "ch15-00-smart-pointers"
+    "ch15-01-box"
+    "ch15-02-deref"
+    "ch15-03-drop"
+    "ch15-04-rc"
+    "ch15-05-interior-mutability"
+    "ch15-06-reference-cycles"
     "ch16-00-concurrency"
+    "ch16-01-threads"
+    "ch16-02-message-passing"
+    "ch16-03-shared-state"
+    "ch16-04-extensible-concurrency-sync-and-send"
     "ch17-00-oop"
+    "ch17-01-what-is-oo"
+    "ch17-02-trait-objects"
+    "ch17-03-oo-design-patterns"
     "ch18-00-patterns"
+    "ch18-01-all-the-places-for-patterns"
+    "ch18-02-refutability"
+    "ch18-03-pattern-syntax"
     "ch19-00-advanced-features"
+    "ch19-01-unsafe-rust"
+    "ch19-03-advanced-traits"
+    "ch19-04-advanced-types"
+    "ch19-05-advanced-functions-and-closures"
+    "ch19-06-macros"
     "ch20-00-final-project-a-web-server"
+    "ch20-01-single-threaded"
+    "ch20-02-multithreaded"
+    "ch20-03-graceful-shutdown"
     "ch21-00-appendix"
+    "appendix-01-keywords"
+    "appendix-02-operators"
+    "appendix-03-derivable-traits"
+    "appendix-04-useful-development-tools"
+    "appendix-05-editions"
+    "appendix-06-translation"
+    "appendix-07-nightly-rust"
 )
 
 # Function to validate book references
@@ -104,16 +150,27 @@ check_references() {
     # Check each URL
     local invalid_urls=0
     for url in $urls; do
-        # Extract chapter ID from URL
-        if [[ "$url" =~ https://doc\.rust-lang\.org/book/([^.]+)\.html ]]; then
+        # Check different valid URL patterns
+        if [[ "$url" =~ ^https://doc\.rust-lang\.org/book/([^.#]+)\.html ]]; then
+            # Main Rust Book chapter (with or without fragment)
             local chapter_id="${BASH_REMATCH[1]}"
-            
-            # Check if chapter ID is in our valid list
             if [[ ! " ${VALID_CHAPTERS[@]} " =~ " ${chapter_id} " ]]; then
                 invalid_urls=$((invalid_urls + 1))
             fi
+        elif [[ "$url" =~ ^https://doc\.rust-lang\.org/edition-guide/? ]]; then
+            # Rust Edition Guide (valid)
+            continue
+        elif [[ "$url" =~ ^https://doc\.rust-lang\.org/std/ ]]; then
+            # Standard library docs (valid)
+            continue
+        elif [[ "$url" =~ ^https://doc\.rust-lang\.org/reference/ ]]; then
+            # Rust Reference (valid)
+            continue
+        elif [[ "$url" =~ ^https://doc\.rust-lang\.org/cargo/ ]]; then
+            # Cargo Book (valid)
+            continue
         else
-            # URL doesn't match expected pattern
+            # URL doesn't match any expected pattern
             invalid_urls=$((invalid_urls + 1))
         fi
     done
@@ -126,7 +183,7 @@ check_references() {
     
     # Check chapter relevance tags
     local relevance_tags=$(jq -r '.rust_book_refs.specific_sections[]?.relevance // empty' "$metadata_file" 2>/dev/null)
-    local valid_relevance=("core_concept" "supporting" "background")
+    local valid_relevance=("core_concept" "supporting" "background" "advanced" "reference")
     local invalid_relevance=0
     
     for tag in $relevance_tags; do

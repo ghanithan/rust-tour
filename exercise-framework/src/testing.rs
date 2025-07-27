@@ -50,10 +50,10 @@ pub struct ClippyIssue {
 /// Code quality assessment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityResult {
-    pub format_score: f64,     // 0.0 to 1.0
-    pub clippy_score: f64,     // 0.0 to 1.0
-    pub test_coverage: f64,    // 0.0 to 1.0
-    pub overall_score: f64,    // 0.0 to 1.0
+    pub format_score: f64,  // 0.0 to 1.0
+    pub clippy_score: f64,  // 0.0 to 1.0
+    pub test_coverage: f64, // 0.0 to 1.0
+    pub overall_score: f64, // 0.0 to 1.0
     pub suggestions: Vec<String>,
 }
 
@@ -103,7 +103,7 @@ impl TestRunner {
 
         // Step 1: Compilation check
         let compilation_result = self.check_compilation(exercise)?;
-        
+
         // Step 2: Run unit tests
         let test_results = if compilation_result.success {
             self.run_unit_tests(exercise)?
@@ -115,15 +115,16 @@ impl TestRunner {
         let quality_check = self.run_quality_checks(exercise)?;
 
         // Step 4: Performance metrics (for performance exercises)
-        let performance_metrics = if exercise.metadata.exercise_type_enum() == crate::ExerciseType::Performance {
-            Some(self.run_benchmarks(exercise)?)
-        } else {
-            None
-        };
+        let performance_metrics =
+            if exercise.metadata.exercise_type_enum() == crate::ExerciseType::Performance {
+                Some(self.run_benchmarks(exercise)?)
+            } else {
+                None
+            };
 
-        let success = compilation_result.success && 
-                     test_results.iter().all(|t| t.passed) &&
-                     quality_check.overall_score >= 0.7; // Minimum quality threshold
+        let success = compilation_result.success
+            && test_results.iter().all(|t| t.passed)
+            && quality_check.overall_score >= 0.7; // Minimum quality threshold
 
         Ok(TestResult {
             exercise_id: exercise.metadata.id.clone(),
@@ -178,14 +179,19 @@ impl TestRunner {
             .context("Failed to run clippy")?;
 
         let mut issues = Vec::new();
-        
+
         // Parse clippy output (simplified)
         let output = String::from_utf8_lossy(&clippy_output.stdout);
         for line in output.lines() {
             if line.contains("warning:") || line.contains("error:") {
                 // Simple parsing - real implementation would be more sophisticated
                 issues.push(ClippyIssue {
-                    level: if line.contains("error:") { "error" } else { "warning" }.to_string(),
+                    level: if line.contains("error:") {
+                        "error"
+                    } else {
+                        "warning"
+                    }
+                    .to_string(),
                     message: line.to_string(),
                     file: "src/main.rs".to_string(), // Simplified
                     line: 1,
@@ -249,7 +255,11 @@ impl TestRunner {
             .output()
             .context("Failed to run cargo fmt")?;
 
-        let format_score = if fmt_output.status.success() { 1.0 } else { 0.7 };
+        let format_score = if fmt_output.status.success() {
+            1.0
+        } else {
+            0.7
+        };
 
         // Clippy score based on issues
         let clippy_output = Command::new(&self.cargo_path)
@@ -258,8 +268,9 @@ impl TestRunner {
             .context("Failed to run clippy")?;
 
         let clippy_issues = String::from_utf8_lossy(&clippy_output.stderr)
-            .matches("warning:").count();
-        
+            .matches("warning:")
+            .count();
+
         let clippy_score = match clippy_issues {
             0 => 1.0,
             1..=3 => 0.8,
@@ -309,14 +320,12 @@ impl TestRunner {
             .context("Failed to run cargo bench")?;
 
         // Parse benchmark results (placeholder implementation)
-        let benchmark_results = vec![
-            BenchmarkResult {
-                name: "main_benchmark".to_string(),
-                time_ns: 1_000_000, // 1ms
-                iterations: 1000,
-                throughput: Some(1000.0),
-            }
-        ];
+        let benchmark_results = vec![BenchmarkResult {
+            name: "main_benchmark".to_string(),
+            time_ns: 1_000_000, // 1ms
+            iterations: 1000,
+            throughput: Some(1000.0),
+        }];
 
         Ok(PerformanceMetrics {
             execution_time_ns: 1_000_000,
