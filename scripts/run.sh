@@ -20,13 +20,13 @@ case "$1" in
     "server")
         echo "🦀 Starting Rust server only..."
         cd "$PROJECT_ROOT"
-        exec cargo run --package rust-tour
+        exec cargo run --package rust-tour --no-default-features
         ;;
     "dev")
         echo "🚀 Starting development mode (Vite + Rust server)..."
         cd "$PROJECT_ROOT"
         # Start Rust server in background
-        cargo run --package rust-tour &
+        cargo run --package rust-tour --no-default-features &
         SERVER_PID=$!
         # Start Vite dev server
         cd web && npm run client &
@@ -55,7 +55,7 @@ case "$1" in
             echo "📦 Building frontend..."
             cd web && npm run build && cd ..
         fi
-        exec cargo run --package rust-tour
+        exec cargo run --package rust-tour --no-default-features
         ;;
     "publish")
         echo "📦 Building for publishing..."

@@ -21,9 +21,10 @@ name = "rust-tour"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["embed-assets", "download-exercises"]
 embed-assets = ["rust-embed"]
 download-exercises = ["git2", "dialoguer", "tempfile", "zip", "dirs"]
+no-download = []
 
 [dependencies]
 # Web framework and middleware

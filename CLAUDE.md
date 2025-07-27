@@ -21,7 +21,10 @@ This is Rust Tour, an interactive Rust tutorial that provides progressive, exerc
 # Start development mode (Vite + Rust server)
 ./scripts/run.sh dev
 
-# Start Rust server only
+# Start Rust server only (development mode)
+cargo run --package rust-tour --no-default-features
+
+# Start Rust server only (with download capability for testing)
 ./scripts/run.sh server
 ```
 

@@ -1959,7 +1959,7 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
     let download_path: String = Input::new()
         .with_prompt("Location")
         .default(default_path.to_string_lossy().to_string())
-        .validate(|input: &String| {
+        .validate_with(|input: &String| {
             let path = PathBuf::from(input);
             if let Some(parent) = path.parent() {
                 if !parent.exists() {

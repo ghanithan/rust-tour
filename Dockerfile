@@ -49,7 +49,7 @@ RUN mkdir -p exercise-framework/src web-server/src && \
     echo "fn main() {}" > web-server/src/main.rs
 
 # Build dependencies (without exercises)
-RUN cargo build --release --package exercise-framework --package rust-tour
+RUN cargo build --release --package exercise-framework --package rust-tour --no-default-features
 
 # Restore original workspace config
 RUN mv Cargo.toml.original Cargo.toml
@@ -72,7 +72,7 @@ COPY scripts/ ./scripts/
 
 # Build the actual application
 RUN touch exercise-framework/src/lib.rs web-server/src/main.rs && \
-    cargo build --release --package rust-tour
+    cargo build --release --package rust-tour --no-default-features
 
 # Copy solutions if they exist (optional)
 RUN mkdir -p ./solutions/
