@@ -39,16 +39,68 @@ COPY web-server/Cargo.toml ./web-server/
 
 # Create temporary workspace config without exercises for dependency caching
 RUN cp Cargo.toml Cargo.toml.original && \
-    sed 's/"exercises\/ch\*\/ex\[0-9\]\[0-9\]\*",//g' Cargo.toml > Cargo.toml.temp && \
+    cat > Cargo.toml.temp << 'EOF'
+[workspace]
+members = [
+    "exercise-framework",
+    "web-server"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Rust Tour Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rust-tour/rust-tour"
+homepage = "https://github.com/rust-tour/rust-tour"
+
+[workspace.dependencies]
+# Common dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+
+# Exercise framework dependencies  
+criterion = "0.5"
+tempfile = "3.8"
+walkdir = "2.4"
+
+# Web server dependencies
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs", "trace", "compression-gzip", "limit"] }
+hyper = { version = "1.0", features = ["full"] }
+tokio-tungstenite = "0.20"
+futures-util = "0.3"
+portable-pty = "0.8"
+notify = "6.0"
+rust-embed = "8.0"
+mime_guess = "2.0"
+path-absolutize = "3.1"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Common dependencies
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+EOF
     mv Cargo.toml.temp Cargo.toml
 
 # Create dummy source files for dependency caching
 RUN mkdir -p exercise-framework/src web-server/src && \
-    echo "fn main() {}" > exercise-framework/src/lib.rs && \
+    echo "pub fn dummy() {}" > exercise-framework/src/lib.rs && \
     echo "fn main() {}" > web-server/src/main.rs
 
 # Build dependencies (without exercises)
-RUN cargo build --release --package rust-tour
+RUN cargo build --release --package exercise-framework --package rust-tour
 
 # Restore original workspace config
 RUN mv Cargo.toml.original Cargo.toml
