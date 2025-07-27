@@ -27,6 +27,7 @@ RUN apk add --no-cache \
     musl-dev \
     pkgconfig \
     openssl-dev \
+    openssl-libs-static \
     libc6-compat
 
 # Set working directory
