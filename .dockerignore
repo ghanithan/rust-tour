@@ -1,6 +1,6 @@
 # Rust build artifacts
 target/
-Cargo.lock
+# Note: Cargo.lock is included for reproducible Docker builds
 
 # Node.js
 node_modules/

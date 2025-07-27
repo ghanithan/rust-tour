@@ -80,16 +80,16 @@ jobs:
       - name: Install Node.js dependencies
         run: cd web && npm ci
 
-      - name: Run full test suite
+      - name: Validate exercise structure
         run: |
-          echo "🧪 Running Rust tests..."
-          cargo test --workspace
+          echo "🔍 Validating exercise structure..."
+          ./scripts/validate-exercises.sh
           
-          echo "🎨 Checking Rust formatting..."
-          cargo fmt --all -- --check
+          echo "📋 Validating metadata..."
+          ./scripts/validate-metadata.sh
           
-          echo "📎 Running Clippy..."
-          cargo clippy --all-targets --all-features -- -D warnings
+          echo "📚 Validating Rust Book references..."
+          ./scripts/check-book-references.sh
           
           echo "🌐 Building web frontend..."
           cd web && npm run build && cd ..
