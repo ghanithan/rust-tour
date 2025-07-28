@@ -8,16 +8,16 @@ The Rust Learning Platform is a comprehensive, interactive web-based learning en
 
 ```mermaid
 graph TB
-    subgraph "Frontend (Web UI)"
-        A[HTML/CSS/JS Frontend] --> B[Monaco Editor]
+    subgraph "Frontend (Vite + React)"
+        A[React Application] --> B[Monaco Editor]
         A --> C[XTerm.js Terminal]
         A --> D[Real-time WebSocket]
         A --> E[Progress Tracking]
     end
     
     subgraph "Backend Services"
-        F[Node.js Server] --> G[Express HTTP Server]
-        F --> H[WebSocket Server]
+        F[Rust Web Server] --> G[Axum HTTP Server]
+        F --> H[WebSocket Handler]
         F --> I[File System API]
         F --> J[Terminal PTY Handler]
     end
@@ -35,11 +35,11 @@ graph TB
         S[Progress Data] --> T[progress.json]
     end
     
-    A -.->|HTTP/8000| G
-    A -.->|WebSocket/3000| H
+    A -.->|HTTP/3000| G
+    A -.->|WebSocket| H
     F -.->|Spawn| K
     F -.->|Read/Write| O
-    F -.->|PTY| U[node-pty]
+    F -.->|PTY| U[portable-pty]
     U -.->|Shell| V[Bash/Terminal]
     
     style A fill:#e1f5fe
@@ -47,6 +47,15 @@ graph TB
     style K fill:#f3e5f5
     style O fill:#e8f5e8
 ```
+
+## Architecture Decisions
+
+### ADR-001: Remove Unused Exercise Framework
+**Status**: Proposed  
+**Date**: 2025-07-28  
+**Link**: [ADR-001-Remove-Exercise-Framework.md](./ADR-001-Remove-Exercise-Framework.md)
+
+The `exercise-framework` was created as a sophisticated abstraction layer for exercise management but was never integrated. The project evolved to use simpler, direct approaches that work perfectly well. This ADR documents the decision to remove this unused technical debt.
 
 ## System Architecture
 
