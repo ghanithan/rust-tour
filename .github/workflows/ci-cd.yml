@@ -136,7 +136,7 @@ jobs:
 
     - name: Build Rust binary
       run: |
-        cargo build --release --target ${{ matrix.target }} --package web-server
+        cargo build --release --target ${{ matrix.target }} --package rust-tour
 
     - name: Create release archive
       shell: bash
@@ -248,7 +248,7 @@ jobs:
 
     - name: Publish to crates.io
       run: |
-        cargo publish --package web-server --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        cargo publish --package rust-tour --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # Stage 6: Create GitHub Release (for tags only)
   release:

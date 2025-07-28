@@ -1,7 +1,6 @@
 # Rust
 /target
 **/*.rs.bk
-Cargo.lock
 
 # IDE
 .vscode/settings.json
@@ -31,7 +30,6 @@ web/yarn-error.log*
 .cache/
 
 # Exercise working files (preserve templates)
-exercises/*/ex*/src/*.rs
 !exercises/*/ex*/src/*_template.rs
 !exercises/*/ex*/src/lib_template.rs
 !exercises/*/ex*/src/main_template.rs

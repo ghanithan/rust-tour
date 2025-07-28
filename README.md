@@ -22,6 +22,8 @@ Rust Tour is a comprehensive learning platform that combines theoretical knowled
 - **Adaptive Difficulty**: Exercises scale from beginner to advanced within each chapter
 - **Community Driven**: Open-source platform with contribution workflows
 
+[🚀 **Get Started** → Jump to Installation Methods](#installation-methods)
+
 ## Built with Claude Code
 
 This entire project was created using [Claude Code](https://claude.ai/code) in GitHub Codespaces - a delightful paradox worth noting! We've used AI to build a platform that champions traditional, hands-on learning. While AI helped architect the codebase, generate exercises, and design the learning framework, **the fundamental truth remains**: programming mastery requires human understanding, critical thinking, and practice.
@@ -55,6 +57,54 @@ This project demonstrates the productive partnership between human developers an
 ---
 
 *"The best tools amplify human capability rather than replace it. Rust Tour stands as testament to this principle."*
+
+## 🚀 Why We Recommend GitHub Codespaces
+
+**GitHub Codespaces provides the ideal environment for learning Rust** - eliminating setup friction so you can focus entirely on mastering the language. Here's why we strongly advocate for using Codespaces:
+
+### ✅ **Zero Setup Barrier**
+- **No local installation required** - Start coding in seconds
+- **Pre-configured environment** - Rust toolchain, VS Code extensions, and all dependencies ready
+- **Consistent experience** - Same environment for every learner, regardless of their operating system
+- **Instant access** - Works on any device with a web browser
+
+### 💰 **Generous Free Tier (2025)**
+**GitHub Free Personal Accounts include:**
+- **120 core hours per month** (60 hours of runtime on a 2-core machine)
+- **15 GB of storage** per month
+- **No payment method required** to get started
+- **Automatic notifications** when approaching usage limits
+
+**For context:** 60 hours per month is more than sufficient for:
+- Completing all Rust Tour exercises
+- Building several practice projects
+- Experimenting with advanced Rust concepts
+- Contributing to open-source projects
+
+### 🎯 **Perfect for Learning**
+- **Eliminate environment issues** - No wrestling with PATH variables, compiler versions, or missing dependencies
+- **Focus on concepts** - Spend time learning Rust, not debugging setup problems
+- **Collaborative learning** - Share your exact environment with instructors or study groups
+- **Cross-platform consistency** - Same experience on Windows, Mac, or Linux
+
+### 📚 **Educational Benefits**
+- **Immediate productivity** - Start learning Rust concepts from minute one
+- **Professional workflow** - Experience industry-standard development tools
+- **Version control integration** - Built-in Git workflow teaches best practices
+- **Real development environment** - Not a limited sandbox or tutorial platform
+
+### 🔗 **Official References**
+- **Codespaces Documentation**: [docs.github.com/codespaces](https://docs.github.com/codespaces/overview)
+- **Billing Information**: [GitHub Codespaces Billing](https://docs.github.com/billing/managing-billing-for-github-codespaces/about-billing-for-github-codespaces)
+- **Getting Started**: [GitHub Codespaces Features](https://github.com/features/codespaces)
+
+---
+
+### 💡 **Transparency Disclaimer**
+
+*We are not sponsored by or affiliated with GitHub in any way. This recommendation comes purely from our commitment to reducing barriers to learning Rust. After extensive testing of various development environments, GitHub Codespaces consistently provides the smoothest onboarding experience for new Rust developers. Our goal is simple: help you start writing Rust code as quickly as possible, with minimal friction.*
+
+---
 
 ## Installation Methods
 

@@ -49,11 +49,13 @@ use walkdir::WalkDir;
 use rust_embed::RustEmbed;
 
 #[cfg(feature = "download-exercises")]
-use dialoguer::{Confirm, Input};
+use dialoguer::{Confirm, Input, Select};
 #[cfg(feature = "download-exercises")]
 use git2::Repository;
 #[cfg(feature = "download-exercises")]
 use tempfile::TempDir;
+#[cfg(feature = "download-exercises")]
+use open;
 
 #[cfg(feature = "embed-assets")]
 #[derive(RustEmbed)]
@@ -407,11 +409,15 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(not(feature = "download-exercises"))]
     let exercises_path = exercises_path;
 
+    println!("🎯 Final exercises_path: {}", exercises_path.display());
+
     // Progress file goes in the parent directory (alongside exercises/)
     let progress_path = exercises_path.parent()
         .unwrap_or_else(|| std::path::Path::new("."))
         .join("progress")
         .join("user_progress.json");
+        
+    println!("📊 Progress file: {}", progress_path.display());
 
     // Create broadcast channel for WebSocket messages
     let (broadcast_tx, _) = broadcast::channel(100);
@@ -453,6 +459,17 @@ async fn main() -> anyhow::Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     info!("Server started on port {}", port);
+    
+    // Open browser automatically when download-exercises feature is enabled
+    #[cfg(feature = "download-exercises")]
+    {
+        let url = format!("http://localhost:{}", port);
+        println!("\n🌐 Opening browser to {}...", url);
+        if let Err(e) = open::that(&url) {
+            warn!("Failed to open browser automatically: {}", e);
+            println!("   ⚠️  Please open your browser manually to: {}", url);
+        }
+    }
 
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
@@ -1419,18 +1436,27 @@ async fn load_exercise_details(
     exercise_path: &std::path::Path,
     path: &str,
 ) -> anyhow::Result<ExerciseDetails> {
+    info!("Loading exercise details for: {}", path);
+    info!("Exercise path: {}", exercise_path.display());
+    
     // Load metadata
     let metadata_path = exercise_path.join("metadata.json");
-    let metadata_content = fs::read_to_string(&metadata_path).await?;
+    info!("Attempting to read metadata: {}", metadata_path.display());
+    let metadata_content = fs::read_to_string(&metadata_path).await
+        .map_err(|e| anyhow::anyhow!("Failed to read metadata.json at {}: {}", metadata_path.display(), e))?;
     let metadata: ExerciseMetadata = serde_json::from_str(&metadata_content)?;
     
     // Load main source file
     let main_path = exercise_path.join("src").join("main.rs");
-    let main_content = fs::read_to_string(&main_path).await?;
+    info!("Attempting to read main.rs: {}", main_path.display());
+    let main_content = fs::read_to_string(&main_path).await
+        .map_err(|e| anyhow::anyhow!("Failed to read src/main.rs at {}: {}", main_path.display(), e))?;
     
     // Load README
     let readme_path = exercise_path.join("README.md");
-    let readme = fs::read_to_string(&readme_path).await?;
+    info!("Attempting to read README: {}", readme_path.display());
+    let readme = fs::read_to_string(&readme_path).await
+        .map_err(|e| anyhow::anyhow!("Failed to read README.md at {}: {}", readme_path.display(), e))?;
     
     // Load hints if available
     let hints_path = exercise_path.join("hints.md");
@@ -1901,17 +1927,22 @@ async fn shutdown_signal() {
 
 #[cfg(feature = "download-exercises")]
 async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<PathBuf> {
-    use std::path::Path;
+    println!("🔍 Checking exercises availability...");
+    println!("   Initial exercises_path: {}", exercises_path.display());
     
     // Check if exercises directory exists and has content
     if exercises_path.exists() && has_exercises(&exercises_path).await? {
+        println!("   ✓ Found exercises at initial path");
         return Ok(exercises_path);
     }
 
     // Check if user has a config file with a custom exercises path
     if let Ok(base_path) = get_config_exercises_path().await {
+        println!("   Config base_path: {}", base_path.display());
         let exercises_subdir = base_path.join("exercises");
+        println!("   Checking exercises_subdir: {}", exercises_subdir.display());
         if exercises_subdir.exists() && has_exercises(&exercises_subdir).await? {
+            println!("   ✓ Found exercises at config path");
             return Ok(exercises_subdir);
         }
     }
@@ -1942,7 +1973,7 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
         println!("\n❌ Rust Tour requires exercises to run.");
         println!("   You can:");
         println!("   • Run this command again and choose to download");
-        println!("   • Clone the repository manually from https://github.com/rust-tour/rust-tour");
+        println!("   • Clone the repository manually from https://github.com/ghanithan/rust-tour");
         println!("   • Use --exercises-path to specify a custom location");
         anyhow::bail!("Exiting without exercises.");
     }
@@ -1956,21 +1987,48 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
     let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     let default_path = home_dir.join("rust-tour-exercises");
     
-    let download_path: String = Input::new()
-        .with_prompt("Location")
-        .default(default_path.to_string_lossy().to_string())
-        .validate_with(|input: &String| {
-            let path = PathBuf::from(input);
-            if let Some(parent) = path.parent() {
-                if !parent.exists() {
-                    return Err(format!("Parent directory '{}' does not exist", parent.display()));
+    // Ask user how they want to select the directory
+    let selection_method = Select::new()
+        .with_prompt("How would you like to select the directory?")
+        .items(&vec!["Browse for directory", "Enter path manually"])
+        .default(0)
+        .interact()?;
+    
+    let download_path = match selection_method {
+        0 => {
+            // Browse for directory
+            println!("\n📁 Navigate to your desired parent directory:");
+            println!("   The 'rust-tour-exercises' folder will be created inside your selection.");
+            
+            let start_path = home_dir.parent().unwrap_or(&home_dir).to_path_buf();
+            match browse_for_directory(start_path).await? {
+                Some(selected_path) => selected_path.join("rust-tour-exercises"),
+                None => {
+                    println!("\n❌ Directory selection cancelled.");
+                    anyhow::bail!("Download cancelled. Please run again to select a directory.");
                 }
             }
-            Ok(())
-        })
-        .interact_text()?;
-
-    let download_path = PathBuf::from(download_path);
+        }
+        1 => {
+            // Manual entry
+            let path_input: String = Input::new()
+                .with_prompt("Location")
+                .default(default_path.to_string_lossy().to_string())
+                .validate_with(|input: &String| {
+                    let path = PathBuf::from(input);
+                    if let Some(parent) = path.parent() {
+                        if !parent.exists() {
+                            return Err(format!("Parent directory '{}' does not exist", parent.display()));
+                        }
+                    }
+                    Ok(())
+                })
+                .interact_text()?;
+            
+            PathBuf::from(path_input)
+        }
+        _ => unreachable!(),
+    };
 
     // Confirm the full path
     println!("\n📂 Full path: {}", download_path.display());
@@ -1985,11 +2043,15 @@ async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<P
 
     // Download exercises
     println!("\n🌐 Connecting to GitHub...");
-    println!("📦 Downloading exercises from https://github.com/rust-tour/rust-tour...");
+    println!("📦 Downloading exercises from https://github.com/ghanithan/rust-tour...");
     download_exercises(&download_path).await?;
+    
+    println!("🔍 Download completed to: {}", download_path.display());
+    println!("   Expected exercises at: {}", download_path.join("exercises").display());
 
     // Save config for future use (save the base directory)
     save_config_exercises_path(&download_path).await?;
+    println!("💾 Saved config with base path: {}", download_path.display());
 
     println!("\n✅ Success! Rust Tour is ready to use.");
     println!("\n📂 Your Rust Tour directory structure:");
@@ -2045,7 +2107,7 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     tokio::fs::create_dir_all(target_path).await?;
 
     // Repository URL
-    let repo_url = "https://github.com/rust-tour/rust-tour.git";
+    let repo_url = "https://github.com/ghanithan/rust-tour.git";
     
     // Clone the repository to a temporary directory
     let temp_dir = TempDir::new()?;
@@ -2059,8 +2121,12 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
     let target_exercises = target_path.join("exercises");
     
     if source_exercises.exists() {
-        copy_dir_recursive(source_exercises, target_exercises).await?;
+        copy_dir_recursive(source_exercises, target_exercises.clone()).await?;
         println!("   ✓ Exercise files extracted");
+        
+        // Verify critical exercise files exist
+        verify_exercises_integrity(&target_exercises).await?;
+        println!("   ✓ Exercise integrity verified");
     } else {
         anyhow::bail!("No exercises directory found in repository");
     }
@@ -2069,18 +2135,87 @@ async fn download_exercises(target_path: &std::path::Path) -> anyhow::Result<()>
 }
 
 #[cfg(feature = "download-exercises")]
+async fn verify_exercises_integrity(exercises_path: &std::path::Path) -> anyhow::Result<()> {
+    println!("   🔍 Verifying exercise integrity...");
+    let mut missing_files = Vec::new();
+    let mut total_exercises = 0;
+    let mut valid_exercises = 0;
+    
+    // Check some known critical exercises
+    let critical_exercises = [
+        "ch01_getting_started/ex01_hello_world",
+        "ch02_guessing_game/ex01_user_input", 
+        "ch03_common_concepts/ex01_variables",
+        "ch04_understanding_ownership/ex01_ownership_basics",
+        "ch05_using_structs/ex01_struct_definition",
+        "ch05_using_structs/ex06_ownership_structs", // The one that was failing
+    ];
+    
+    for exercise_path in critical_exercises {
+        total_exercises += 1;
+        let exercise_dir = exercises_path.join(exercise_path);
+        let src_main = exercise_dir.join("src/main.rs");
+        let metadata = exercise_dir.join("metadata.json");
+        
+        if !exercise_dir.exists() {
+            missing_files.push(format!("Missing exercise directory: {}", exercise_path));
+            continue;
+        }
+        
+        if !src_main.exists() {
+            missing_files.push(format!("Missing src/main.rs: {}", exercise_path));
+            continue;
+        }
+        
+        if !metadata.exists() {
+            missing_files.push(format!("Missing metadata.json: {}", exercise_path));
+            continue;
+        }
+        
+        valid_exercises += 1;
+        println!("      ✓ {}", exercise_path);
+    }
+    
+    println!("   📊 Verified {}/{} critical exercises", valid_exercises, total_exercises);
+    
+    if !missing_files.is_empty() {
+        println!("   ⚠️  Found {} issues:", missing_files.len());
+        for missing in &missing_files {
+            println!("      ✗ {}", missing);
+        }
+        anyhow::bail!("Exercise integrity check failed: {} critical files missing", missing_files.len());
+    }
+    
+    Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
 async fn copy_dir_recursive(src: std::path::PathBuf, dst: std::path::PathBuf) -> anyhow::Result<()> {
+    println!("   📁 Creating directory: {}", dst.display());
     tokio::fs::create_dir_all(&dst).await?;
     
     let mut entries = tokio::fs::read_dir(&src).await?;
     while let Some(entry) = entries.next_entry().await? {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
+        let file_type = entry.file_type().await?;
         
-        if entry.file_type().await?.is_dir() {
+        if file_type.is_dir() {
+            println!("   📂 Copying directory: {} -> {}", src_path.display(), dst_path.display());
             Box::pin(copy_dir_recursive(src_path, dst_path)).await?;
+        } else if file_type.is_file() {
+            println!("   📄 Copying file: {} -> {}", src_path.display(), dst_path.display());
+            match tokio::fs::copy(&src_path, &dst_path).await {
+                Ok(bytes) => {
+                    println!("      ✓ Copied {} bytes", bytes);
+                },
+                Err(e) => {
+                    error!("      ✗ Failed to copy {}: {}", src_path.display(), e);
+                    return Err(e.into());
+                }
+            }
         } else {
-            tokio::fs::copy(&src_path, &dst_path).await?;
+            println!("   ⚠️  Skipping non-regular file: {}", src_path.display());
         }
     }
     
@@ -2123,4 +2258,77 @@ async fn save_config_exercises_path(exercises_path: &std::path::Path) -> anyhow:
     
     tokio::fs::write(&config_file, serde_json::to_string_pretty(&config)?).await?;
     Ok(())
+}
+
+#[cfg(feature = "download-exercises")]
+async fn browse_for_directory(start_path: PathBuf) -> anyhow::Result<Option<PathBuf>> {
+    let mut current_path = start_path;
+    
+    loop {
+        // Read directory entries
+        let mut entries = Vec::new();
+        let mut dirs = Vec::new();
+        
+        match std::fs::read_dir(&current_path) {
+            Ok(read_dir) => {
+                for entry in read_dir {
+                    if let Ok(entry) = entry {
+                        if let Ok(file_type) = entry.file_type() {
+                            if file_type.is_dir() {
+                                if let Some(name) = entry.file_name().to_str() {
+                                    // Skip hidden directories
+                                    if !name.starts_with('.') {
+                                        dirs.push(name.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                dirs.sort();
+            }
+            Err(_) => {
+                println!("⚠️  Cannot read directory: {}", current_path.display());
+                return Ok(None);
+            }
+        }
+        
+        // Build menu items
+        entries.push("[✓ Select This Directory]".to_string());
+        if current_path.parent().is_some() {
+            entries.push("[↑ Go Up]".to_string());
+        }
+        for dir in &dirs {
+            entries.push(format!("📁 {}/", dir));
+        }
+        entries.push("[✗ Cancel]".to_string());
+        
+        // Show current path
+        println!("\n📂 Current: {}", current_path.display());
+        
+        // Create selection dialog
+        let selection = Select::new()
+            .items(&entries)
+            .default(0)
+            .interact()?;
+        
+        match entries[selection].as_str() {
+            "[✓ Select This Directory]" => {
+                return Ok(Some(current_path));
+            }
+            "[↑ Go Up]" => {
+                if let Some(parent) = current_path.parent() {
+                    current_path = parent.to_path_buf();
+                }
+            }
+            "[✗ Cancel]" => {
+                return Ok(None);
+            }
+            dir_entry => {
+                // Extract directory name (remove "📁 " prefix and "/" suffix)
+                let dir_name = dir_entry.trim_start_matches("📁 ").trim_end_matches('/');
+                current_path = current_path.join(dir_name);
+            }
+        }
+    }
 }
