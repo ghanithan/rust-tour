@@ -2,6 +2,9 @@
 name = "random_numbers"
 version = "0.1.0"
 edition = "2021"
+# This exercise is independent, not part of the workspace
+[workspace]
+
 
 # TODO: Add the rand crate as a dependency
 # Hint: Add 'rand = "0.8"' under the [dependencies] section below

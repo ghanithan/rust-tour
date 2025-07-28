@@ -2,5 +2,8 @@
 name = "ex01_ownership_basics"
 version = "0.1.0"
 edition = "2021"
+# This exercise is independent, not part of the workspace
+[workspace]
+
 
 [dependencies]

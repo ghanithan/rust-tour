@@ -1,5 +1,7 @@
 # Rust
 /target
+exercises/*/*/target/
+exercises/*/*/Cargo.lock
 **/*.rs.bk
 
 # IDE

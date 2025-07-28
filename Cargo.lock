@@ -395,21 +395,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
-name = "comments_exercise"
-version = "0.1.0"
-
-[[package]]
-name = "compilation_exercise"
-version = "0.1.0"
-
-[[package]]
-name = "complete_game"
-version = "0.1.0"
-dependencies = [
- "rand 0.8.5",
-]
-
-[[package]]
 name = "console"
 version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -663,110 +648,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "error_handling"
-version = "0.1.0"
-
-[[package]]
-name = "ex01_ownership_basics"
-version = "0.1.0"
-
-[[package]]
-name = "ex01_struct_definition"
-version = "0.1.0"
-
-[[package]]
-name = "ex02_move_semantics"
-version = "0.1.0"
-
-[[package]]
-name = "ex02_mutability"
-version = "0.1.0"
-
-[[package]]
-name = "ex02_struct_update_syntax"
-version = "0.1.0"
-
-[[package]]
-name = "ex03_references_borrowing"
-version = "0.1.0"
-
-[[package]]
-name = "ex03_shadowing"
-version = "0.1.0"
-
-[[package]]
-name = "ex03_struct_methods"
-version = "0.1.0"
-
-[[package]]
-name = "ex04_associated_functions"
-version = "0.1.0"
-
-[[package]]
-name = "ex04_data_types"
-version = "0.1.0"
-
-[[package]]
-name = "ex04_mutable_references"
-version = "0.1.0"
-
-[[package]]
-name = "ex05_booleans_chars"
-version = "0.1.0"
-
-[[package]]
-name = "ex05_borrowing_rules"
-version = "0.1.0"
-
-[[package]]
-name = "ex05_tuple_structs"
-version = "0.1.0"
-
-[[package]]
-name = "ex06_compound_types"
-version = "0.1.0"
-
-[[package]]
-name = "ex06_ownership_structs"
-version = "0.1.0"
-
-[[package]]
-name = "ex06_slices_intro"
-version = "0.1.0"
-
-[[package]]
-name = "ex07_functions"
-version = "0.1.0"
-
-[[package]]
-name = "ex07_rectangle_program"
-version = "0.1.0"
-
-[[package]]
-name = "ex08_comments"
-version = "0.1.0"
-
-[[package]]
-name = "ex08_student_manager"
-version = "0.1.0"
-
-[[package]]
-name = "ex09_advanced_functions"
-version = "0.1.0"
-
-[[package]]
-name = "ex10_if_else"
-version = "0.1.0"
-
-[[package]]
-name = "ex11_loops"
-version = "0.1.0"
-
-[[package]]
-name = "ex12_control_flow_practice"
-version = "0.1.0"
-
-[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -902,13 +783,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "game_enhancements"
-version = "0.1.0"
-dependencies = [
- "rand 0.8.5",
-]
-
-[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1031,14 +905,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "hello_cargo"
-version = "0.1.0"
-
-[[package]]
-name = "hello_world"
-version = "0.1.0"
 
 [[package]]
 name = "hmac"
@@ -1571,13 +1437,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
-name = "loops"
-version = "0.1.0"
-dependencies = [
- "rand 0.8.5",
-]
-
-[[package]]
 name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1596,10 +1455,6 @@ dependencies = [
  "string_cache_codegen",
  "tendril",
 ]
-
-[[package]]
-name = "match_expressions"
-version = "0.1.0"
 
 [[package]]
 name = "matchers"
@@ -2195,10 +2050,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "random_numbers"
-version = "0.1.0"
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2387,10 +2238,6 @@ dependencies = [
  "walkdir",
  "zip",
 ]
-
-[[package]]
-name = "rust_edition_exercise"
-version = "0.1.0"
 
 [[package]]
 name = "rustc-demangle"
@@ -2697,10 +2544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple_calculator"
-version = "0.1.0"
-
-[[package]]
 name = "siphasher"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2774,10 +2617,6 @@ dependencies = [
  "proc-macro2",
  "quote",
 ]
-
-[[package]]
-name = "string_parsing"
-version = "0.1.0"
 
 [[package]]
 name = "strsim"
@@ -3252,10 +3091,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "user_input"
-version = "0.1.0"
-
-[[package]]
 name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3289,10 +3124,6 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-
-[[package]]
-name = "variables"
-version = "0.1.0"
 
 [[package]]
 name = "vcpkg"

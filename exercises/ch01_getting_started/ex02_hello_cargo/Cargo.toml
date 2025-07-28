@@ -3,6 +3,9 @@ name = "hello_cargo"
 version = "0.1.0"
 edition = "2021"
 
+# This exercise is independent, not part of the workspace
+[workspace]
+
 # Learn about dependencies by adding a simple one
 [dependencies]
 # TODO: Add the "colored" crate version "2" to make colorful output

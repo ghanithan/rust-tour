@@ -2,6 +2,9 @@
 name = "user_input"
 version = "0.1.0"
 edition = "2021"
+# This exercise is independent, not part of the workspace
+[workspace]
+
 
 # This exercise demonstrates basic input/output without external dependencies
 [dependencies]

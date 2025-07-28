@@ -1,7 +1,6 @@
 [workspace]
 members = [
-    "web-server",
-    "exercises/ch*/ex[0-9][0-9]*"
+    "web-server"
 ]
 resolver = "2"
 
