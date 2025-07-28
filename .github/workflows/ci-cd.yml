@@ -102,7 +102,7 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-          - target: x86_64-apple-darwin
+          - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -121,12 +121,11 @@ jobs:
       with:
         key: ${{ matrix.target }}
 
-    # Install OpenSSL on macOS
-    - name: Install OpenSSL (macOS)
-      if: matrix.os == 'macos-latest'
+    # Set up environment for vendored dependencies
+    - name: Set up build environment
       run: |
-        brew install openssl
-        echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+        echo "CARGO_NET_RETRY=10" >> $GITHUB_ENV
+        echo "RUST_BACKTRACE=1" >> $GITHUB_ENV
 
     - name: Install Node.js
       uses: actions/setup-node@v4

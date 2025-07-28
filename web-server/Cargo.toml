@@ -82,7 +82,7 @@ scraper = "0.15"
 regex = "1.0"
 
 # Git support for downloading exercises (only for published binaries)
-git2 = { version = "0.19", optional = true }
+git2 = { version = "0.19", optional = true, features = ["vendored-openssl"] }
 
 # User interaction (only for published binaries)
 dialoguer = { version = "0.11", optional = true }
