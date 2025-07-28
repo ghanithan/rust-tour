@@ -19,16 +19,17 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# Rust build stage
+# Rust build stage with optimized toolchain
 FROM rust:1.83-alpine AS rust-builder
 
-# Install system dependencies for building
+# Install system dependencies for building (using system OpenSSL instead of vendored)
 RUN apk add --no-cache \
     musl-dev \
     pkgconfig \
     openssl-dev \
     openssl-libs-static \
-    libc6-compat
+    libc6-compat \
+    git
 
 # Set working directory
 WORKDIR /app
@@ -42,33 +43,17 @@ COPY web-server/Cargo.toml ./web-server/
 RUN cp Cargo.toml Cargo.toml.original && \
     printf '[workspace]\nmembers = [\n    "web-server"\n]\nresolver = "2"\n\n[workspace.package]\nversion = "0.1.0"\nedition = "2021"\nauthors = ["Rust Tour Contributors"]\nlicense = "MIT OR Apache-2.0"\nrepository = "https://github.com/rust-tour/rust-tour"\nhomepage = "https://github.com/rust-tour/rust-tour"\n\n[workspace.dependencies]\nserde = { version = "1.0", features = ["derive"] }\nserde_json = "1.0"\ntokio = { version = "1.0", features = ["full"] }\nanyhow = "1.0"\ncriterion = "0.5"\ntempfile = "3.8"\nwalkdir = "2.4"\naxum = { version = "0.7", features = ["ws", "macros"] }\ntower = "0.4"\ntower-http = { version = "0.5", features = ["cors", "fs", "trace", "compression-gzip", "limit"] }\nhyper = { version = "1.0", features = ["full"] }\ntokio-tungstenite = "0.20"\nfutures-util = "0.3"\nportable-pty = "0.8"\nnotify = "6.0"\nrust-embed = "8.0"\nmime_guess = "2.0"\npath-absolutize = "3.1"\nuuid = { version = "1.0", features = ["v4"] }\nchrono = { version = "0.4", features = ["serde"] }\nthiserror = "1.0"\ntracing = "0.1"\ntracing-subscriber = "0.3"\n\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = "abort"\n' > Cargo.toml
 
-# Create dummy source files for dependency caching
-RUN mkdir -p web-server/src && \
-    echo "fn main() {}" > web-server/src/main.rs
-
-# Build dependencies (without exercises)
-RUN cargo build --release --package rust-tour --no-default-features
-
-# Restore original workspace config
-RUN mv Cargo.toml.original Cargo.toml
-
-# Copy actual source code
+# Copy all source code and config files
 COPY web-server/ ./web-server/
-
-# Copy Cargo.lock for final build
 COPY Cargo.lock ./
-
-# Copy exercises for final build
 COPY exercises/ ./exercises/
+COPY scripts/ ./scripts/
 
 # Copy built web assets
 COPY --from=web-builder /app/web/dist ./web/dist
 
-# Copy scripts
-COPY scripts/ ./scripts/
-
-# Build the actual application
-RUN touch web-server/src/main.rs && \
+# Restore original workspace config and build once (no extra features needed - everything pre-copied)
+RUN mv Cargo.toml.original Cargo.toml && \
     cargo build --release --package rust-tour --no-default-features
 
 # Copy solutions if they exist (optional)
