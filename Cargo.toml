@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "exercise-framework",
     "web-server",
     "exercises/ch*/ex[0-9][0-9]*"
 ]
@@ -21,8 +20,7 @@ serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
 
-# Exercise framework dependencies  
-criterion = "0.5"
+# Common dependencies used by web-server
 tempfile = "3.8"
 walkdir = "2.4"
 
