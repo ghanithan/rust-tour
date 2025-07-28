@@ -1,51 +1,53 @@
-# Rust Learning Platform - Technical Documentation
+# Rust Tour - Technical Architecture Documentation
 
 ## Project Overview
 
-The Rust Learning Platform is a comprehensive, interactive web-based learning environment designed to teach Rust programming through progressive, exercise-based education following "The Rust Programming Language" book structure. The platform combines a modern web interface with real-time code execution and terminal access.
+Rust Tour is an interactive Rust learning platform that provides progressive, exercise-based education following "The Rust Programming Language" book structure. The platform combines a modern Rust web server with real-time WebSocket communication and an integrated terminal experience.
 
-## Architecture Overview
+## System Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "Frontend (Vite + React)"
-        A[React Application] --> B[Monaco Editor]
-        A --> C[XTerm.js Terminal]
-        A --> D[Real-time WebSocket]
-        A --> E[Progress Tracking]
+    subgraph "Frontend (JavaScript/Vite)"
+        A[JavaScript Application] --> B[Monaco Editor]
+        A --> C[Terminal Interface] 
+        A --> D[WebSocket Client]
+        A --> E[Progress Tracker]
     end
     
-    subgraph "Backend Services"
-        F[Rust Web Server] --> G[Axum HTTP Server]
+    subgraph "Backend (Rust/Axum)"
+        F[Axum HTTP Server] --> G[Exercise API]
         F --> H[WebSocket Handler]
         F --> I[File System API]
-        F --> J[Terminal PTY Handler]
+        F --> J[Terminal PTY Manager]
+        K[Progress System] --> L[JSON Storage]
     end
     
     subgraph "Rust Toolchain"
-        K[Cargo Commands] --> L[rustc Compiler]
-        K --> M[Cargo Test]
-        K --> N[Clippy Linter]
+        M[Cargo Commands] --> N[rustc Compiler]
+        M --> O[Cargo Test]
+        M --> P[Clippy Linter]
     end
     
     subgraph "File System"
-        O[Exercise Files] --> P[src/main.rs]
-        O --> Q[Cargo.toml]
-        O --> R[tests/]
-        S[Progress Data] --> T[progress.json]
+        Q[Exercise Files] --> R[src/main.rs]
+        Q --> S[Cargo.toml]
+        Q --> T[tests/]
+        Q --> U[metadata.json]
+        V[Progress Data] --> W[user_progress.json]
     end
     
-    A -.->|HTTP/3000| G
+    A -.->|HTTP/REST| F
     A -.->|WebSocket| H
-    F -.->|Spawn| K
-    F -.->|Read/Write| O
-    F -.->|PTY| U[portable-pty]
-    U -.->|Shell| V[Bash/Terminal]
+    F -.->|Spawn Process| M
+    F -.->|Read/Write| Q
+    J -.->|PTY| X[portable-pty]
+    X -.->|Shell| Y[Bash/Terminal]
     
     style A fill:#e1f5fe
     style F fill:#fff3e0
-    style K fill:#f3e5f5
-    style O fill:#e8f5e8
+    style M fill:#f3e5f5
+    style Q fill:#e8f5e8
 ```
 
 ## Architecture Decisions
@@ -57,540 +59,817 @@ graph TB
 
 The `exercise-framework` was created as a sophisticated abstraction layer for exercise management but was never integrated. The project evolved to use simpler, direct approaches that work perfectly well. This ADR documents the decision to remove this unused technical debt.
 
-## System Architecture
+## Core Architecture Components
 
-### 1. Frontend Architecture
+### 1. Rust Backend Server (Axum Framework)
 
-#### 1.1 Technology Stack
-- **HTML5/CSS3**: Modern responsive design with CSS Grid and Flexbox
-- **Vanilla JavaScript (ES6+)**: Modular architecture with ES6 modules
-- **Monaco Editor**: VSCode-based code editor with Rust syntax highlighting
-- **XTerm.js**: Full-featured terminal emulator
-- **WebSocket API**: Real-time bidirectional communication
+**Technology Stack:**
+- **Axum**: Modern async web framework
+- **Tokio**: Async runtime for concurrent operations
+- **WebSocket**: Real-time bidirectional communication
+- **portable-pty**: Cross-platform terminal integration
+- **serde**: JSON serialization/deserialization
 
-#### 1.2 Frontend Module Structure
+**Server Structure:**
 ```
-web/src/js/
-├── app.js              # Main application entry point
-├── ui.js               # User interface management
-├── websocket-manager.js # WebSocket communication
-├── terminal.js         # Terminal management
-├── progress-tracker.js # Progress tracking and persistence
-└── platform.js        # Core platform logic
+web-server/src/
+├── main.rs              # Main server application
+├── Cargo.toml          # Dependencies and features
+└── web-dist/           # Embedded frontend assets (optional)
 ```
 
-#### 1.3 UI Layout Design
+### 2. Frontend Application
 
-The interface uses CSS Grid for the main layout with the following areas:
+**Technology Stack:**
+- **TypeScript/React**: Modern web application framework
+- **Monaco Editor**: VSCode-based code editor with Rust syntax
+- **WebSocket API**: Real-time communication with backend
+- **CSS Grid**: Responsive layout system
 
-```css
-grid-template-areas: 
-  "header header header"
-  "sidebar editor panel"
-  "sidebar output panel";
+**Frontend Structure:**
+```
+web/src/
+├── components/         # React components
+├── hooks/             # Custom React hooks
+├── services/          # API and WebSocket services
+├── styles/            # CSS modules
+└── utils/             # Helper functions
 ```
 
-**Layout Zones:**
-- **Header**: Logo, progress indicator, global controls
-- **Sidebar**: Exercise navigation and chapter organization
-- **Editor**: Monaco Editor with action buttons
-- **Output Panel**: Tabbed interface for stdout, tests, and clippy results
-- **Right Panel**: Book references, hints system, exercise info
-- **Terminal**: Overlay terminal with resize/minimize capabilities
+## Code Editing, Saving, and Testing Flow
 
-### 2. Backend Architecture
-
-#### 2.1 Server Structure
-```
-web/
-├── server.js           # Main Node.js server
-├── package.json        # Dependencies and scripts
-└── dist/              # Built frontend assets
-```
-
-#### 2.2 Server Responsibilities
-- **HTTP Server (Port 8000)**: Serves static frontend assets
-- **WebSocket Server (Port 3000)**: Real-time communication hub
-- **File System API**: Exercise file management
-- **Process Management**: Cargo command execution
-- **Terminal Service**: PTY-based terminal sessions
-
-#### 2.3 WebSocket Message Protocol
-```javascript
-// Message structure
-{
-  type: "message_type",
-  action: "specific_action",
-  sessionId: "unique_session_id",
-  data: { /* payload */ },
-  timestamp: Date.now()
-}
-```
-
-**Supported Message Types:**
-- `exercise_view`: Track exercise viewing
-- `code_execution`: Handle run/test/check commands
-- `terminal`: Terminal session management
-- `file_update`: File system changes
-- `progress_update`: Learning progress updates
-
-### 3. Exercise Framework
-
-#### 3.1 Exercise Structure
-Each exercise follows a standardized structure:
-
-```
-exercises/chXX_topic/exYY_name/
-├── src/
-│   └── main.rs         # Student implementation area
-├── tests/              # Automated test cases
-│   └── integration_tests.rs
-├── hints.md           # Progressive hint system
-├── Cargo.toml         # Exercise-specific dependencies
-└── README.md          # Exercise description
-```
-
-#### 3.2 Exercise Metadata
-```javascript
-{
-  "title": "Exercise Name",
-  "description": "Exercise description",
-  "difficulty": "beginner|intermediate|advanced",
-  "estimated_time_minutes": 15,
-  "concepts": ["ownership", "borrowing"],
-  "book_references": {
-    "specific_sections": [
-      {
-        "title": "Chapter Section",
-        "url": "https://doc.rust-lang.org/book/...",
-        "chapter": "4.1",
-        "relevance": "core|supplementary"
-      }
-    ]
-  }
-}
-```
-
-## Implementation Details
-
-### 1. Terminal Implementation
-
-#### 1.1 Architecture Decision: XTerm.js + node-pty
-
-**Why XTerm.js?**
-- Full VT100/xterm terminal emulation
-- Excellent performance with large outputs
-- Rich theming and customization options
-- Wide browser compatibility
-
-**Why node-pty?**
-- Cross-platform PTY (pseudo-terminal) support
-- Proper process management and signal handling
-- Native shell integration
-- Maintains terminal state and history
-
-#### 1.2 Terminal Session Management
-
-```javascript
-// Terminal session lifecycle
-class TerminalManager {
-  createSession() {
-    this.sessionId = `terminal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    // Send session creation request via WebSocket
-  }
-  
-  handleInput(data) {
-    // Forward input to backend PTY process
-  }
-  
-  handleOutput(data) {
-    // Display output in XTerm instance
-  }
-}
-```
-
-#### 1.3 Resize and Minimize Implementation
-
-**Design Decision: Flexible Terminal UX**
-- **Draggable resize handle**: Top edge resize with min/max constraints
-- **Minimize functionality**: Collapse to header-only (40px height)
-- **Double-click header**: Toggle minimize/maximize
-- **Smooth transitions**: CSS transitions for better UX
-
-```javascript
-// Resize constraints
-const minHeight = 100; // Allow small terminal sizes
-const maxHeight = window.innerHeight * 0.8; // Maximum 80% of viewport
-
-// State management
-let isMinimized = false;
-let previousHeight = 300; // Store for restoration
-```
-
-### 2. Code Execution Pipeline
-
-#### 2.1 Execution Flow
+### 1. Exercise Loading Flow
 
 ```mermaid
 sequenceDiagram
     participant UI as Frontend UI
-    participant WS as WebSocket
-    participant Server as Node.js Server
+    participant API as Axum Server
     participant FS as File System
-    participant Cargo as Rust Toolchain
     
-    UI->>WS: code_execution request
-    WS->>Server: Execute command
-    Server->>FS: Write code to file
-    Server->>Cargo: spawn cargo run/test/clippy
-    Cargo-->>Server: stdout/stderr stream
-    Server->>WS: Execution results
-    WS->>UI: Update output panels
+    UI->>API: GET /api/exercises/{chapter}/{exercise}
+    API->>FS: Read exercise files
+    FS-->>API: Exercise data (metadata, code, README, hints)
+    API-->>UI: Exercise response
+    UI->>UI: Load code in Monaco Editor
+    UI->>API: POST /api/progress/view (track viewing)
 ```
 
-#### 2.2 Command Execution Implementation
+**API Endpoint**: `GET /api/exercises/{chapter}/{exercise}`
 
-```javascript
-// Server-side command execution
-function executeCargoCommand(command, exercisePath, code) {
-  return new Promise((resolve, reject) => {
-    // 1. Write code to file system
-    fs.writeFileSync(path.join(exercisePath, 'src/main.rs'), code);
+**Backend Implementation:**
+```rust
+async fn get_exercise(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+) -> Result<Json<ExerciseDetails>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
     
-    // 2. Execute cargo command
-    const child = spawn('cargo', [command], {
-      cwd: exercisePath,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    // Read all exercise files
+    let metadata = read_metadata(&exercise_path)?;
+    let main_content = read_main_rs(&exercise_path)?;
+    let readme = read_readme(&exercise_path)?;
+    let hints = read_hints(&exercise_path)?;
     
-    // 3. Collect output streams
-    let stdout = '';
-    let stderr = '';
-    
-    child.stdout.on('data', (data) => stdout += data.toString());
-    child.stderr.on('data', (data) => stderr += data.toString());
-    
-    child.on('close', (code) => {
-      resolve({ stdout, stderr, exitCode: code });
-    });
-  });
+    Ok(Json(ExerciseDetails {
+        metadata,
+        main_content,
+        readme,
+        hints,
+        path: format!("{}/{}", chapter, exercise),
+    }))
 }
 ```
 
-### 3. Progress Tracking System
+### 2. Code Saving Flow
 
-#### 3.1 Progress Data Structure
+```mermaid
+sequenceDiagram
+    participant UI as Monaco Editor
+    participant WS as WebSocket
+    participant API as Axum Server
+    participant FS as File System
+    participant Broadcast as Broadcast Channel
+    
+    UI->>API: PUT /api/exercises/{chapter}/{exercise}/code
+    API->>FS: Write code to src/main.rs
+    FS-->>API: Write confirmation
+    API->>Broadcast: Send file_updated message
+    Broadcast->>WS: Broadcast to all clients
+    WS-->>UI: File change notification
+    API-->>UI: Save confirmation
+```
 
-```javascript
+**API Endpoint**: `PUT /api/exercises/{chapter}/{exercise}/code`
+
+**Backend Implementation:**
+```rust
+async fn save_exercise_code(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<SaveCodeRequest>,
+) -> Result<Json<ApiResponse<()>>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    let main_path = exercise_path.join("src").join("main.rs");
+    
+    // Save code to file system
+    fs::write(&main_path, &request.code).await?;
+    
+    // Broadcast file change to all connected clients
+    let broadcast_msg = BroadcastMessage {
+        msg_type: "file_updated".to_string(),
+        data: serde_json::json!({
+            "exercise": format!("{}/{}", chapter, exercise),
+            "file": "src/main.rs"
+        }),
+    };
+    let _ = state.broadcast_tx.send(broadcast_msg);
+    
+    Ok(Json(ApiResponse::success(())))
+}
+```
+
+### 3. Code Execution Flow (Run/Test/Check)
+
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as Axum Server
+    participant Cargo as Cargo Process
+    participant FS as File System
+    
+    UI->>API: POST /api/exercises/{chapter}/{exercise}/test
+    API->>FS: Ensure code is saved
+    API->>Cargo: spawn cargo test --nocapture
+    Cargo-->>API: stdout/stderr streams
+    API-->>UI: Execution results (CargoResult)
+    
+    Note over UI,Cargo: Similar flow for /run and /check endpoints
+```
+
+**API Endpoints:**
+- `POST /api/exercises/{chapter}/{exercise}/test` - Run tests
+- `POST /api/exercises/{chapter}/{exercise}/run` - Execute program  
+- `POST /api/exercises/{chapter}/{exercise}/check` - Run clippy
+
+**Backend Implementation:**
+```rust
+async fn test_exercise(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+) -> Result<Json<CargoResult>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    
+    match run_cargo_command("test", &exercise_path, vec!["--", "--nocapture"]).await {
+        Ok(result) => Ok(Json(result)),
+        Err(e) => {
+            error!("Error running tests for {}/{}: {}", chapter, exercise, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn run_cargo_command(
+    command: &str,
+    cwd: &std::path::Path,
+    args: Vec<&str>,
+) -> anyhow::Result<CargoResult> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg(command)
+        .args(&args)
+        .current_dir(cwd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    
+    let output = timeout(Duration::from_secs(60), cmd.output()).await??;
+    
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let combined_output = format!("{}{}", stdout, stderr);
+    
+    Ok(CargoResult {
+        success: output.status.success(),
+        code: output.status.code(),
+        stdout,
+        stderr,
+        output: combined_output,
+    })
+}
+```
+
+## WebSocket Architecture and Real-Time Features
+
+### 1. WebSocket Connection Management
+
+**Connection Endpoint**: `GET /ws`
+
+**Backend WebSocket Handler:**
+```rust
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<AppState>,
+) -> Response {
+    ws.on_upgrade(|socket| websocket_connection(socket, state))
+}
+
+async fn websocket_connection(socket: WebSocket, state: AppState) {
+    let connection_id = Uuid::new_v4();
+    
+    // Add connection to state
+    {
+        let mut connections = state.connections.write().await;
+        connections.insert(connection_id);
+    }
+    
+    // Set up broadcast receiver
+    let mut broadcast_rx = state.broadcast_tx.subscribe();
+    let (mut sender, mut receiver) = socket.split();
+    
+    // Handle incoming and outgoing messages
+    // ... message processing logic
+}
+```
+
+### 2. WebSocket Message Types
+
+**Message Structure:**
+```rust
+#[derive(Debug, Serialize)]
+struct BroadcastMessage {
+    #[serde(rename = "type")]
+    msg_type: String,
+    #[serde(flatten)]
+    data: serde_json::Value,
+}
+```
+
+**Supported Message Types:**
+
+1. **Terminal Messages** (`type: "terminal"`)
+   ```json
+   {
+     "type": "terminal",
+     "action": "create|input|output|resize|destroy",
+     "sessionId": "unique_session_id",
+     "data": "terminal_data"
+   }
+   ```
+
+2. **File Update Messages** (`type: "file_updated"`)
+   ```json
+   {
+     "type": "file_updated",
+     "exercise": "ch01_getting_started/ex01_hello_world", 
+     "file": "src/main.rs"
+   }
+   ```
+
+3. **File Change Messages** (`type: "file_changed"`)
+   ```json
+   {
+     "type": "file_changed",
+     "exercise": "exercise_name",
+     "file": "relative_file_path"
+   }
+   ```
+
+### 3. Terminal PTY Integration
+
+**Terminal Session Management:**
+```rust
+async fn create_terminal_session(
+    state: &AppState,
+    connection_id: ConnectionId,
+    session_id: String,
+    cols: Option<u16>,
+    rows: Option<u16>,
+) -> anyhow::Result<()> {
+    let cols = cols.unwrap_or(80);
+    let rows = rows.unwrap_or(24);
+    
+    // Determine working directory (exercises path)
+    let cwd = state.exercises_path.clone();
+    let shell = if cfg!(windows) { "powershell.exe" } else { "bash" };
+    
+    // Create PTY system
+    let pty_system = native_pty_system();
+    let pty_size = PtySize { rows, cols, pixel_width: 0, pixel_height: 0 };
+    let pty_pair = pty_system.openpty(pty_size)?;
+    
+    // Spawn shell process
+    let mut cmd = CommandBuilder::new(shell);
+    cmd.cwd(&cwd);
+    let child = pty_pair.slave.spawn_command(cmd)?;
+    
+    // Set up PTY I/O streaming via WebSocket
+    // ... PTY output streaming logic
+}
+```
+
+**Terminal Features:**
+- **Real-time I/O**: Terminal input/output streamed via WebSocket
+- **Session Management**: Multiple terminal sessions per user
+- **Working Directory**: Terminals start in exercises directory
+- **Resize Support**: Dynamic terminal resizing
+- **Cross-platform**: Works on Windows, macOS, Linux
+
+### 4. Real-Time Collaboration Features
+
+**Broadcast System:**
+```rust
+// Central broadcast channel for all real-time events
+let (broadcast_tx, _) = broadcast::channel(100);
+
+// Send messages to all connected clients
+let message = BroadcastMessage {
+    msg_type: "file_updated".to_string(),
+    data: serde_json::json!({ "exercise": "...", "file": "..." }),
+};
+let _ = broadcast_tx.send(message);
+```
+
+**Use Cases:**
+- **File Synchronization**: Code changes broadcast to all clients
+- **Progress Updates**: Learning progress shared across sessions
+- **Terminal Output**: Terminal sessions can be shared/viewed
+- **System Notifications**: Server status and system messages
+
+## Exercise Management System
+
+### 1. Exercise Structure
+
+**Exercise Directory Layout:**
+```
+exercises/chXX_topic_name/exYY_exercise_name/
+├── src/
+│   └── main.rs          # Student implementation area
+├── tests/
+│   └── unit_tests.rs    # Automated test cases
+├── solutions/
+│   ├── reference.rs     # Primary reference solution
+│   └── explained.md     # Solution explanation
+├── Cargo.toml           # Exercise-specific dependencies
+├── metadata.json        # Exercise configuration
+├── README.md           # Exercise instructions
+└── hints.md            # Progressive hint system (3 levels)
+```
+
+### 2. Exercise Metadata
+
+**metadata.json Structure:**
+```json
 {
-  "user_id": "unique_identifier",
-  "session_stats": {
-    "session_start": "2023-10-01T10:00:00Z",
-    "exercises_viewed": ["ch01/ex01", "ch01/ex02"],
-    "total_time_minutes": 45,
-    "commands_executed": {
-      "run": 12,
-      "test": 8,
-      "check": 5
-    }
+  "id": "ch01-ex01-hello-world",
+  "title": "Hello World",
+  "description": "Create your first Rust program",
+  "chapter": 1,
+  "exercise_number": 1,
+  "difficulty": "beginner",
+  "estimated_time_minutes": 10,
+  "concepts": ["println!", "main_function", "compilation"],
+  "prerequisites": [],
+  "exercise_type": "code_completion",
+  "rust_book_refs": {
+    "primary_chapter": "1.2",
+    "specific_sections": [
+      {
+        "chapter": "1.2",
+        "title": "Hello, World!",
+        "url": "https://doc.rust-lang.org/book/ch01-02-hello-world.html",
+        "relevance": "core_concept"
+      }
+    ]
   },
-  "exercise_progress": {
-    "ch01/ex01": {
-      "status": "completed",
-      "completion_time": "2023-10-01T10:15:00Z",
-      "attempts": 3,
-      "hints_used": [1, 2],
-      "time_spent_minutes": 15
-    }
+  "hints": {
+    "available": 3,
+    "auto_unlock": false
   },
-  "skill_progress": {
-    "ownership": 0.7,
-    "borrowing": 0.4,
-    "lifetimes": 0.1
+  "testing": {
+    "timeout_seconds": 10,
+    "memory_limit_mb": 50,
+    "allow_std_only": true
   }
 }
 ```
 
-#### 3.2 Progress Persistence
+### 3. Exercise Discovery and Loading
 
-**Design Decision: Local Storage + File Backup**
-- Primary storage: Browser localStorage for immediate access
-- Backup: JSON file in project root for persistence
-- Sync mechanism: WebSocket messages update both locations
-
-### 4. Error Handling and Resilience
-
-#### 4.1 WebSocket Connection Management
-
-```javascript
-class WebSocketManager {
-  connect() {
-    // Exponential backoff reconnection strategy
-    const maxRetries = 5;
-    const baseDelay = 1000; // 1 second
+**Backend Exercise Scanning:**
+```rust
+async fn scan_exercises(exercises_path: &std::path::Path) -> anyhow::Result<Vec<ExerciseWithPath>> {
+    let mut exercises = Vec::new();
     
-    // Retry with exponential backoff
-    const retryDelay = baseDelay * Math.pow(2, attempts - 1);
-  }
-  
-  handleDisconnection() {
-    // Graceful degradation - disable real-time features
-    // Show user notification about connection loss
-    // Continue with local-only functionality
-  }
+    for chapter_entry in std::fs::read_dir(exercises_path)? {
+        let chapter_entry = chapter_entry?;
+        if !chapter_entry.file_type()?.is_dir() { continue; }
+        
+        let chapter_name = chapter_entry.file_name().to_string_lossy().to_string();
+        if !chapter_name.starts_with("ch") { continue; }
+        
+        for exercise_entry in std::fs::read_dir(chapter_entry.path())? {
+            let exercise_entry = exercise_entry?;
+            if !exercise_entry.file_type()?.is_dir() { continue; }
+            
+            let exercise_name = exercise_entry.file_name().to_string_lossy().to_string();
+            if !exercise_name.starts_with("ex") { continue; }
+            
+            // Load metadata and create exercise entry
+            let metadata_path = exercise_entry.path().join("metadata.json");
+            if let Ok(metadata) = load_exercise_metadata(&metadata_path).await {
+                exercises.push(ExerciseWithPath {
+                    metadata,
+                    path: format!("{}/{}", chapter_name, exercise_name),
+                });
+            }
+        }
+    }
+    
+    Ok(exercises)
 }
 ```
 
-#### 4.2 Codespaces Environment Detection
+### 4. Exercise Download System (for Published Binary)
 
-**Challenge**: Different port configurations in GitHub Codespaces
-**Solution**: Dynamic URL construction based on environment detection
-
-```javascript
-// WebSocket URL determination
-let wsUrl;
-if (window.location.hostname.includes('github.dev')) {
-  // Codespaces: Replace port 8000 with 3000 for WebSocket
-  const port3000Host = window.location.hostname.replace('-8000.', '-3000.');
-  wsUrl = `${protocol}//${port3000Host}/ws`;
-} else {
-  // Local development
-  wsUrl = `${protocol}//${window.location.hostname}:3000/ws`;
+**Download Flow:**
+```rust
+#[cfg(feature = "download-exercises")]
+async fn ensure_exercises_available(exercises_path: PathBuf) -> anyhow::Result<PathBuf> {
+    // Check if exercises already exist
+    if exercises_path.exists() && has_exercises(&exercises_path).await? {
+        return Ok(exercises_path);
+    }
+    
+    // Download from GitHub repository
+    let repo_url = "https://github.com/ghanithan/rust-tour.git";
+    let temp_dir = TempDir::new()?;
+    let _repo = Repository::clone(repo_url, temp_dir.path())?;
+    
+    // Copy exercises to target location
+    let source_exercises = temp_dir.path().join("exercises");
+    let target_exercises = download_path.join("exercises");
+    copy_dir_recursive(source_exercises, target_exercises.clone()).await?;
+    
+    // Verify exercise integrity
+    verify_exercises_integrity(&target_exercises).await?;
+    
+    Ok(target_exercises)
 }
 ```
 
-## Design Decisions
+**Integrity Verification:**
+```rust
+async fn verify_exercises_integrity(exercises_path: &std::path::Path) -> anyhow::Result<()> {
+    let critical_exercises = [
+        "ch01_getting_started/ex01_hello_world",
+        "ch05_using_structs/ex06_ownership_structs",
+        // ... other critical exercises
+    ];
+    
+    for exercise_path in critical_exercises {
+        let exercise_dir = exercises_path.join(exercise_path);
+        let src_main = exercise_dir.join("src/main.rs");
+        let metadata = exercise_dir.join("metadata.json");
+        
+        if !src_main.exists() {
+            anyhow::bail!("Missing src/main.rs: {}", exercise_path);
+        }
+        if !metadata.exists() {
+            anyhow::bail!("Missing metadata.json: {}", exercise_path);
+        }
+    }
+    
+    Ok(())
+}
+```
 
-### 1. Architecture Decisions
+## Progress Tracking System
 
-#### 1.1 Hybrid Client-Server Architecture
+### 1. Progress Data Structure
 
-**Decision**: Split between static frontend (port 8000) and WebSocket service (port 3000)
+**ProgressData:**
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+struct ProgressData {
+    user_id: String,
+    created_at: String,
+    overall_progress: f64,
+    chapters_completed: u32,
+    exercises_completed: u32,
+    total_exercises: u32,
+    current_streak: u32,
+    longest_streak: u32,
+    total_time_minutes: u32,
+    chapters: serde_json::Value, // Chapter-specific progress
+    exercise_history: Vec<ExerciseHistoryEntry>,
+    achievements: Vec<serde_json::Value>,
+    session_stats: SessionStats,
+}
 
-**Rationale**:
-- **Performance**: Static asset serving optimized separately from real-time communication
-- **Scalability**: WebSocket service can be scaled independently
-- **Development**: Easier debugging with separated concerns
-- **Deployment**: Flexible deployment options (CDN for static assets, dedicated WebSocket servers)
+#[derive(Debug, Serialize, Deserialize)]
+struct ExerciseHistoryEntry {
+    exercise_id: String,
+    viewed_at: Option<String>,
+    completed_at: Option<String>,
+    time_taken_minutes: Option<u32>,
+    status: String, // "viewed", "in_progress", "completed"
+    session_id: Option<String>,
+    hints_used: Option<Vec<u32>>,
+}
+```
 
-#### 1.2 Vanilla JavaScript vs. Framework
+### 2. Progress Persistence
 
-**Decision**: Use vanilla JavaScript with ES6 modules instead of React/Vue/Angular
+**File-based Storage:**
+```rust
+async fn save_progress(progress_path: &std::path::Path, progress: &ProgressData) -> anyhow::Result<()> {
+    // Ensure parent directory exists
+    if let Some(parent) = progress_path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    
+    // Serialize and write JSON
+    let json = serde_json::to_string_pretty(progress)?;
+    tokio::fs::write(progress_path, json).await?;
+    
+    Ok(())
+}
 
-**Rationale**:
-- **Learning Focus**: Reduced complexity allows focus on Rust learning
-- **Performance**: No framework overhead, faster initial load
-- **Dependencies**: Minimal external dependencies reduce security surface
-- **Customization**: Full control over editor integration and terminal handling
-- **Bundle Size**: Significantly smaller bundle for better loading in Codespaces
+async fn load_progress(progress_path: &std::path::Path) -> anyhow::Result<ProgressData> {
+    if !progress_path.exists() {
+        // Create default progress data
+        return Ok(ProgressData::default());
+    }
+    
+    let content = tokio::fs::read_to_string(progress_path).await?;
+    let progress: ProgressData = serde_json::from_str(&content)?;
+    Ok(progress)
+}
+```
 
-#### 1.3 Monaco Editor Choice
+### 3. Progress API Endpoints
 
-**Decision**: Microsoft Monaco Editor over CodeMirror or Ace Editor
+**Progress Tracking Endpoints:**
+- `GET /api/progress` - Get current progress data
+- `POST /api/progress/view` - Track exercise viewing
+- `POST /api/progress/complete` - Mark exercise completed
+- `POST /api/progress/hint` - Track hint usage
 
-**Rationale**:
-- **VSCode Compatibility**: Familiar interface for developers
-- **Language Support**: Excellent TypeScript/JavaScript ecosystem for extensions
-- **Performance**: Handles large files efficiently
-- **Features**: Built-in IntelliSense, minimap, command palette
-- **Accessibility**: Strong accessibility features out of the box
+## File System Integration
 
-### 2. User Experience Decisions
+### 1. File Watching System
 
-#### 2.1 Progressive Hint System
+**Real-time File Change Detection:**
+```rust
+async fn setup_file_watcher(state: AppState) -> anyhow::Result<()> {
+    let exercises_path = state.exercises_path.clone();
+    let broadcast_tx = state.broadcast_tx.clone();
+    
+    tokio::spawn(async move {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+        
+        let mut watcher = RecommendedWatcher::new(
+            move |res| {
+                if let Err(e) = tx.blocking_send(res) {
+                    error!("Failed to send file watcher event: {}", e);
+                }
+            },
+            notify::Config::default(),
+        )?;
+        
+        watcher.watch(&exercises_path, RecursiveMode::Recursive)?;
+        
+        while let Some(event) = rx.recv().await {
+            match event {
+                Ok(Event { kind: EventKind::Modify(_), paths, .. }) => {
+                    for path in paths {
+                        if let Ok(relative_path) = path.strip_prefix(&exercises_path) {
+                            // Broadcast file change to all clients
+                            let broadcast_msg = BroadcastMessage {
+                                msg_type: "file_changed".to_string(),
+                                data: serde_json::json!({
+                                    "file": relative_path.to_string_lossy()
+                                }),
+                            };
+                            let _ = broadcast_tx.send(broadcast_msg);
+                        }
+                    }
+                }
+                Err(e) => error!("File watcher error: {}", e),
+            }
+        }
+        
+        Ok::<(), anyhow::Error>(())
+    });
+    
+    Ok(())
+}
+```
 
-**Design**: Three-level hint system (Conceptual → Strategic → Implementation)
+### 2. Exercise File Operations
 
-**Rationale**:
-- **Learning Theory**: Scaffolded learning approach
-- **Engagement**: Prevents immediate solution seeking
-- **Adaptive**: Users can choose their level of assistance
-- **Tracking**: Helps identify common difficulty points
+**Core File Operations:**
+```rust
+// Read exercise code
+async fn read_exercise_code(exercise_path: &std::path::Path) -> anyhow::Result<String> {
+    let main_path = exercise_path.join("src").join("main.rs");
+    let content = tokio::fs::read_to_string(&main_path).await?;
+    Ok(content)
+}
 
-#### 2.2 Integrated Terminal
+// Save exercise code
+async fn save_exercise_code(exercise_path: &std::path::Path, code: &str) -> anyhow::Result<()> {
+    let main_path = exercise_path.join("src").join("main.rs");
+    
+    // Ensure directory exists
+    if let Some(parent) = main_path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    
+    tokio::fs::write(&main_path, code).await?;
+    Ok(())
+}
 
-**Decision**: Include full terminal access within the web interface
+// Load exercise metadata
+async fn load_exercise_metadata(metadata_path: &std::path::Path) -> anyhow::Result<ExerciseMetadata> {
+    let content = tokio::fs::read_to_string(metadata_path).await?;
+    let metadata: ExerciseMetadata = serde_json::from_str(&content)?;
+    Ok(metadata)
+}
+```
 
-**Rationale**:
-- **Workflow Efficiency**: Eliminates context switching to external terminal
-- **Learning Value**: Students see real cargo commands and output
-- **Debugging**: Direct access to rust toolchain commands
-- **Professional Simulation**: Mirrors real development environment
+## API Reference
 
-#### 2.3 Real-time Feedback
+### REST API Endpoints
 
-**Decision**: WebSocket-based real-time updates for code execution
+#### Exercise Management
+- `GET /api/exercises` - List all available exercises
+- `GET /api/exercises/{chapter}/{exercise}` - Get specific exercise details
+- `PUT /api/exercises/{chapter}/{exercise}/code` - Save exercise code
+- `POST /api/exercises/{chapter}/{exercise}/test` - Run exercise tests
+- `POST /api/exercises/{chapter}/{exercise}/run` - Execute exercise code
+- `POST /api/exercises/{chapter}/{exercise}/check` - Run clippy checks
 
-**Rationale**:
-- **Engagement**: Immediate feedback improves learning
-- **Performance Perception**: Streaming output feels more responsive
-- **Progress Tracking**: Real-time analytics for learning insights
-- **Collaboration**: Foundation for future collaborative features
+#### Progress Tracking
+- `GET /api/progress` - Get user progress data
+- `POST /api/progress/view` - Track exercise viewing
+- `POST /api/progress/complete` - Mark exercise completed
+- `POST /api/progress/hint` - Track hint usage
 
-### 3. Technical Decisions
+#### Book Integration
+- `GET /api/book/{chapter}` - Get Rust Book chapter content
+- `GET /api/book/fetch` - Fetch book content by URL
 
-#### 3.1 File System Architecture
+#### System
+- `GET /health` - Health check endpoint
 
-**Decision**: Direct file system manipulation instead of in-memory code execution
+### WebSocket Protocol
 
-**Rationale**:
-- **Rust Toolchain Integration**: Cargo requires file system presence
-- **Debugging Capability**: Students can inspect generated files
-- **Realistic Environment**: Mirrors actual development workflow
-- **Testing Support**: File-based tests work naturally
-- **IDE Integration**: External tools can access exercise files
+#### Connection
+- **Endpoint**: `GET /ws`
+- **Protocol**: Standard WebSocket upgrade
 
-#### 3.2 Progress Data Format
+#### Message Format
+```typescript
+interface WebSocketMessage {
+  type: string;
+  action?: string;
+  sessionId?: string;
+  data?: any;
+  timestamp?: number;
+}
+```
 
-**Decision**: JSON-based progress tracking with local storage + file backup
+#### Message Types
 
-**Rationale**:
-- **Simplicity**: No database setup required
-- **Portability**: Progress travels with project
-- **Debugging**: Human-readable format
-- **Privacy**: Local-first approach
-- **Offline Capability**: Works without server connection
+**Terminal Messages:**
+```json
+{
+  "type": "terminal",
+  "action": "create|input|output|resize|destroy", 
+  "sessionId": "unique_session_id",
+  "data": "message_data"
+}
+```
 
-#### 3.3 CSS Grid Layout
+**File Update Messages:**
+```json
+{
+  "type": "file_updated",
+  "exercise": "chapter/exercise",
+  "file": "file_path"
+}
+```
 
-**Decision**: CSS Grid for main layout instead of Flexbox or JavaScript-based layouts
-
-**Rationale**:
-- **Responsive Design**: Natural responsive behavior
-- **Performance**: Hardware-accelerated layout
-- **Maintainability**: Declarative layout specification
-- **Flexibility**: Easy to modify layout areas
-- **Modern Standards**: Future-proof approach
-
-## Performance Optimizations
-
-### 1. Frontend Optimizations
-
-- **Module Loading**: ES6 modules loaded asynchronously
-- **Monaco Lazy Loading**: Editor components loaded on demand
-- **WebSocket Buffering**: Message queuing during reconnection
-- **Local Storage Caching**: Exercise metadata cached locally
-- **CSS Grid**: Hardware-accelerated layout engine
-
-### 2. Backend Optimizations
-
-- **Process Pooling**: Reuse cargo processes where possible
-- **Stream Processing**: Stream command output instead of buffering
-- **Connection Pooling**: WebSocket connection reuse
-- **File System Watching**: Efficient file change detection
-
-### 3. Terminal Optimizations
-
-- **Viewport Rendering**: XTerm.js renders only visible content
-- **Resize Debouncing**: Debounced resize events to reduce reflow
-- **PTY Buffering**: Efficient PTY output buffering
-- **Memory Management**: Proper cleanup of terminal sessions
+**Broadcast Messages:**
+```json
+{
+  "type": "file_changed|system_notification",
+  "data": { "message": "content" }
+}
+```
 
 ## Security Considerations
 
 ### 1. Code Execution Security
-
-- **Sandboxing**: Cargo execution in isolated directories
-- **Resource Limits**: Process timeout and memory limits
+- **Process Isolation**: Cargo commands run in exercise-specific directories
+- **Timeout Limits**: All cargo commands have 60-second timeout
+- **Resource Limits**: Memory and CPU limits for spawned processes
 - **Input Validation**: All user code validated before execution
-- **File System Isolation**: Exercises contained to specific directories
 
 ### 2. WebSocket Security
-
-- **Origin Validation**: WebSocket connections validated against allowed origins
+- **Connection Validation**: WebSocket connections validated against allowed origins
 - **Message Validation**: All WebSocket messages validated and sanitized
+- **Session Management**: Secure session token generation with UUIDs
 - **Rate Limiting**: Connection and message rate limiting
-- **Session Management**: Secure session token generation
 
-### 3. Client Security
+### 3. File System Security
+- **Path Validation**: All file paths validated to prevent directory traversal
+- **Permission Control**: File operations limited to exercises directory
+- **Input Sanitization**: User input sanitized before file operations
 
-- **XSS Prevention**: All user content properly escaped
-- **Content Security Policy**: Strict CSP headers
-- **Local Storage**: No sensitive data in localStorage
-- **HTTPS Enforcement**: Production deployment enforces HTTPS
+## Performance Optimizations
+
+### 1. Backend Optimizations
+- **Async Processing**: Full async/await processing with Tokio
+- **Connection Pooling**: Efficient WebSocket connection management
+- **Process Reuse**: Cargo process optimization where possible
+- **Memory Management**: Proper cleanup of terminal sessions and file handles
+
+### 2. File System Optimizations
+- **Efficient File Watching**: Debounced file change notifications
+- **Streaming I/O**: Stream large command outputs instead of buffering
+- **Path Caching**: Exercise path caching for faster access
+
+### 3. WebSocket Optimizations
+- **Message Buffering**: Efficient message queuing and batching
+- **Broadcast Channels**: High-performance broadcast system for real-time updates
+- **Connection Management**: Automatic cleanup of disconnected clients
 
 ## Deployment Architecture
 
 ### 1. Development Environment
-
 ```
-Local Machine:
-├── Frontend (Vite Dev Server): localhost:8000
-├── Backend (Node.js): localhost:3000
-└── Rust Toolchain: Direct system access
+Local Development:
+├── Frontend (Vite Dev Server): localhost:5173 (development)
+├── Backend (Rust Server): localhost:3000
+└── Exercises: Local file system
 ```
 
 ### 2. GitHub Codespaces
-
 ```
 Codespace Environment:
-├── Frontend: https://{codespace}-8000.preview.app.github.dev
-├── Backend: https://{codespace}-3000.preview.app.github.dev
+├── Frontend: https://{codespace}-5173.preview.app.github.dev (dev)
+├── Backend: https://{codespace}-3000.preview.app.github.dev  
 ├── Port Forwarding: Automatic GitHub port forwarding
 └── Rust Toolchain: Pre-installed in devcontainer
 ```
 
-### 3. Production Deployment Options
-
-#### Option A: Single Server
+### 3. Production Deployment
 ```
 Production Server:
-├── Nginx Reverse Proxy
-├── Static Assets (CDN)
-├── Node.js Backend
-└── WebSocket Service
+├── Frontend: Embedded in Rust binary (web-dist/)
+├── Backend: Single Rust binary (rust-tour)
+├── Port: Configurable (default 3000)
+└── Exercises: Downloaded on first run or embedded
 ```
 
-#### Option B: Microservices
+## Configuration and Features
+
+### 1. Cargo Features
+- `embed-assets`: Embed frontend assets in binary
+- `download-exercises`: Enable exercise download capability
+- `default`: Both features enabled
+
+### 2. Environment Variables
+- `PORT`: Server port (default: 3000)
+- `DEBUG_WEBSOCKET`: Enable WebSocket debug logging
+- `RUST_LOG`: Rust logging level
+
+### 3. Command Line Options
+```bash
+rust-tour [OPTIONS]
+
+Options:
+  -p, --port <PORT>              Port to run the server on [default: 3000]
+      --debug-websocket         Enable debug logging for WebSocket connections
+      --exercises-path <PATH>   Custom path to exercises directory
+  -h, --help                    Print help information
+  -V, --version                 Print version information
 ```
-Microservices:
-├── CDN (Static Assets)
-├── WebSocket Service (Dedicated)
-├── Code Execution Service
-└── Progress Database
-```
 
-## Future Enhancements
-
-### 1. Planned Features
-
-- **Multi-user Support**: Shared progress and leaderboards
-- **Advanced Analytics**: Learning pattern analysis
-- **Code Collaboration**: Real-time collaborative editing
-- **Exercise Authoring**: Web-based exercise creation tools
-- **Mobile Support**: Responsive design for tablets/phones
-
-### 2. Technical Improvements
-
-- **Service Workers**: Offline capability
-- **WebAssembly**: Client-side Rust compilation
-- **Container Support**: Docker-based exercise isolation
-- **Database Integration**: Scalable progress storage
-- **OAuth Integration**: GitHub/Google authentication
-
-## Monitoring and Maintenance
+## Monitoring and Observability
 
 ### 1. Logging Strategy
+- **Structured Logging**: Using `tracing` crate for structured logs
+- **Log Levels**: Debug, Info, Warn, Error with appropriate filtering
+- **Request Tracing**: Full HTTP request/response logging
+- **WebSocket Events**: Connection and message logging
 
-- **Frontend**: Console logging with debug flags
-- **Backend**: Structured logging with Winston
-- **WebSocket**: Connection and message logging
-- **Process Execution**: Cargo command logging
-
-### 2. Error Tracking
-
-- **Client Errors**: Automatic error reporting
-- **Server Errors**: Process crash detection
-- **WebSocket Errors**: Connection failure tracking
-- **Compilation Errors**: User code error analysis
-
-### 3. Performance Monitoring
-
-- **Load Times**: Frontend bundle loading metrics
-- **Execution Times**: Cargo command performance
-- **Memory Usage**: Server and client memory tracking
-- **WebSocket Latency**: Real-time communication metrics
+### 2. Metrics and Monitoring
+- **Health Endpoint**: `/health` for service health checks
+- **Performance Metrics**: Request latency and success rates
+- **Usage Analytics**: Exercise completion and progress tracking
+- **Error Tracking**: Comprehensive error logging and reporting
 
 ---
 
-*This documentation reflects the current implementation as of the project's initial development phase. It will be updated as the platform evolves and new features are added.*
+*This documentation reflects the current Rust/Axum implementation of Rust Tour. It is maintained as the authoritative technical reference for the platform architecture.*

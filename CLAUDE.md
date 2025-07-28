@@ -5,6 +5,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 This is Rust Tour, an interactive Rust tutorial that provides progressive, exercise-based education following "The Rust Programming Language" book structure. The platform uses a hybrid approach with GitHub Repository + Codespaces as the primary delivery method.
 
+## Architecture Documentation
+For comprehensive understanding of the system architecture, code editing flows, WebSocket communication, and technical implementation details, refer to:
+
+📋 **[Technical Architecture Documentation](docs/plan/TECHNICAL_DOCUMENTATION.md)**
+
+This document provides detailed information about:
+- Complete code editing, saving, and testing flow
+- WebSocket architecture and real-time features  
+- Terminal PTY integration
+- Exercise management system
+- Progress tracking system
+- API reference and message protocols
+
 ## Development Commands
 
 ### Project Setup
