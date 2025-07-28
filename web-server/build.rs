@@ -42,12 +42,19 @@ fn main() {
                 println!("cargo:warning=Frontend build completed successfully");
             }
             
-            // Copy assets for packaging
-            if !local_dist.exists() {
-                println!("cargo:warning=Copying frontend assets for packaging...");
-                if let Err(e) = copy_dir_all(&dist_dir, local_dist) {
-                    println!("cargo:warning=Failed to copy dist: {}", e);
+            // Copy assets for packaging (always copy to ensure fresh assets)
+            println!("cargo:warning=Copying frontend assets for packaging...");
+            if local_dist.exists() {
+                println!("cargo:warning=Removing existing web-dist directory...");
+                if let Err(e) = fs::remove_dir_all(local_dist) {
+                    println!("cargo:warning=Failed to remove existing web-dist: {}", e);
                 }
+            }
+            
+            if let Err(e) = copy_dir_all(&dist_dir, local_dist) {
+                println!("cargo:warning=Failed to copy dist: {}", e);
+            } else {
+                println!("cargo:warning=Successfully copied assets to web-dist/");
             }
             
             // Monaco editor will be loaded from CDN - no need to copy
