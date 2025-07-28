@@ -111,23 +111,11 @@ test_exercise() {
     return 0
 }
 
-# Test exercise framework
+# Test exercise framework (deprecated - framework removed)
 test_framework() {
     print_status "Testing exercise framework"
-    
-    if [ -d "exercise-framework" ]; then
-        cd exercise-framework
-        if cargo test --quiet; then
-            print_success "Exercise framework tests pass"
-        else
-            print_error "Exercise framework tests failed"
-            cd - > /dev/null
-            return 1
-        fi
-        cd - > /dev/null
-    else
-        print_warning "Exercise framework directory not found"
-    fi
+    print_warning "Exercise framework has been removed from the project"
+    print_success "Skipping framework tests (no longer needed)"
 }
 
 # Main testing logic
