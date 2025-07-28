@@ -303,7 +303,7 @@ jobs:
           ## What's Changed
           See the full changelog below for details.
 
-  gitgit# Stage 7: Deploy to Staging (main branch only)
+  # Stage 7: Deploy to Staging (main branch only)
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -318,3 +318,5 @@ jobs:
         echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
         # Add your deployment script here
         # For example, update a deployment in your staging cluster
+
+  
