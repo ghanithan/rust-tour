@@ -121,6 +121,13 @@ jobs:
       with:
         key: ${{ matrix.target }}
 
+    # Install OpenSSL on macOS
+    - name: Install OpenSSL (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install openssl
+        echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
@@ -142,11 +149,11 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          BINARY_NAME="web-server.exe"
+          BINARY_NAME="rust-tour.exe"
           ARCHIVE_NAME="rust-tour-${{ matrix.target }}.zip"
           7z a $ARCHIVE_NAME target/${{ matrix.target }}/release/$BINARY_NAME
         else
-          BINARY_NAME="web-server"
+          BINARY_NAME="rust-tour"
           ARCHIVE_NAME="rust-tour-${{ matrix.target }}.tar.gz"
           tar -czf $ARCHIVE_NAME -C target/${{ matrix.target }}/release $BINARY_NAME
         fi
@@ -247,8 +254,10 @@ jobs:
         npm run build
 
     - name: Publish to crates.io
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       run: |
-        cargo publish --package rust-tour --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        cargo publish --package rust-tour
 
   # Stage 6: Create GitHub Release (for tags only)
   release:
@@ -286,7 +295,7 @@ jobs:
 
           ### Cargo
           ```bash
-          cargo install web-server
+          cargo install rust-tour
           ```
 
           ### Binary Downloads

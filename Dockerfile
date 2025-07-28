@@ -13,7 +13,7 @@ WORKDIR /app/web
 
 # Copy web package files
 COPY web/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy web source and build
 COPY web/ ./
