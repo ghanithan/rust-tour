@@ -130,8 +130,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Latest tag for releases (overwrites previous latest)
-            type=raw,value=latest
+            # Latest tag only for releases (production)
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            # Main branch latest for development
+            type=raw,value=main-latest,enable=${{ github.ref == 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
             # Full semver version
             type=semver,pattern=v{{version}}
             # Major.minor version  
@@ -166,7 +168,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
           format: 'sarif'
           output: 'trivy-results.sarif'
 
@@ -179,11 +181,12 @@ jobs:
         run: |
           echo "Testing release image..."
           
-          # Test the specific version
+          # Test the built image (use first tag from metadata)
+          IMAGE_TAG="${{ fromJSON(steps.meta.outputs.json).tags[0] }}"
           docker run --rm -d \
             --name rust-tour-release-test \
             -p 3002:3000 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}
+            $IMAGE_TAG
           
           # Wait for startup
           sleep 30
@@ -199,7 +202,7 @@ jobs:
           # Cleanup
           docker stop rust-tour-release-test
           
-          echo "Release image v${{ steps.version.outputs.version }} tested successfully"
+          echo "Release image $IMAGE_TAG tested successfully"
 
   publish-cargo:
     name: Publish to Cargo
@@ -368,7 +371,10 @@ jobs:
             if [ "${{ needs.build-and-publish.result }}" == "success" ]; then
               echo "### Main Branch Docker Image Updated" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              echo "**Docker Image:** \`ghcr.io/ghanithan/rust-tour:main\` (development)" >> $GITHUB_STEP_SUMMARY
+              echo "**Docker Images:**" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/ghanithan/rust-tour:main-latest\` (development latest)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/ghanithan/rust-tour:main-${{ github.sha }}\` (specific commit)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Build Type:** Fast development build with separate web assets" >> $GITHUB_STEP_SUMMARY
               echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
             else
@@ -378,6 +384,6 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Try Latest Development Version" >> $GITHUB_STEP_SUMMARY
             echo '```bash' >> $GITHUB_STEP_SUMMARY
-            echo "docker run -d -p 3000:3000 -v \$(pwd)/progress:/app/progress ghcr.io/ghanithan/rust-tour:main" >> $GITHUB_STEP_SUMMARY
+            echo "docker run -d -p 3000:3000 -v \$(pwd)/progress:/app/progress ghcr.io/ghanithan/rust-tour:main-latest" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi

@@ -193,20 +193,24 @@ docker run -d \
   --name rust-tour-dev \
   -p 3000:3000 \
   -v $(pwd)/progress:/app/progress \
-  ghcr.io/ghanithan/rust-tour:main
+  ghcr.io/ghanithan/rust-tour:main-latest
 ```
 
 **Available image tags:**
+
+**Production Tags (stable releases):**
 - `latest` - Latest stable release with embedded assets (production-optimized)
 - `v0.1.0` - Specific version releases with embedded assets (production-optimized)
 - `0.1` - Latest patch in minor version series with embedded assets
 - `0` - Latest minor in major version series with embedded assets
-- `main` - Latest development build from main branch (fast builds, separate web files)
-- `sha-abc123` - Specific commit from any branch
+
+**Development Tags (main branch):**
+- `main-latest` - Latest development build from main branch (fast builds, separate web files)
+- `main-abc123` - Specific commit from main branch for traceability
 
 **Build Differences:**
 - **Production images** (`latest`, version tags): Built with `Dockerfile.prod`, full optimization, embedded assets
-- **Development images** (`main`): Built with `Dockerfile`, fast compilation, separate web files for debugging
+- **Development images** (`main-latest`, `main-*`): Built with `Dockerfile`, fast compilation, separate web files for debugging
 
 **For Development:**
 ```bash
@@ -499,10 +503,11 @@ git push origin v0.1.0
 **Release Artifacts:**
 - **GitHub Release** with generated changelog
 - **Docker Images** on GHCR:
-  - `ghcr.io/ghanithan/rust-tour:latest`
-  - `ghcr.io/ghanithan/rust-tour:v0.1.0`
-  - `ghcr.io/ghanithan/rust-tour:0.1`
-  - `ghcr.io/ghanithan/rust-tour:0`
+  - `ghcr.io/ghanithan/rust-tour:latest` (production)
+  - `ghcr.io/ghanithan/rust-tour:v0.1.0` (specific version)
+  - `ghcr.io/ghanithan/rust-tour:0.1` (minor series)
+  - `ghcr.io/ghanithan/rust-tour:0` (major series)
+  - `ghcr.io/ghanithan/rust-tour:main-latest` (development)
 
 ### Code Quality Standards
 
