@@ -19,13 +19,8 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# Rust build stage with optimized toolchain and cargo-chef for caching
-FROM rust:1.83-bookworm AS chef
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-RUN cargo install cargo-chef
+# Rust build stage using pre-built base image with cargo-chef
+FROM ghcr.io/ghanithan/rust-tour/base:alpine-rust-1.83 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -33,15 +28,7 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS rust-builder
-
-# Install system dependencies for building
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
+# All build dependencies are already in the base image
 WORKDIR /app
 
 # Build dependencies first (this will be cached)

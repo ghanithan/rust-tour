@@ -1,0 +1,47 @@
+# Base Alpine image with Rust and cargo-chef pre-installed
+# This image is built and pushed to GHCR for faster builds
+FROM rust:1.83-alpine
+
+# Install build dependencies required for most Rust projects on Alpine
+RUN apk add --no-cache \
+    musl-dev \
+    pkgconfig \
+    openssl-dev \
+    openssl-libs-static \
+    git \
+    gcc \
+    g++ \
+    libc-dev \
+    make \
+    perl \
+    # Additional useful build tools
+    cmake \
+    ninja \
+    # For potential Python bindings
+    python3-dev
+
+# Install cargo-chef for dependency caching
+RUN cargo install cargo-chef --locked --version 0.1.68
+
+# Install other useful cargo tools
+RUN cargo install cargo-audit --locked && \
+    cargo install cargo-outdated --locked
+
+# Set up cargo environment
+ENV CARGO_HOME=/usr/local/cargo
+ENV PATH=$CARGO_HOME/bin:$PATH
+ENV RUST_BACKTRACE=1
+
+# Create app directory
+WORKDIR /app
+
+# Verify installations
+RUN cargo --version && \
+    rustc --version && \
+    cargo-chef --version && \
+    git --version
+
+# Label for identification
+LABEL org.opencontainers.image.title="Rust Tour Base Alpine"
+LABEL org.opencontainers.image.description="Alpine-based Rust image with cargo-chef and build dependencies"
+LABEL org.opencontainers.image.source="https://github.com/ghanithan/rust-tour"
