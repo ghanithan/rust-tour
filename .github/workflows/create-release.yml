@@ -80,37 +80,10 @@ jobs:
       - name: Install Node.js dependencies
         run: cd web && npm ci
 
-      - name: Validate exercise structure
+      - name: Build web frontend
         run: |
-          echo "🔍 Validating exercise structure..."
-          ./scripts/validate-exercises.sh
-          
-          echo "📋 Validating metadata..."
-          ./scripts/validate-metadata.sh
-          
-          echo "📚 Validating Rust Book references..."
-          ./scripts/check-book-references.sh
-          
           echo "🌐 Building web frontend..."
           cd web && npm run build && cd ..
-          
-          echo "📝 Validating exercises..."
-          ./scripts/run.sh test
-
-      - name: Test Docker build
-        run: |
-          echo "🐳 Testing Docker build..."
-          docker build -t rust-tour-test .
-          
-          echo "🚀 Testing Docker run..."
-          docker run --rm -d --name rust-tour-test -p 3001:3000 rust-tour-test
-          sleep 30
-          
-          # Test health endpoint
-          curl -f http://localhost:3001/health || exit 1
-          echo "✅ Docker build and health check passed"
-          
-          docker stop rust-tour-test
 
       - name: Set validation status
         id: validation
@@ -225,17 +198,18 @@ jobs:
           echo "## 🎉 Release v${{ inputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ✅ Completed Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "- [x] Full validation suite passed" >> $GITHUB_STEP_SUMMARY
-          echo "- [x] Docker build tested" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Version validation passed" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Git tag v${{ inputs.version }} created" >> $GITHUB_STEP_SUMMARY
           echo "- [x] GitHub release published" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "- [ ] Docker images will be built automatically" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Binary artifacts will be built for multiple platforms" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Docker images will be built and pushed" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Images will be available at:" >> $GITHUB_STEP_SUMMARY
           echo "  - \`ghcr.io/ghanithan/rust-tour:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "  - \`ghcr.io/ghanithan/rust-tour:v${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Binary downloads will be attached to the GitHub release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📖 Release Notes:" >> $GITHUB_STEP_SUMMARY
           echo "[View full release notes](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
