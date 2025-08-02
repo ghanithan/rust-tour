@@ -76,12 +76,8 @@ RUN apk add --no-cache \
     nano \
     tree \
     less \
-    grep \
-    sed \
-    awk \
-    find \
     htop \
-    ps
+    procps
 
 # Create non-root user
 RUN addgroup -g 1001 -S rustuser && \
