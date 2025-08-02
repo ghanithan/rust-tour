@@ -25,7 +25,8 @@ RUN apk add --no-cache \
     musl-dev \
     gcc \
     libc-dev
-RUN cargo install cargo-chef
+RUN cargo install --locked cargo-binstall && \
+    cargo binstall --no-confirm cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
