@@ -19,7 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
     strategy:
       matrix:
         include:
@@ -210,7 +210,7 @@ jobs:
     needs: build-binaries
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -228,11 +228,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Build web frontend
+      - name: Build web frontend and prepare for packaging
         run: |
           cd web
           npm ci
           npm run build
+          
+          # Copy web assets to web-server/web-dist for cargo packaging
+          cd ..
+          mkdir -p web-server/web-dist
+          cp -r web/dist/* web-server/web-dist/
 
       - name: Publish to crates.io
         env:
@@ -246,7 +251,7 @@ jobs:
     needs: [build-binaries, build-and-publish]
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
     permissions:
       contents: write
     steps:
@@ -290,7 +295,7 @@ jobs:
     needs: build-and-publish
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
     runs-on: ubuntu-latest
     permissions:
       contents: write
