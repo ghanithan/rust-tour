@@ -21,6 +21,10 @@ RUN npm run build
 
 # Rust build stage with optimized toolchain and cargo-chef for caching
 FROM rust:1.83-alpine AS chef
+RUN apk add --no-cache \
+    musl-dev \
+    gcc \
+    libc-dev
 RUN cargo install cargo-chef
 WORKDIR /app
 
