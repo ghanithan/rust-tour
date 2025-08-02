@@ -62,19 +62,30 @@ RUN cargo build --profile ci-release --package rust-tour --no-default-features
 # Copy solutions if they exist (optional)
 RUN mkdir -p ./solutions/
 
-# Final runtime stage
-FROM alpine:3.18
+# Final runtime stage with Rust toolchain
+FROM rust:1.83-alpine
 
-# Install runtime dependencies
+# Install runtime dependencies and useful tools
 RUN apk add --no-cache \
     ca-certificates \
     git \
     bash \
-    wget
+    wget \
+    curl \
+    vim \
+    nano \
+    tree \
+    less \
+    grep \
+    sed \
+    awk \
+    find \
+    htop \
+    ps
 
 # Create non-root user
 RUN addgroup -g 1001 -S rustuser && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G rustuser rustuser
+    adduser -S -D -H -u 1001 -h /app -s /bin/bash -G rustuser rustuser
 
 # Set working directory
 WORKDIR /app
