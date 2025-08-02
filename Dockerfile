@@ -20,13 +20,12 @@ COPY web/ ./
 RUN npm run build
 
 # Rust build stage with optimized toolchain and cargo-chef for caching
-FROM rust:1.83-alpine AS chef
-RUN apk add --no-cache \
-    musl-dev \
-    gcc \
-    libc-dev
-RUN cargo install --locked cargo-binstall && \
-    cargo binstall --no-confirm cargo-chef
+FROM rust:1.83-bookworm AS chef
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN cargo install cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -35,14 +34,12 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS rust-builder
 
-# Install system dependencies for building (using system OpenSSL instead of vendored)
-RUN apk add --no-cache \
-    musl-dev \
-    pkgconfig \
-    openssl-dev \
-    openssl-libs-static \
-    libc6-compat \
-    git
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
