@@ -193,16 +193,18 @@ docker run -d \
   --name rust-tour-dev \
   -p 3000:3000 \
   -v $(pwd)/progress:/app/progress \
-  ghcr.io/ghanithan/rust-tour:main-latest
+  ghcr.io/ghanithan/rust-tour:main
 ```
 
 **Available image tags:**
-- `latest` - Latest stable release (from version tags)
-- `v0.1.0` - Specific version releases
-- `0.1` - Latest patch in minor version series  
-- `0` - Latest minor in major version series
-- `main-latest` - Latest development build from main branch
-- `main-abc123` - Specific commit from main branch
+- `latest` - Latest stable release with embedded assets (from version tags)
+- `v0.1.0` - Specific version releases with embedded assets
+- `0.1` - Latest patch in minor version series with embedded assets
+- `0` - Latest minor in major version series with embedded assets
+- `main` - Latest development build from main branch (without embedded assets, uses separate web files)
+- `sha-abc123` - Specific commit from any branch
+
+**Note:** Production images (`latest`, version tags) include embedded web assets for single-binary deployment. Development images (`main`) use separate web files for easier debugging and faster builds.
 
 **For Development:**
 ```bash

@@ -285,17 +285,21 @@ docker pull ghcr.io/ghanithan/rust-tour:latest
 ### Image Tagging Strategy
 
 ```bash
-# Version tags
+# Production tags (with embedded assets)
 ghcr.io/ghanithan/rust-tour:v1.0.0     # Specific version
 ghcr.io/ghanithan/rust-tour:1.0        # Minor version
 ghcr.io/ghanithan/rust-tour:1          # Major version
 ghcr.io/ghanithan/rust-tour:latest     # Latest stable
 
-# Development tags
+# Development tags (without embedded assets)
 ghcr.io/ghanithan/rust-tour:main       # Main branch
 ghcr.io/ghanithan/rust-tour:dev        # Development
 ghcr.io/ghanithan/rust-tour:pr-123     # Pull request builds
 ```
+
+**Note on Build Differences:**
+- **Production images** (version tags, `latest`): Built with `Dockerfile.prod`, includes embedded web assets for single-binary deployment
+- **Development images** (`main`, PR builds): Built with standard `Dockerfile`, uses separate web files for easier debugging and faster builds
 
 ## Troubleshooting
 

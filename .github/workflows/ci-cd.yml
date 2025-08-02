@@ -211,10 +211,22 @@ jobs:
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
 
+    - name: Determine Dockerfile
+      id: dockerfile
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          echo "file=Dockerfile.prod" >> $GITHUB_OUTPUT
+          echo "Using production Dockerfile with embedded assets"
+        else
+          echo "file=Dockerfile" >> $GITHUB_OUTPUT
+          echo "Using development Dockerfile without embedded assets"
+        fi
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ${{ steps.dockerfile.outputs.file }}
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}

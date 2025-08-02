@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Rust Tour
+# Production Dockerfile for Rust Tour with embedded assets
 FROM node:20-alpine AS web-builder
 
 # Install build dependencies for native modules like node-pty
@@ -52,9 +52,9 @@ COPY scripts/ ./scripts/
 # Copy built web assets
 COPY --from=web-builder /app/web/dist ./web/dist
 
-# Restore original workspace config and build without embed-assets for development
+# Restore original workspace config and build with default features (includes embed-assets)
 RUN mv Cargo.toml.original Cargo.toml && \
-    cargo build --release --package rust-tour --no-default-features
+    cargo build --release --package rust-tour
 
 # Copy solutions if they exist (optional)
 RUN mkdir -p ./solutions/
@@ -76,15 +76,12 @@ RUN addgroup -g 1001 -S rustuser && \
 # Set working directory
 WORKDIR /app
 
-# Copy the built binary
+# Copy the built binary (with embedded assets)
 COPY --from=rust-builder /app/target/release/rust-tour /usr/local/bin/rust-tour
 
 # Copy exercise content and scripts
 COPY --from=rust-builder --chown=rustuser:rustuser /app/exercises ./exercises
 COPY --from=rust-builder --chown=rustuser:rustuser /app/scripts ./scripts
-
-# Copy web assets (for non-embedded builds)
-COPY --from=rust-builder --chown=rustuser:rustuser /app/web/dist ./web/dist
 
 # Create progress directory
 RUN mkdir -p /app/progress && chown rustuser:rustuser /app/progress
