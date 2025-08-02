@@ -102,6 +102,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -204,6 +205,13 @@ jobs:
           echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ secrets.RELEASE_TOKEN }}" ]; then
+            echo "✅ Release workflows will trigger automatically" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Manual trigger required** - No RELEASE_TOKEN configured" >> $GITHUB_STEP_SUMMARY
+            echo "   Please manually run the Release Build workflow for tag v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Binary artifacts will be built for multiple platforms" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Docker images will be built and pushed" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Images will be available at:" >> $GITHUB_STEP_SUMMARY
