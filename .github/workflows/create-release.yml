@@ -39,18 +39,18 @@ jobs:
       - name: Validate version format
         run: |
           if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid version format. Use semantic versioning (e.g., 0.1.0)"
+            echo "Invalid version format. Use semantic versioning (e.g., 0.1.0)"
             exit 1
           fi
-          echo "✅ Version format valid: ${{ inputs.version }}"
+          echo "Version format valid: ${{ inputs.version }}"
 
       - name: Check if tag already exists
         run: |
           if git tag | grep -q "^v${{ inputs.version }}$"; then
-            echo "❌ Tag v${{ inputs.version }} already exists"
+            echo "Tag v${{ inputs.version }} already exists"
             exit 1
           fi
-          echo "✅ Tag v${{ inputs.version }} is available"
+          echo "Tag v${{ inputs.version }} is available"
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
@@ -82,7 +82,7 @@ jobs:
 
       - name: Build web frontend
         run: |
-          echo "🌐 Building web frontend..."
+          echo "Building web frontend..."
           cd web && npm run build && cd ..
 
       - name: Set validation status
@@ -179,7 +179,7 @@ jobs:
 
       - name: Create and push tag
         run: |
-          echo "🏷️ Creating tag v${{ inputs.version }}"
+          echo "Creating tag v${{ inputs.version }}"
           git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
           git push origin "v${{ inputs.version }}"
 
@@ -196,20 +196,20 @@ jobs:
 
       - name: Release Summary
         run: |
-          echo "## 🎉 Release v${{ inputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "## Release v${{ inputs.version }} Created Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ✅ Completed Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "### Completed Steps:" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Version validation passed" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Git tag v${{ inputs.version }} created" >> $GITHUB_STEP_SUMMARY
           echo "- [x] GitHub release published" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ secrets.RELEASE_TOKEN }}" ]; then
-            echo "✅ Release workflows will trigger automatically" >> $GITHUB_STEP_SUMMARY
+            echo "Release workflows will trigger automatically" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ **Manual trigger required** - No RELEASE_TOKEN configured" >> $GITHUB_STEP_SUMMARY
-            echo "   Please manually run the Release Build workflow for tag v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Manual trigger required** - No RELEASE_TOKEN configured" >> $GITHUB_STEP_SUMMARY
+            echo "Please manually run the Release Build workflow for tag v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Binary artifacts will be built for multiple platforms" >> $GITHUB_STEP_SUMMARY
@@ -219,5 +219,5 @@ jobs:
           echo "  - \`ghcr.io/ghanithan/rust-tour:v${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Binary downloads will be attached to the GitHub release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📖 Release Notes:" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Notes:" >> $GITHUB_STEP_SUMMARY
           echo "[View full release notes](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY

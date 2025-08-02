@@ -47,3 +47,11 @@ tracing-subscriber = "0.3"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# CI-optimized release profile for faster builds
+[profile.ci-release]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+debug = false
+overflow-checks = false

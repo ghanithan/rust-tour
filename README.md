@@ -197,14 +197,16 @@ docker run -d \
 ```
 
 **Available image tags:**
-- `latest` - Latest stable release with embedded assets (from version tags)
-- `v0.1.0` - Specific version releases with embedded assets
+- `latest` - Latest stable release with embedded assets (production-optimized)
+- `v0.1.0` - Specific version releases with embedded assets (production-optimized)
 - `0.1` - Latest patch in minor version series with embedded assets
 - `0` - Latest minor in major version series with embedded assets
-- `main` - Latest development build from main branch (without embedded assets, uses separate web files)
+- `main` - Latest development build from main branch (fast builds, separate web files)
 - `sha-abc123` - Specific commit from any branch
 
-**Note:** Production images (`latest`, version tags) include embedded web assets for single-binary deployment. Development images (`main`) use separate web files for easier debugging and faster builds.
+**Build Differences:**
+- **Production images** (`latest`, version tags): Built with `Dockerfile.prod`, full optimization, embedded assets
+- **Development images** (`main`): Built with `Dockerfile`, fast compilation, separate web files for debugging
 
 **For Development:**
 ```bash
