@@ -276,8 +276,19 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Only extract version if this is a tag
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Handle different trigger types
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # For workflow_run triggers, get the tag from the API
+            echo "Triggered by workflow_run, fetching latest release info..."
+            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
+            if [ -z "$VERSION" ]; then
+              echo "Could not determine version from latest release"
+              exit 1
+            fi
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
@@ -330,8 +341,19 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Only extract version if this is a tag
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Handle different trigger types
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # For workflow_run triggers, get the tag from the API
+            echo "Triggered by workflow_run, fetching latest release info..."
+            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
+            if [ -z "$VERSION" ]; then
+              echo "Could not determine version from latest release"
+              exit 1
+            fi
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
@@ -368,8 +390,19 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Only extract version if this is a tag
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Handle different trigger types
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # For workflow_run triggers, get the tag from the API
+            echo "Triggered by workflow_run, fetching latest release info..."
+            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
+            if [ -z "$VERSION" ]; then
+              echo "Could not determine version from latest release"
+              exit 1
+            fi
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
