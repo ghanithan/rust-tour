@@ -117,12 +117,18 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Extract version from tag (remove 'v' prefix)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
-          echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
-          echo "patch=$VERSION" >> $GITHUB_OUTPUT
+          # Only extract version if this is a tag
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Extract version from tag (remove 'v' prefix)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+            echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
+            echo "patch=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a version tag, skipping version extraction"
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Extract metadata
         id: meta
@@ -252,7 +258,7 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          cargo publish --package rust-tour
+          cargo publish --package rust-tour --allow-dirty
 
   attach-binaries:
     name: Attach Binaries to Release
@@ -270,8 +276,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Only extract version if this is a tag
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a version tag, cannot attach binaries"
+            exit 1
+          fi
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -280,6 +292,7 @@ jobs:
 
       - name: Update GitHub Release with binaries
         uses: softprops/action-gh-release@v1
+        if: steps.version.outputs.version != ''
         with:
           tag_name: v${{ steps.version.outputs.version }}
           files: artifacts/**/*
@@ -317,8 +330,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Only extract version if this is a tag
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a version tag, cannot attach binaries"
+            exit 1
+          fi
 
       - name: Update docker-compose.ghcr.yml with latest version
         run: |
@@ -349,8 +368,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Only extract version if this is a tag
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a version tag, cannot attach binaries"
+            exit 1
+          fi
 
       - name: Generate release summary
         run: |

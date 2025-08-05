@@ -43,7 +43,7 @@
     }
   },
 
-  "postCreateCommand": "bash scripts/setup.sh",
+  "postCreateCommand": "./scripts/welcome.sh",
   
   "remoteUser": "vscode",
   
