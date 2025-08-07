@@ -50,7 +50,11 @@ echo "  4) 📚 View available commands"
 echo "  5) 🚪 Exit (explore on your own)"
 echo ""
 
-read -p "Enter your choice (1-5): " choice
+read -t 10 -p "Enter your choice (1-5): " choice
+if [ $? -ne 0 ]; then
+    echo -e "\nNo input received in 10 seconds. Defaulting to option 1."
+    choice=1
+fi
 
 case $choice in
     1)
