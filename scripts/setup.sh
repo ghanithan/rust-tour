@@ -80,11 +80,8 @@ if [ ! -f "progress/user_progress.json" ]; then
 EOF
 fi
 
-# Build the exercise framework
-print_status "Building exercise framework..."
-if [ -d "exercise-framework" ]; then
-    cargo build --release
-fi
+# Note: exercise-framework has been deprecated and removed from the build process
+# See docs/plan/ADR-001-Remove-Exercise-Framework.md for details
 
 # Build web server
 print_status "Building web server..."

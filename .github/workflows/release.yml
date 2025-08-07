@@ -7,7 +7,6 @@ on:
   workflow_run:
     workflows: ["Create Release"]
     types: [completed]
-    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -284,7 +283,9 @@ jobs:
             VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
             if [ -z "$VERSION" ]; then
               echo "Could not determine version from latest release"
-              exit 1
+              echo "version=" >> $GITHUB_OUTPUT
+            else
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -292,8 +293,9 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Not a version tag, cannot attach binaries"
-            exit 1
+            # Main branch or other non-version push
+            echo "Not a version tag, this is a development build"
+            echo "version=" >> $GITHUB_OUTPUT
           fi
 
       - name: Download all build artifacts
@@ -349,7 +351,9 @@ jobs:
             VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
             if [ -z "$VERSION" ]; then
               echo "Could not determine version from latest release"
-              exit 1
+              echo "version=" >> $GITHUB_OUTPUT
+            else
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -357,8 +361,9 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Not a version tag, cannot attach binaries"
-            exit 1
+            # Main branch or other non-version push
+            echo "Not a version tag, this is a development build"
+            echo "version=" >> $GITHUB_OUTPUT
           fi
 
       - name: Update docker-compose.ghcr.yml with latest version
@@ -398,7 +403,9 @@ jobs:
             VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
             if [ -z "$VERSION" ]; then
               echo "Could not determine version from latest release"
-              exit 1
+              echo "version=" >> $GITHUB_OUTPUT
+            else
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -406,8 +413,9 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Not a version tag, cannot attach binaries"
-            exit 1
+            # Main branch or other non-version push
+            echo "Not a version tag, this is a development build"
+            echo "version=" >> $GITHUB_OUTPUT
           fi
 
       - name: Generate release summary
@@ -445,7 +453,7 @@ jobs:
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Docker Images:**" >> $GITHUB_STEP_SUMMARY
               echo "- \`ghcr.io/ghanithan/rust-tour:main-latest\` (development latest)" >> $GITHUB_STEP_SUMMARY
-              echo "- \`ghcr.io/ghanithan/rust-tour:main-${{ github.sha }}\` (specific commit)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`ghcr.io/ghanithan/rust-tour:main-${GITHUB_SHA:0:7}\` (specific commit)" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Build Type:** Fast development build with separate web assets" >> $GITHUB_STEP_SUMMARY
               echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY

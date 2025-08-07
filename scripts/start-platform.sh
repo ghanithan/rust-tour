@@ -46,10 +46,9 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Build the Rust exercise framework
-echo -e "${BLUE}Building exercise framework...${NC}"
+# Note: exercise-framework has been deprecated and removed from the build process
+# See docs/plan/ADR-001-Remove-Exercise-Framework.md for details
 cd "$PROJECT_ROOT"
-cargo build --manifest-path exercise-framework/Cargo.toml
 
 # Function to cleanup on exit
 cleanup() {

@@ -56,7 +56,7 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 # Check required directories
-REQUIRED_DIRS=("exercises" "web" "web-server" "exercise-framework" "scripts")
+REQUIRED_DIRS=("exercises" "web" "web-server" "scripts")
 for dir in "${REQUIRED_DIRS[@]}"; do
     if [ -d "$dir" ]; then
         print_status "✓ $dir/ directory exists"

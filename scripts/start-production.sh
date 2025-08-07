@@ -74,19 +74,9 @@ else
     print_status "Dependencies already installed"
 fi
 
-# Build the Rust exercise framework
-print_status "Building exercise framework..."
+# Note: exercise-framework has been deprecated and removed from the build process
+# See docs/plan/ADR-001-Remove-Exercise-Framework.md for details
 cd "$PROJECT_ROOT"
-if [ -d "exercise-framework" ]; then
-    cargo build --manifest-path exercise-framework/Cargo.toml
-    if [ $? -ne 0 ]; then
-        print_warning "Exercise framework build failed, continuing anyway..."
-    else
-        print_success "Exercise framework built"
-    fi
-else
-    print_warning "Exercise framework not found, skipping..."
-fi
 
 # Check if frontend is built
 print_status "Checking frontend build..."
