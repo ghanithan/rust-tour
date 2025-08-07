@@ -5,7 +5,7 @@ version: '3.8'
 
 services:
   rust-tour:
-    image: ghcr.io/ghanithan/rust-tour:vrefs/heads/main
+    image: ghcr.io/ghanithan/rust-tour:v0.1.6
     ports:
       - "3000:3000"
     environment:
