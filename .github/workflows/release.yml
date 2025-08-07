@@ -83,8 +83,8 @@ jobs:
     name: Build and Publish Release Images
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'push' || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || 
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
     permissions:
       contents: read
       packages: write
