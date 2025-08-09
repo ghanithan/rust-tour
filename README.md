@@ -4,7 +4,7 @@
 
 An interactive Rust learning platform featuring progressive exercises aligned with "The Rust Programming Language" book.
 
-[![CI](https://github.com/ghanithan/rust-tour/workflows/CI/badge.svg)](https://github.com/ghanithan/rust-tour/actions)
+[![CI](https://github.com/ghanithan/rust-tour/workflows/CI/badge.svg?branch=main)](https://github.com/ghanithan/rust-tour/actions)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 
 ## Overview
