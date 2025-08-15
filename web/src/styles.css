@@ -42,9 +42,10 @@
   --font-mono: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   
   /* Layout dimensions - responsive variables */
-  --header-height: 2.8125rem;
+  --header-height: 2.25rem;
   --sidebar-width: 18.75rem;
-  --output-height: 18.75rem;
+  --output-height: 2.5rem; /* Height for status bar only */
+  --output-height-expanded: 30vh; /* Default expanded height, but can be overridden */
   --terminal-height: 25vh;
   --gap-size: 0;
   
@@ -74,12 +75,14 @@
   --content-mono-base: clamp(0.5rem, 0.45rem + 0.2vw, 0.65rem);
   
   /* UI element font variable for consistent sizing */
-  --ui-font-size: clamp(0.7rem, 0.65rem + 0.15vw, 0.85rem);
+  --ui-font-size: clamp(0.65rem, 0.6rem + 0.12vw, 0.75rem);
+  --ui-padding-sm: clamp(0.35rem, 0.3rem + 0.1vw, 0.45rem);
+  --ui-padding-md: clamp(0.6rem, 0.5rem + 0.15vw, 0.75rem);
 }
 
 /* Font Awesome icon styling */
 .fas, .far, .fab {
-  margin-right: 0.5rem;
+  margin-right: 0.2rem;
 }
 
 /* Icon color classes */
@@ -237,8 +240,88 @@ body {
     "header header header"
     "editor resize panel"
     "output resize panel";
-  grid-template-columns: 1fr 0.25rem 1fr;
+  grid-template-columns: 1.5fr 0.25rem 1fr;
   grid-template-rows: var(--header-height) 1fr var(--output-height);
+  /* Transition only when not manually resizing */
+  transition: grid-template-rows 0.15s ease;
+}
+
+/* Disable transitions during manual resize for instant feedback */
+.main-layout.resizing-output {
+  transition: none;
+}
+
+
+/* Output Section - always present for proper layout */
+.output-section {
+  grid-area: output;
+  background: var(--bg-secondary);
+  border-top: 0.0625rem solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Output resize handle - positioned at top border */
+.output-section::before {
+  content: "";
+  position: absolute;
+  top: -0.3125rem;
+  left: 0;
+  right: 0;
+  height: 0.625rem;
+  cursor: ns-resize;
+  z-index: 10;
+  background: transparent;
+}
+
+.output-section:hover::before {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Resize handle visual indicator */
+.output-section::after {
+  content: "";
+  position: absolute;
+  top: -0.09375rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3.125rem;
+  height: 0.1875rem;
+  background: var(--text-secondary);
+  border-radius: 0.125rem;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.output-section:hover::after {
+  opacity: 0.8;
+}
+
+/* Output container - always visible, but content area controlled by height */
+.output-container {
+  display: flex;
+  flex-direction: column;
+  height: 0;
+  overflow: hidden;
+  /* Faster transition, only for button operations */
+  transition: height 0.15s ease;
+}
+
+/* Disable output container transitions during manual resize */
+.main-layout.resizing-output .output-container {
+  transition: none;
+}
+
+/* Expanded output state - show full content */
+.main-layout.output-expanded .output-container {
+  height: auto;
+  flex: 1;
+}
+
+.main-layout.output-expanded {
+  grid-template-rows: var(--header-height) 1fr var(--output-height-expanded);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -356,33 +439,34 @@ body.disable-transitions * {
 
 .header-controls {
   display: flex;
-  gap: var(--space-md);
+  gap: 0.75rem;
   align-items: center;
   justify-self: end;
+  padding-right: 0.5rem;
 }
 
 .font-size-toggle {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: white;
-  padding: var(--space-sm);
-  border-radius: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-md);
+  font-size: 0.625rem;
   transition: all 0.2s ease;
-  margin-right: var(--space-sm);
 }
 
 .font-size-toggle:hover {
   background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  transform: scale(1.05);
 }
 
 .font-size-toggle:active {
-  transform: translateY(0);
+  transform: scale(0.95);
 }
 
 .font-size-icon {
@@ -398,17 +482,16 @@ body.disable-transitions * {
 .theme-toggle {
   background: rgba(255, 255, 255, 0.1);
   border: none;
-  border-radius: 0.25rem;
+  border-radius: 50%;
   color: white;
-  width: 2rem;
-  height: 2rem;
+  width: 1.5rem;
+  height: 1.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-md);
+  font-size: 0.625rem;
   transition: all 0.2s ease;
-  margin-right: var(--space-md);
 }
 
 .theme-toggle .fas {
@@ -430,6 +513,9 @@ body.disable-transitions * {
   padding: var(--space-xs) var(--space-md);
   font-size: var(--font-sm);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Sidebar - Exercise Navigation */
@@ -600,7 +686,7 @@ body.disable-transitions * {
 }
 
 .completed-badge i {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
 }
 
 /* Editor Area */
@@ -615,7 +701,7 @@ body.disable-transitions * {
 .editor-header {
   background: var(--bg-secondary);
   border-bottom: 0.0625rem solid var(--border-primary);
-  padding: 0.625rem 0.9375rem;
+  padding: 0.4rem 0.75rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -629,11 +715,11 @@ body.disable-transitions * {
 
 .editor-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .btn {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--ui-padding-sm) var(--ui-padding-md);
   border: none;
   border-radius: 0.25rem;
   font-size: var(--ui-font-size);
@@ -642,7 +728,7 @@ body.disable-transitions * {
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 0.3rem;
 }
 
 .btn-primary {
@@ -682,16 +768,7 @@ body.disable-transitions * {
   min-height: 0;
 }
 
-/* Output Panel */
-.output-container {
-  grid-area: output;
-  background: var(--bg-secondary);
-  border-top: 0.0625rem solid var(--border-primary);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
+/* Output Container (nested inside output-section) */
 
 .output-header {
   display: flex;
@@ -699,8 +776,22 @@ body.disable-transitions * {
   border-bottom: 0.0625rem solid var(--border-primary);
 }
 
+.output-minimize-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.375rem;
+  cursor: pointer;
+  font-size: var(--ui-font-size);
+  transition: color 0.2s ease;
+}
+
+.output-minimize-btn:hover {
+  color: var(--text-primary);
+}
+
 .output-tab {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.75rem;
   cursor: pointer;
   font-size: var(--ui-font-size);
   font-weight: 500;
@@ -762,7 +853,7 @@ body.disable-transitions * {
 }
 
 .panel-header {
-  padding: var(--space-lg);
+  padding: 0.4rem 0.75rem;
   border-bottom: 0.0625rem solid var(--border-primary);
   display: flex;
   justify-content: space-between;
@@ -785,16 +876,17 @@ body.disable-transitions * {
   background: var(--bg-tertiary);
   border: 0.0625rem solid var(--border-primary);
   color: var(--text-primary);
-  width: 2rem;
-  height: 2rem;
+  padding: var(--ui-padding-sm) var(--ui-padding-md);
   border-radius: 0.25rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  font-weight: bold;
+  font-size: var(--ui-font-size);
+  font-weight: 500;
   transition: all 0.2s ease;
+  gap: 0.3rem;
+  line-height: 1;
 }
 
 .panel-nav-btn:hover:not(:disabled) {
@@ -812,15 +904,16 @@ body.disable-transitions * {
 .exercise-counter {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  padding: 0.375rem 0.625rem;
+  padding: var(--ui-padding-sm) var(--ui-padding-md);
   border-radius: 0.25rem;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-mono);
+  font-size: var(--ui-font-size);
+  font-weight: 500;
   border: 0.0625rem solid var(--border-secondary);
-  min-width: 2.5rem;
-  text-align: center;
-  box-shadow: inset 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  line-height: 1;
 }
 
 .panel-tabs {
@@ -831,10 +924,10 @@ body.disable-transitions * {
 
 .panel-tab {
   flex: 1;
-  padding: 0.625rem;
+  padding: 0.375rem;
   text-align: center;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--ui-font-size);
   font-weight: 500;
   border-bottom: 0.125rem solid transparent;
   transition: all 0.2s ease;
@@ -1264,14 +1357,14 @@ body.disable-transitions * {
 
 /* Status Indicators */
 .status-bar {
-  padding: 0.375rem 0.75rem;
+  padding: 0.25rem 0.75rem;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-primary);
   font-size: 11px;
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
-  min-height: 2rem;
+  min-height: 1.5rem;
 }
 
 .status-message {
@@ -1343,7 +1436,7 @@ body.disable-transitions * {
 @media (max-width: 75rem) {
   :root {
     --sidebar-width: 15.625rem;
-    --output-height: 15.625rem;
+    --output-height: 1.5rem;
   }
 }
 
@@ -1404,7 +1497,7 @@ body.disable-transitions * {
   }
   
   .right-panel-trigger .trigger-icon {
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     transition: transform 0.3s ease;
     transform: rotate(0deg);
     opacity: 0.8;
@@ -1422,7 +1515,7 @@ body.disable-transitions * {
   }
   
   .right-panel-trigger .trigger-text {
-    font-size: 0.5rem;
+    font-size: 0.625rem;
     font-weight: 600;
     letter-spacing: 0.05rem;
     text-transform: uppercase;
@@ -1465,7 +1558,7 @@ body.disable-transitions * {
 @media (max-width: 48rem) {
   :root {
     --sidebar-width: 100vw;
-    --output-height: 12.5rem;
+    --output-height: 1.5rem;
   }
   
   .right-panel {
@@ -1571,43 +1664,7 @@ body.terminal-open .output-container {
   overflow-y: auto;
 }
 
-/* Output Resize Handle */
-.output-resize-handle {
-  position: absolute;
-  top: -0.25rem;
-  left: 0;
-  right: 0;
-  height: 0.5rem;
-  background: transparent;
-  cursor: ns-resize;
-  z-index: 20;
-  user-select: none;
-}
-
-.output-resize-handle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.output-resize-handle:active {
-  background: var(--accent);
-}
-
-.resize-handle-bar {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 3.125rem;
-  height: 0.1875rem;
-  background: var(--text-secondary);
-  border-radius: 0.125rem;
-  opacity: 0.7;
-}
-
-.output-resize-handle:hover .resize-handle-bar {
-  opacity: 0.8;
-  background: var(--text-secondary);
-}
+/* Output Resize Handle - old styles removed, now using grid-based approach */
 
 body.resizing-output {
   cursor: ns-resize !important;
@@ -1706,7 +1763,7 @@ body.resizing-output * {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 0.75rem;
   background: var(--bg-secondary);
   border-bottom: 0.0625rem solid var(--border-primary);
   flex-shrink: 0;
@@ -1800,7 +1857,7 @@ body.resizing-output * {
   width: 1.5rem;
   height: 1.5rem;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 0.25rem;

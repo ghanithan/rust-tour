@@ -45,6 +45,12 @@ class RustTour {
       // Initialize terminal
       this.terminal.init('terminal');
       
+      // Apply initial font size to terminal
+      const currentFontSize = localStorage.getItem('fontSize') || 'medium';
+      const terminalSizeMap = { small: 12, medium: 13, large: 14 };
+      const terminalFontSize = terminalSizeMap[currentFontSize];
+      this.terminal.updateFontSize(terminalFontSize);
+      
       this.setupEventListeners();
       
       // Load default exercise or last opened
@@ -151,6 +157,12 @@ class RustTour {
       
       // Save last exercise
       localStorage.setItem('lastExercise', exercisePath);
+      
+      // Navigate terminal to new exercise directory if terminal is open
+      const terminalContainer = document.getElementById('terminal-container');
+      if (terminalContainer && terminalContainer.style.display !== 'none') {
+        this.terminal.navigateToExercise(exercise.path);
+      }
       
       console.log(`Loaded exercise: ${exercise.metadata.title}`);
     } catch (error) {

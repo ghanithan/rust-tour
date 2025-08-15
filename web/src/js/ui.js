@@ -17,17 +17,67 @@ export class UI {
       medium: 13/14,  // 13px  
       large: 14/14    // 14px
     };
+    this.currentOutputHeight = 200; // Default expanded height
+    this.minimizedOutputHeight = 40; // Status bar height
   }
 
   async init(platform) {
     this.platform = platform;
     this.setupLayout();
+    this.initializeOutputLayout(); // Set up initial minimized state
     this.initializeTheme();
     this.initializeFontSize();
     await this.initializeEditor();
     this.setupEventHandlers();
     this.setupOutputResize(); // Now safely disabled internally
     console.log('UI initialized');
+  }
+
+  initializeOutputLayout() {
+    // Set up initial minimized state with proper grid layout
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+      const viewportHeight = window.innerHeight;
+      const headerHeight = 36;
+      const availableHeight = viewportHeight - headerHeight;
+      const editorHeight = availableHeight - this.minimizedOutputHeight;
+      
+      // Set initial grid to minimized state
+      mainLayout.style.gridTemplateRows = `2.25rem ${editorHeight}px ${this.minimizedOutputHeight}px`;
+      
+      // Ensure the toggle button shows correct initial state
+      const toggleBtn = document.getElementById('output-minimize-btn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        toggleBtn.title = 'Expand Output';
+      }
+    }
+  }
+
+  updateOutputLayoutOnResize() {
+    // Maintain output layout proportions when window is resized
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+      const viewportHeight = window.innerHeight;
+      const headerHeight = 36;
+      const availableHeight = viewportHeight - headerHeight;
+      
+      const isExpanded = mainLayout.classList.contains('output-expanded');
+      
+      if (isExpanded) {
+        // Maintain current output height but ensure it doesn't exceed limits
+        const maxOutputHeight = Math.floor(availableHeight * 0.8);
+        const outputHeight = Math.min(this.currentOutputHeight, maxOutputHeight);
+        const editorHeight = availableHeight - outputHeight;
+        
+        this.currentOutputHeight = outputHeight;
+        mainLayout.style.gridTemplateRows = `2.25rem ${editorHeight}px ${outputHeight}px`;
+      } else {
+        // Keep minimized state
+        const editorHeight = availableHeight - this.minimizedOutputHeight;
+        mainLayout.style.gridTemplateRows = `2.25rem ${editorHeight}px ${this.minimizedOutputHeight}px`;
+      }
+    }
   }
 
   // Helper method to calculate font size from CSS variable
@@ -83,7 +133,7 @@ export class UI {
             <div class="editor-title" id="editor-title">Select an exercise to begin</div>
             <div class="editor-actions">
               <button class="btn btn-primary" id="save-run-btn" title="Save and Run (Ctrl+Enter)">
-                <i class="fas fa-save"></i> <i class="fas fa-play"></i> Save and Run
+                <i class="fas fa-save" style="margin-right: 0;"></i><span style="opacity: 0.5; margin: 0 0.2rem; vertical-align: baseline; position: relative; top: -1px;">|</span><i class="fas fa-play"></i>Save and Run
               </button>
               <button class="btn btn-success" id="test-btn" title="Test (Ctrl+T)">
                 <i class="fas fa-vial"></i> Test
@@ -97,22 +147,26 @@ export class UI {
             </div>
           </div>
           <div id="editor"></div>
+        </main>
+
+        <!-- Output Section (includes status bar + output container) -->
+        <section class="output-section">
           <div class="status-bar">
             <div class="status-message" id="status-message">
               <span class="status-icon"></span>
               <span class="status-text">Ready</span>
             </div>
+            <button class="output-minimize-btn" id="output-minimize-btn" title="Expand Output">
+              <i class="fas fa-chevron-up"></i>
+            </button>
           </div>
-        </main>
-
-        <!-- Output Panel -->
-        <section class="output-container">
-          <div class="output-header">
-            <div class="output-tab active" data-tab="output"><i class="fas fa-terminal"></i> Output</div>
-            <div class="output-tab" data-tab="tests"><i class="fas fa-flask"></i> Tests</div>
-            <div class="output-tab" data-tab="clippy"><i class="fas fa-search"></i> Clippy</div>
-          </div>
-          <div class="output-content">
+          <div class="output-container">
+            <div class="output-header">
+              <div class="output-tab active" data-tab="output"><i class="fas fa-terminal"></i> Output</div>
+              <div class="output-tab" data-tab="tests"><i class="fas fa-flask"></i> Tests</div>
+              <div class="output-tab" data-tab="clippy"><i class="fas fa-search"></i> Clippy</div>
+            </div>
+            <div class="output-content">
             <div class="output-panel active" id="output-panel">
               <div class="output-placeholder">Run your code to see output here</div>
             </div>
@@ -122,6 +176,7 @@ export class UI {
             <div class="output-panel" id="clippy-panel">
               <div class="output-placeholder">Check code quality to see suggestions here</div>
             </div>
+          </div>
           </div>
         </section>
 
@@ -236,7 +291,7 @@ export class UI {
     this.editor = monaco.editor.create(document.getElementById('editor'), {
       value: '// Select an exercise to begin coding\nfn main() {\n    println!("Hello, Rust!");\n}',
       language: 'rust',
-      theme: 'vs-dark',
+      theme: this.currentTheme === 'dark' ? 'vs-dark' : 'vs',
       fontSize: 14,
       fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
       minimap: { enabled: true },
@@ -250,6 +305,11 @@ export class UI {
       renderWhitespace: 'boundary',
       bracketPairColorization: { enabled: true }
     });
+
+    // Apply current font size to the newly created editor
+    const baseSize = 14;
+    const newSize = baseSize * this.fontSizeMultipliers[this.currentFontSize];
+    this.editor.updateOptions({ fontSize: newSize });
 
     // Add editor event listeners
     this.editor.onDidChangeModelContent(() => {
@@ -305,6 +365,11 @@ export class UI {
       this.toggleTheme();
     });
 
+    // Output toggle handler
+    document.getElementById('output-minimize-btn').addEventListener('click', () => {
+      this.toggleOutput();
+    });
+
 
     // ESC key handler
     document.addEventListener('keydown', (e) => {
@@ -325,6 +390,7 @@ export class UI {
       document.body.classList.add('disable-transitions');
       
       this.handleResize();
+      this.updateOutputLayoutOnResize(); // Update output grid layout
       
       // Update editor font size on resize - temporarily disabled
       // if (this.editor) {
@@ -336,6 +402,10 @@ export class UI {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         document.body.classList.remove('disable-transitions');
+        // Final Monaco editor layout update after transitions
+        if (this.editor) {
+          this.editor.layout();
+        }
       }, 300);
     });
 
@@ -744,6 +814,9 @@ export class UI {
     // Switch to output tab
     this.switchOutputTab('output');
     
+    // Auto-expand output section when there's new output
+    this.expandOutput();
+    
     // Auto-scroll to bottom
     this.scrollOutputToBottom();
   }
@@ -754,6 +827,9 @@ export class UI {
     
     // Switch to tests tab
     this.switchOutputTab('tests');
+    
+    // Auto-expand output section when there are new test results
+    this.expandOutput();
     
     // Auto-scroll to bottom
     this.scrollOutputToBottom();
@@ -766,6 +842,10 @@ export class UI {
     // Switch to clippy tab if there are suggestions
     if (content.trim()) {
       this.switchOutputTab('clippy');
+      
+      // Auto-expand output section when there are clippy results
+      this.expandOutput();
+      
       // Auto-scroll to bottom
       this.scrollOutputToBottom();
     }
@@ -1602,37 +1682,39 @@ export class UI {
   setupOutputResize() {
     const mainLayout = document.querySelector('.main-layout');
     const editorContainer = document.querySelector('.editor-container');
-    const outputContainer = document.querySelector('.output-container');
+    const outputSection = document.querySelector('.output-section');
     
-    if (!mainLayout || !editorContainer || !outputContainer) {
+    if (!mainLayout || !editorContainer || !outputSection) {
       console.warn('Required elements for resize not found');
       return;
     }
     
-    // Create resize handle
-    const resizeHandle = document.createElement('div');
-    resizeHandle.className = 'output-resize-handle';
-    resizeHandle.innerHTML = '<div class="resize-handle-bar"></div>';
-    
-    // Insert resize handle at the top of the output container
-    outputContainer.insertBefore(resizeHandle, outputContainer.firstChild);
-    console.log('Resize handle inserted:', resizeHandle);
+    console.log('Output resize setup - using output-section top border');
     
     let isResizing = false;
     let startY = 0;
     let startEditorHeight = 0;
     let startOutputHeight = 0;
     
-    resizeHandle.addEventListener('mousedown', (e) => {
+    outputSection.addEventListener('mousedown', (e) => {
+      // Only start resize if clicking in the top resize area (::before pseudo-element area)
+      const rect = outputSection.getBoundingClientRect();
+      const clickY = e.clientY - rect.top;
+      
+      // Check if click is in the resize area (top 10px)
+      if (clickY > 10) return;
       isResizing = true;
       startY = e.clientY;
       
       const editorRect = editorContainer.getBoundingClientRect();
-      const outputRect = outputContainer.getBoundingClientRect();
+      const outputRect = outputSection.getBoundingClientRect();
       startEditorHeight = editorRect.height;
       startOutputHeight = outputRect.height;
       
+      // Disable transitions for instant manual resize feedback
       document.body.classList.add('resizing-output');
+      mainLayout.classList.add('resizing-output');
+      
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       e.preventDefault();
@@ -1642,25 +1724,50 @@ export class UI {
       if (!isResizing) return;
       
       const deltaY = e.clientY - startY;
-      const totalHeight = startEditorHeight + startOutputHeight;
-      const minHeight = 150; // Minimum height for both sections
+      const viewportHeight = window.innerHeight;
+      const headerHeight = 36; // ~2.25rem in pixels
+      const availableHeight = viewportHeight - headerHeight;
       
+      // Calculate new heights
       let newEditorHeight = startEditorHeight + deltaY;
       let newOutputHeight = startOutputHeight - deltaY;
       
-      // Enforce minimum heights
-      if (newEditorHeight < minHeight) {
-        newEditorHeight = minHeight;
-        newOutputHeight = totalHeight - minHeight;
-      } else if (newOutputHeight < minHeight) {
-        newOutputHeight = minHeight;
-        newEditorHeight = totalHeight - minHeight;
+      // Set constraints
+      const minEditorHeight = 200; // Minimum editor height
+      const minOutputHeight = 40;  // Minimum output height (status bar)
+      const maxOutputHeight = Math.floor(availableHeight * 0.8); // Max 80% of available height
+      
+      // Enforce constraints
+      if (newEditorHeight < minEditorHeight) {
+        newEditorHeight = minEditorHeight;
+        newOutputHeight = availableHeight - minEditorHeight;
+      } else if (newOutputHeight < minOutputHeight) {
+        newOutputHeight = minOutputHeight;
+        newEditorHeight = availableHeight - minOutputHeight;
+      } else if (newOutputHeight > maxOutputHeight) {
+        newOutputHeight = maxOutputHeight;
+        newEditorHeight = availableHeight - maxOutputHeight;
       }
       
-      // Update grid template rows - use CSS variable for header height
-      const computedStyle = getComputedStyle(document.documentElement);
-      const headerHeightRem = computedStyle.getPropertyValue('--header-height').trim();
+      // Update grid template rows dynamically
+      const headerHeightRem = '2.25rem';
       mainLayout.style.gridTemplateRows = `${headerHeightRem} ${newEditorHeight}px ${newOutputHeight}px`;
+      
+      // Store the current output height for minimize/expand
+      this.currentOutputHeight = newOutputHeight;
+      
+      // Auto-expand/minimize based on resize height with hysteresis
+      const isCurrentlyExpanded = mainLayout.classList.contains('output-expanded');
+      const expandThreshold = 60;  // Expand when output > 60px
+      const minimizeThreshold = 45; // Minimize when output ≤ 45px
+      
+      if (!isCurrentlyExpanded && newOutputHeight > expandThreshold) {
+        // Auto-expand: dragging up from minimized state
+        this.autoExpandDuringResize();
+      } else if (isCurrentlyExpanded && newOutputHeight <= minimizeThreshold) {
+        // Auto-minimize: dragging down to minimal size
+        this.autoMinimizeDuringResize();
+      }
       
       // Resize Monaco editor
       if (this.editor) {
@@ -1670,7 +1777,11 @@ export class UI {
     
     const handleMouseUp = () => {
       isResizing = false;
+      
+      // Re-enable transitions after manual resize is complete
       document.body.classList.remove('resizing-output');
+      mainLayout.classList.remove('resizing-output');
+      
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       
@@ -1681,9 +1792,21 @@ export class UI {
     };
   }
 
+  // Auto-expand during manual resize (without grid updates)
+  autoExpandDuringResize() {
+    // Use existing expandOutput method but skip grid updates since we're manually resizing
+    this.expandOutput(true);
+  }
+
+  // Auto-minimize during manual resize (without grid updates)
+  autoMinimizeDuringResize() {
+    // Use existing minimizeOutput method but skip grid updates since we're manually resizing
+    this.minimizeOutput(true);
+  }
+
   // Font size management methods
   initializeFontSize() {
-    // Apply the current font size to the document
+    // Apply the current font size to the document (CSS variables only)
     this.applyFontSize(this.currentFontSize);
     
     // Use timeout to ensure DOM is ready for tooltip update
@@ -1760,6 +1883,82 @@ export class UI {
     if (this.editor) {
       const theme = this.currentTheme === 'dark' ? 'vs-dark' : 'vs';
       monaco.editor.setTheme(theme);
+    }
+  }
+
+  // Output panel control methods
+  expandOutput(skipGridUpdate = false) {
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+      mainLayout.classList.add('output-expanded');
+      
+      // Update grid to use expanded height (unless called during manual resize)
+      if (!skipGridUpdate) {
+        const viewportHeight = window.innerHeight;
+        const headerHeight = 36;
+        const availableHeight = viewportHeight - headerHeight;
+        const editorHeight = availableHeight - this.currentOutputHeight;
+        
+        mainLayout.style.gridTemplateRows = `2.25rem ${editorHeight}px ${this.currentOutputHeight}px`;
+      }
+      
+      // Update button icon to down arrow (minimize action)
+      const toggleBtn = document.getElementById('output-minimize-btn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        toggleBtn.title = 'Minimize Output';
+      }
+      
+      // Refresh Monaco editor after layout change (only if not manual resize)
+      if (!skipGridUpdate) {
+        setTimeout(() => {
+          if (this.editor) {
+            this.editor.layout();
+          }
+        }, 200); // After faster transition completes (0.15s + buffer)
+      }
+    }
+  }
+
+  minimizeOutput(skipGridUpdate = false) {
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+      mainLayout.classList.remove('output-expanded');
+      
+      // Update grid to use minimized height (unless called during manual resize)
+      if (!skipGridUpdate) {
+        const viewportHeight = window.innerHeight;
+        const headerHeight = 36;
+        const availableHeight = viewportHeight - headerHeight;
+        const editorHeight = availableHeight - this.minimizedOutputHeight;
+        
+        mainLayout.style.gridTemplateRows = `2.25rem ${editorHeight}px ${this.minimizedOutputHeight}px`;
+      }
+      
+      // Update button icon to up arrow (expand action)
+      const toggleBtn = document.getElementById('output-minimize-btn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        toggleBtn.title = 'Expand Output';
+      }
+      
+      // Refresh Monaco editor after layout change (only if not manual resize)
+      if (!skipGridUpdate) {
+        setTimeout(() => {
+          if (this.editor) {
+            this.editor.layout();
+          }
+        }, 200); // After faster transition completes (0.15s + buffer)
+      }
+    }
+  }
+
+  toggleOutput() {
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout && mainLayout.classList.contains('output-expanded')) {
+      this.minimizeOutput();
+    } else {
+      this.expandOutput();
     }
   }
 

@@ -549,8 +549,8 @@ export class TerminalManager {
   // Navigate to a specific exercise directory
   navigateToExercise(exercisePath) {
     if (this.sessionId && this.terminal) {
-      // Clear current line and send cd command
-      const cdCommand = `cd ${exercisePath}\r`;
+      // Navigate to exercises root first, then to the specific exercise
+      const cdCommand = `cd /workspaces/rust-tour/exercises && cd ${exercisePath}\r`;
       this.ws.send({
         type: 'terminal',
         action: 'input',
