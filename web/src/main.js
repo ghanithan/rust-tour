@@ -13,7 +13,13 @@ class RustTour {
     this.bookIntegration = new BookIntegration();
     this.websocket = new WebSocketManager();
     this.ui = new UI();
-    this.terminal = new TerminalManager(this.websocket);
+    
+    // Calculate initial terminal font size based on current font size setting
+    const currentFontSize = localStorage.getItem('fontSize') || 'medium';
+    const fontSizeMap = { small: 12, medium: 13, large: 14 };
+    const initialTerminalFontSize = fontSizeMap[currentFontSize];
+    
+    this.terminal = new TerminalManager(this.websocket, initialTerminalFontSize);
     
     this.currentExercise = null;
     this.exercises = [];

@@ -3,10 +3,11 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
 export class TerminalManager {
-  constructor(websocketManager) {
+  constructor(websocketManager, fontSize = 13) {
     this.ws = websocketManager;
     this.terminal = null;
     this.fitAddon = null;
+    this.fontSize = fontSize;
     this.sessionId = this.loadSessionId(); // Try to restore session
     this.isInitialized = false;
     this.isMinimized = false; // Track minimize state
@@ -64,7 +65,7 @@ export class TerminalManager {
         brightWhite: '#ffffff'
       },
       fontFamily: 'Monaco, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-      fontSize: 14,
+      fontSize: this.fontSize,
       lineHeight: 1.2
     });
 
@@ -494,6 +495,20 @@ export class TerminalManager {
   resize() {
     if (this.terminal && this.fitAddon) {
       this.fitAddon.fit();
+    }
+  }
+
+  updateFontSize(fontSize) {
+    this.fontSize = fontSize;
+    if (this.terminal) {
+      // Update the terminal's font size
+      this.terminal.options.fontSize = fontSize;
+      // Refresh the terminal to apply changes
+      this.terminal.refresh(0, this.terminal.rows - 1);
+      // Refit the terminal to adjust dimensions
+      if (this.fitAddon) {
+        this.fitAddon.fit();
+      }
     }
   }
 

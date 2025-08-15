@@ -11,12 +11,19 @@ export class UI {
     this.rightPanelOpen = false;
     this.exerciseHierarchy = null; // Will store the hierarchical structure
     this.currentTheme = localStorage.getItem('theme') || 'dark';
+    this.currentFontSize = localStorage.getItem('fontSize') || 'medium';
+    this.fontSizeMultipliers = {
+      small: 12/14,   // 12px
+      medium: 13/14,  // 13px  
+      large: 14/14    // 14px
+    };
   }
 
   async init(platform) {
     this.platform = platform;
     this.setupLayout();
     this.initializeTheme();
+    this.initializeFontSize();
     await this.initializeEditor();
     this.setupEventHandlers();
     this.setupOutputResize(); // Now safely disabled internally
@@ -46,6 +53,9 @@ export class UI {
             <span>Rust Tour</span>
           </div>
           <div class="header-controls">
+            <button class="font-size-toggle" id="font-size-toggle" title="Font Size: Medium">
+              <span class="font-size-icon"><i class="fas fa-text-height"></i></span>
+            </button>
             <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
               <span class="theme-icon"><i class="fas fa-moon"></i></span>
             </button>
@@ -222,7 +232,7 @@ export class UI {
       }
     });
 
-    // Initialize editor
+    // Initialize editor with fixed font size (to preserve scrolling functionality)
     this.editor = monaco.editor.create(document.getElementById('editor'), {
       value: '// Select an exercise to begin coding\nfn main() {\n    println!("Hello, Rust!");\n}',
       language: 'rust',
@@ -283,6 +293,11 @@ export class UI {
     // Right panel backdrop handler
     document.getElementById('right-panel-backdrop').addEventListener('click', () => {
       this.closeRightPanel();
+    });
+
+    // Font size toggle handler
+    document.getElementById('font-size-toggle').addEventListener('click', () => {
+      this.toggleFontSize();
     });
 
     // Theme toggle handler
@@ -1664,6 +1679,64 @@ export class UI {
         setTimeout(() => this.editor.layout(), 100);
       }
     };
+  }
+
+  // Font size management methods
+  initializeFontSize() {
+    // Apply the current font size to the document
+    this.applyFontSize(this.currentFontSize);
+    
+    // Use timeout to ensure DOM is ready for tooltip update
+    setTimeout(() => {
+      this.updateFontSizeTooltip();
+    }, 100);
+  }
+
+  toggleFontSize() {
+    const sizes = ['small', 'medium', 'large'];
+    const currentIndex = sizes.indexOf(this.currentFontSize);
+    const nextIndex = (currentIndex + 1) % sizes.length;
+    this.currentFontSize = sizes[nextIndex];
+    
+    this.applyFontSize(this.currentFontSize);
+    localStorage.setItem('fontSize', this.currentFontSize);
+    this.updateFontSizeTooltip();
+    
+    // Update Monaco editor font size with fixed calculation (to preserve scrolling)
+    if (this.editor) {
+      const baseSize = 14;
+      const newSize = baseSize * this.fontSizeMultipliers[this.currentFontSize];
+      this.editor.updateOptions({ fontSize: newSize });
+    }
+    
+    // Update terminal font size
+    if (this.platform && this.platform.terminal) {
+      const terminalSizeMap = { small: 12, medium: 13, large: 14 };
+      const terminalFontSize = terminalSizeMap[this.currentFontSize];
+      this.platform.terminal.updateFontSize(terminalFontSize);
+    }
+  }
+
+  applyFontSize(size) {
+    // Map to our new baseline: small=12px, medium=13px, large=14px
+    const pxSizes = { small: 12, medium: 13, large: 14 };
+    const basePx = pxSizes[size];
+    const baseRem = basePx / 16; // Convert px to rem (assuming 16px base)
+    
+    const root = document.documentElement;
+    
+    // Update only content-specific font size CSS variables with new baseline
+    root.style.setProperty('--content-font-base', `${baseRem}rem`);
+    root.style.setProperty('--content-font-md', `${baseRem * 1.15}rem`);
+    root.style.setProperty('--content-mono-base', `${baseRem}rem`);
+  }
+
+  updateFontSizeTooltip() {
+    const fontSizeToggle = document.getElementById('font-size-toggle');
+    if (fontSizeToggle) {
+      const sizeLabel = this.currentFontSize.charAt(0).toUpperCase() + this.currentFontSize.slice(1);
+      fontSizeToggle.title = `Font Size: ${sizeLabel}`;
+    }
   }
 
   // Theme management methods
