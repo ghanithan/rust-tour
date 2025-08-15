@@ -19,8 +19,17 @@ export class UI {
     this.initializeTheme();
     await this.initializeEditor();
     this.setupEventHandlers();
-    this.setupOutputResize();
+    this.setupOutputResize(); // Now safely disabled internally
     console.log('UI initialized');
+  }
+
+  // Helper method to calculate font size from CSS variable
+  calculateResponsiveFontSize(cssVariable) {
+    const computed = getComputedStyle(document.documentElement);
+    const fontSize = computed.getPropertyValue(cssVariable);
+    // Convert rem/em to pixels (assuming 16px base)
+    const pixels = parseFloat(fontSize) * 16;
+    return Math.max(10, Math.min(20, pixels)); // Clamp between 10-20px for editor
   }
 
   setupLayout() {
@@ -301,6 +310,12 @@ export class UI {
       document.body.classList.add('disable-transitions');
       
       this.handleResize();
+      
+      // Update editor font size on resize - temporarily disabled
+      // if (this.editor) {
+      //   const newFontSize = this.calculateResponsiveFontSize('--font-mono-base');
+      //   this.editor.updateOptions({ fontSize: newFontSize });
+      // }
       
       // Re-enable transitions after resize is complete
       clearTimeout(resizeTimer);
@@ -1627,9 +1642,10 @@ export class UI {
         newEditorHeight = totalHeight - minHeight;
       }
       
-      // Update grid template rows
-      const headerHeight = 60;
-      mainLayout.style.gridTemplateRows = `${headerHeight}px ${newEditorHeight}px ${newOutputHeight}px`;
+      // Update grid template rows - use CSS variable for header height
+      const computedStyle = getComputedStyle(document.documentElement);
+      const headerHeightRem = computedStyle.getPropertyValue('--header-height').trim();
+      mainLayout.style.gridTemplateRows = `${headerHeightRem} ${newEditorHeight}px ${newOutputHeight}px`;
       
       // Resize Monaco editor
       if (this.editor) {

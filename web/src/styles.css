@@ -55,13 +55,18 @@
   --space-lg: 0.9375rem;
   --space-xl: 1.25rem;
   
-  /* Responsive font scale */
-  --font-xs: 0.625rem;
-  --font-sm: 0.75rem;
-  --font-base: 0.875rem;
-  --font-md: 1rem;
-  --font-lg: 1.125rem;
-  --font-xl: 1.5rem;
+  /* Responsive font scale - scales with screen size */
+  --font-xs: clamp(0.5rem, 0.45rem + 0.25vw, 0.625rem);
+  --font-sm: clamp(0.6rem, 0.55rem + 0.25vw, 0.75rem);
+  --font-base: clamp(0.7rem, 0.65rem + 0.25vw, 0.875rem);
+  --font-md: clamp(0.8rem, 0.75rem + 0.25vw, 1rem);
+  --font-lg: clamp(0.9rem, 0.85rem + 0.3vw, 1.125rem);
+  --font-xl: clamp(1.1rem, 1rem + 0.5vw, 1.5rem);
+  
+  /* Monospace font sizes for code/terminal */
+  --font-mono-sm: clamp(0.6rem, 0.55rem + 0.2vw, 0.75rem);
+  --font-mono-base: clamp(0.7rem, 0.65rem + 0.2vw, 0.85rem);
+  --font-mono-md: clamp(0.75rem, 0.7rem + 0.2vw, 0.9rem);
 }
 
 /* Font Awesome icon styling */
@@ -661,7 +666,7 @@ body.disable-transitions * {
   flex: 1;
   overflow-y: auto;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-mono-sm);
   line-height: 1.4;
 }
 
@@ -791,16 +796,16 @@ body.disable-transitions * {
 .panel-content {
   flex: 1;
   overflow-y: auto;
-  font-size: 14px;
+  font-size: var(--font-base);
 }
 
 .panel-content p {
-  font-size: 14px;
+  font-size: var(--font-base);
   line-height: 1.5;
 }
 
 .panel-content div {
-  font-size: 14px;
+  font-size: var(--font-base);
 }
 
 .panel-section {
@@ -829,7 +834,7 @@ body.disable-transitions * {
   color: var(--text-primary);
   border-radius: 0.25rem;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-sm);
   transition: all 0.2s ease;
 }
 
@@ -852,7 +857,7 @@ body.disable-transitions * {
   padding: 0.625rem;
   background: var(--bg-primary);
   border-radius: 0.25rem;
-  font-size: 14px;
+  font-size: var(--font-base);
   line-height: 1.6;
   display: none;
 }
@@ -904,7 +909,7 @@ body.disable-transitions * {
 
 .book-link-chapter {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-base);
   margin: 0;
   font-weight: 400;
 }
@@ -1578,7 +1583,7 @@ body.resizing-output * {
   padding: 0.125rem 0.25rem;
   border-radius: 0.1875rem;
   font-family: Monaco, Menlo, Consolas, monospace;
-  font-size: 0.9em;
+  font-size: var(--font-mono-base);
 }
 
 .markdown-content pre {
@@ -1657,7 +1662,7 @@ body.resizing-output * {
   align-items: center;
   gap: 0.5rem;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-base);
   font-weight: 500;
 }
 
