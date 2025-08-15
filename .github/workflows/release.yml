@@ -13,17 +13,79 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-changes:
+    name: Check Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      exercises-only: ${{ steps.filter.outputs.exercises-only }}
+      should-build: ${{ steps.filter.outputs.should-build }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: filter
+        run: |
+          # Get the list of changed files
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # For push events, compare with the previous commit
+            if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+              # Initial commit or force push, build everything
+              echo "exercises-only=false" >> $GITHUB_OUTPUT
+              echo "should-build=true" >> $GITHUB_OUTPUT
+            else
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+            fi
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # For workflow_run, assume we should build (triggered by release creation)
+            echo "exercises-only=false" >> $GITHUB_OUTPUT
+            echo "should-build=true" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            # For pull requests or other events
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          # Check if all changes are in exercises folder
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed files detected"
+            echo "exercises-only=false" >> $GITHUB_OUTPUT
+            echo "should-build=true" >> $GITHUB_OUTPUT
+          else
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            
+            # Check if ALL changed files are in the exercises folder
+            NON_EXERCISE_CHANGES=$(echo "$CHANGED_FILES" | grep -v '^exercises/' || true)
+            
+            if [ -z "$NON_EXERCISE_CHANGES" ]; then
+              echo "All changes are in the exercises folder - skipping builds"
+              echo "exercises-only=true" >> $GITHUB_OUTPUT
+              echo "should-build=false" >> $GITHUB_OUTPUT
+            else
+              echo "Changes detected outside exercises folder - proceeding with builds"
+              echo "Non-exercise changes:"
+              echo "$NON_EXERCISE_CHANGES"
+              echo "exercises-only=false" >> $GITHUB_OUTPUT
+              echo "should-build=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   build-binaries:
     name: Build Release Binaries
+    needs: check-changes
     runs-on: ${{ matrix.os }}
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
+      needs.check-changes.outputs.should-build == 'true' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
     strategy:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-22.04  # Use Ubuntu 22.04 (GLIBC 2.35) for better compatibility
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-pc-windows-msvc
@@ -80,10 +142,12 @@ jobs:
 
   build-and-publish:
     name: Build and Publish Release Images
+    needs: check-changes
     runs-on: ubuntu-latest
     if: |
-       (github.event_name == 'push') || 
-       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
+       needs.check-changes.outputs.should-build == 'true' &&
+       ((github.event_name == 'push') || 
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
     permissions:
       contents: read
       packages: write
@@ -221,10 +285,11 @@ jobs:
   publish-cargo:
     name: Publish to Cargo
     runs-on: ubuntu-latest
-    needs: build-binaries
+    needs: [check-changes, build-binaries]
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
+      needs.check-changes.outputs.should-build == 'true' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -262,10 +327,11 @@ jobs:
   attach-binaries:
     name: Attach Binaries to Release
     runs-on: ubuntu-latest
-    needs: [build-binaries, build-and-publish]
+    needs: [check-changes, build-binaries, build-and-publish]
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
+      needs.check-changes.outputs.should-build == 'true' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
     permissions:
       contents: write
     steps:
@@ -327,10 +393,11 @@ jobs:
 
   update-documentation:
     name: Update Release Documentation
-    needs: build-and-publish
+    needs: [check-changes, build-and-publish]
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release')
+      needs.check-changes.outputs.should-build == 'true' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -388,7 +455,7 @@ jobs:
 
   release-summary:
     name: Release Summary
-    needs: [build-and-publish]
+    needs: [check-changes, build-and-publish]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -420,6 +487,16 @@ jobs:
 
       - name: Generate release summary
         run: |
+          # Check if builds were skipped
+          if [[ "${{ needs.check-changes.outputs.should-build }}" == "false" ]]; then
+            echo "## Build Skipped - Exercises Only Changes" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The release workflow was triggered but no builds were performed because all changes were in the exercises folder." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This is expected behavior to save CI resources when only exercise content is updated." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             # Release build summary
             echo "## Release v${{ steps.version.outputs.version }} Published" >> $GITHUB_STEP_SUMMARY

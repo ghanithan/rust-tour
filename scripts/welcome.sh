@@ -60,10 +60,18 @@ case $choice in
     1)
         echo ""
         if [ -f "./bin/rust-tour" ]; then
-            echo -e "${GREEN}Starting Rust Tour...${NC}"
-            echo -e "${BLUE}📌 Opening browser at http://localhost:3000${NC}"
-            echo ""
-            exec ./bin/rust-tour --port 3000
+            # Check GLIBC compatibility
+            if ldd ./bin/rust-tour 2>&1 | grep -q "GLIBC.*not found"; then
+                echo -e "${YELLOW}⚠️  Binary incompatible with system GLIBC version${NC}"
+                echo -e "${BLUE}Building from source instead (this may take a few minutes)...${NC}"
+                echo ""
+                exec ./scripts/run.sh dev
+            else
+                echo -e "${GREEN}Starting Rust Tour...${NC}"
+                echo -e "${BLUE}📌 Opening browser at http://localhost:3000${NC}"
+                echo ""
+                exec ./bin/rust-tour --port 3000
+            fi
         else
             echo -e "${YELLOW}Rust Tour not installed. Installing now...${NC}"
             exec ./scripts/run-release.sh

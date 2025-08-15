@@ -25,6 +25,11 @@ case "$1" in
     "dev")
         echo "🚀 Starting development mode (Vite + Rust server)..."
         cd "$PROJECT_ROOT"
+        # Ensure npm dependencies are installed
+        if [ ! -d "web/node_modules" ]; then
+            echo "📦 Installing npm dependencies..."
+            cd web && npm ci && cd ..
+        fi
         # Start Rust server in background
         cargo run --package rust-tour --no-default-features &
         SERVER_PID=$!

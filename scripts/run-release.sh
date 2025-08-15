@@ -72,6 +72,16 @@ VERSION_NUM=$(echo "$VERSION" | sed 's/^v//')
 # Check if update is needed
 if [ -f "./bin/rust-tour" ] && [ "$CURRENT_VERSION" = "$VERSION_NUM" ]; then
     echo -e "${GREEN}✅ You already have the latest version ($VERSION)${NC}"
+    
+    # Check GLIBC compatibility
+    if ldd ./bin/"$BINARY_NAME" 2>&1 | grep -q "GLIBC.*not found"; then
+        echo ""
+        echo -e "${YELLOW}⚠️  Binary is incompatible with your system's GLIBC version${NC}"
+        echo -e "${BLUE}Building from source instead...${NC}"
+        echo ""
+        exec ./scripts/run.sh dev
+    fi
+    
     echo ""
     echo -e "${BLUE}🚀 Starting Rust Tour on port 3000...${NC}"
     echo -e "${BLUE}📂 Working directory: $(pwd)${NC}"
@@ -100,6 +110,19 @@ chmod +x "$BINARY_NAME"
 cd ..
 
 echo -e "${GREEN}✅ Download complete!${NC}"
+
+# Check GLIBC compatibility before running
+if ldd ./bin/"$BINARY_NAME" 2>&1 | grep -q "GLIBC.*not found"; then
+    echo ""
+    echo -e "${YELLOW}⚠️  Downloaded binary is incompatible with your system's GLIBC version${NC}"
+    echo -e "${YELLOW}Your system has: $(ldd --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+')${NC}"
+    echo -e "${YELLOW}Binary requires: GLIBC 2.35 or newer${NC}"
+    echo ""
+    echo -e "${BLUE}Falling back to building from source (this may take a few minutes)...${NC}"
+    echo ""
+    exec ./scripts/run.sh dev
+fi
+
 echo ""
 echo -e "${BLUE}🚀 Starting Rust Tour on port 3000...${NC}"
 echo -e "${BLUE}📂 Working directory: $(pwd)${NC}"
