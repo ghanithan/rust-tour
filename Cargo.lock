@@ -2204,7 +2204,7 @@ dependencies = [
 
 [[package]]
 name = "rust-tour"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "axum",
