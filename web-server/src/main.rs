@@ -1796,6 +1796,9 @@ async fn run_cargo_command(
     cmd.arg(command)
         .args(&args)
         .current_dir(cwd)
+        .env("CARGO_TERM_COLOR", "always")  // Force cargo to output colors
+        .env("CLICOLOR_FORCE", "1")         // Standard CLICOLOR force flag
+        .env("FORCE_COLOR", "1")            // Modern force color standard
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     

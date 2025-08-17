@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
+import { AnsiUp } from 'ansi_up';
 
 export class UI {
   constructor() {
@@ -28,6 +29,11 @@ export class UI {
     
     // Tooltip instances for dynamic content
     this.tooltipInstances = new Map();
+    
+    // ANSI color support
+    this.ansiUp = new AnsiUp();
+    this.ansiUp.use_classes = true; // Use CSS classes instead of inline styles
+    this.ansiUp.escape_html = true; // Enable HTML escaping for security
   }
 
   async init(platform) {
@@ -1594,7 +1600,9 @@ export class UI {
     const outputPanel = document.getElementById('output-panel');
     const className = type === 'stderr' ? 'output-stderr' : 'output-stdout';
     
-    outputPanel.innerHTML = `<div class="${className}">${this.escapeHtml(content)}</div>`;
+    // Convert ANSI codes to HTML for colored output
+    const htmlContent = this.ansiUp.ansi_to_html(content);
+    outputPanel.innerHTML = `<div class="${className}">${htmlContent}</div>`;
     
     // Switch to output tab
     this.switchOutputTab('output');
@@ -1608,7 +1616,10 @@ export class UI {
 
   updateTestResults(content) {
     const testsPanel = document.getElementById('tests-panel');
-    testsPanel.innerHTML = `<div class="output-stdout">${this.escapeHtml(content)}</div>`;
+    
+    // Convert ANSI codes to HTML for colored test output
+    const htmlContent = this.ansiUp.ansi_to_html(content);
+    testsPanel.innerHTML = `<div class="output-stdout">${htmlContent}</div>`;
     
     // Switch to tests tab
     this.switchOutputTab('tests');
@@ -1622,7 +1633,10 @@ export class UI {
 
   updateClippyResults(content) {
     const clippyPanel = document.getElementById('clippy-panel');
-    clippyPanel.innerHTML = `<div class="output-stdout">${this.escapeHtml(content)}</div>`;
+    
+    // Convert ANSI codes to HTML for colored clippy output
+    const htmlContent = this.ansiUp.ansi_to_html(content);
+    clippyPanel.innerHTML = `<div class="output-stdout">${htmlContent}</div>`;
     
     // Switch to clippy tab if there are suggestions
     if (content.trim()) {
