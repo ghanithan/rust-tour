@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       rust_version:
-        description: 'Rust version to build (e.g., 1.83)'
+        description: 'Rust version to build (e.g., 1.84)'
         required: false
-        default: '1.83'
+        default: '1.84'
   schedule:
     # Build weekly on Sunday at 2 AM UTC
     - cron: '0 2 * * 0'
