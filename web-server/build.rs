@@ -2,6 +2,7 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 use std::fs;
+use std::time::SystemTime;
 
 fn main() {
     println!("cargo:rerun-if-changed=../web/src");
@@ -19,7 +20,8 @@ fn main() {
             // Check if we need to build the frontend
             let needs_build = !dist_dir.exists() 
                 || !dist_dir.join("index.html").exists()
-                || env::var("FORCE_FRONTEND_BUILD").is_ok();
+                || env::var("FORCE_FRONTEND_BUILD").is_ok()
+                || source_files_newer_than_dist(&web_dir, &dist_dir);
             
             if needs_build {
                 println!("cargo:warning=Building frontend assets for embedding...");
@@ -77,4 +79,89 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn source_files_newer_than_dist(web_dir: &Path, dist_dir: &Path) -> bool {
+    // If dist doesn't exist, we definitely need to build
+    if !dist_dir.exists() {
+        return true;
+    }
+    
+    // Get the oldest modification time in dist directory
+    let dist_oldest = match get_oldest_file_time(dist_dir) {
+        Some(time) => time,
+        None => return true, // No files in dist, need to build
+    };
+    
+    // Check if any source file is newer than the oldest dist file
+    let src_dir = web_dir.join("src");
+    if src_dir.exists() {
+        if let Some(src_newest) = get_newest_file_time(&src_dir) {
+            if src_newest > dist_oldest {
+                println!("cargo:warning=Source files newer than dist, rebuilding frontend");
+                return true;
+            }
+        }
+    }
+    
+    // Check package.json
+    let package_json = web_dir.join("package.json");
+    if package_json.exists() {
+        if let Ok(metadata) = fs::metadata(&package_json) {
+            if let Ok(modified) = metadata.modified() {
+                if modified > dist_oldest {
+                    println!("cargo:warning=package.json newer than dist, rebuilding frontend");
+                    return true;
+                }
+            }
+        }
+    }
+    
+    false
+}
+
+fn get_oldest_file_time(dir: &Path) -> Option<SystemTime> {
+    let mut oldest: Option<SystemTime> = None;
+    
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Ok(metadata) = entry.metadata() {
+                if metadata.is_file() {
+                    if let Ok(modified) = metadata.modified() {
+                        oldest = Some(oldest.map_or(modified, |current| current.min(modified)));
+                    }
+                } else if metadata.is_dir() {
+                    // Recursively check subdirectories
+                    if let Some(subdir_oldest) = get_oldest_file_time(&entry.path()) {
+                        oldest = Some(oldest.map_or(subdir_oldest, |current| current.min(subdir_oldest)));
+                    }
+                }
+            }
+        }
+    }
+    
+    oldest
+}
+
+fn get_newest_file_time(dir: &Path) -> Option<SystemTime> {
+    let mut newest: Option<SystemTime> = None;
+    
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Ok(metadata) = entry.metadata() {
+                if metadata.is_file() {
+                    if let Ok(modified) = metadata.modified() {
+                        newest = Some(newest.map_or(modified, |current| current.max(modified)));
+                    }
+                } else if metadata.is_dir() {
+                    // Recursively check subdirectories
+                    if let Some(subdir_newest) = get_newest_file_time(&entry.path()) {
+                        newest = Some(newest.map_or(subdir_newest, |current| current.max(subdir_newest)));
+                    }
+                }
+            }
+        }
+    }
+    
+    newest
 }

@@ -65,3 +65,4 @@ logs
 coverage/
 *.lcov
 .setup-complete
+bin/rust-tour

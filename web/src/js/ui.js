@@ -677,6 +677,9 @@ export class UI {
     this.fileViewStates.clear();
     this.openTabs = [];
     
+    // Initialize dirty file tracking
+    this.dirtyFiles = new Set();
+    
     // Create models for each file
     files.forEach(file => {
       const language = this.detectLanguage(file.path);
@@ -687,6 +690,8 @@ export class UI {
       
       // Track model changes for unsaved indicators
       model.onDidChangeContent(() => {
+        // Mark file as dirty
+        this.dirtyFiles.add(file.path);
         this.updateFileModifiedState(file.path);
       });
     });
@@ -724,6 +729,9 @@ export class UI {
   }
 
   switchToFile(filePath) {
+    console.log('🔄 switchToFile called for:', filePath);
+    console.log('Editor exists:', !!this.editor);
+    console.log('Current file:', this.currentFile);
     
     // Save current view state
     if (this.currentFile && this.editor) {
@@ -737,8 +745,24 @@ export class UI {
       return;
     }
     
+    
     // Switch editor model
     this.editor.setModel(model);
+    console.log('Editor model set. Current editor model:', this.editor.getModel()?.uri?.path);
+    
+    // Add editor-level change detection as backup
+    // Remove any existing listener first to avoid duplicates
+    if (this.editorChangeListener) {
+      this.editorChangeListener.dispose();
+    }
+    this.editorChangeListener = this.editor.onDidChangeModelContent(() => {
+      const currentModel = this.editor.getModel();
+      if (currentModel && this.currentFile) {
+        // Mark file as dirty
+        this.dirtyFiles.add(this.currentFile);
+        this.updateFileModifiedState(this.currentFile);
+      }
+    });
     
     // Restore view state
     const viewState = this.fileViewStates.get(filePath);
@@ -993,14 +1017,26 @@ export class UI {
   
   getAllModifiedFiles() {
     const modifiedFiles = [];
+    
     this.fileModels.forEach((model, path) => {
-      if (model.getAlternativeVersionId() !== model.getVersionId()) {
+      const altVersion = model.getAlternativeVersionId();
+      const currentVersion = model.getVersionId(); 
+      const versionBasedModified = altVersion !== currentVersion;
+      
+      // ALTERNATIVE: Check if file is dirty based on our own tracking
+      const isDirty = this.dirtyFiles && this.dirtyFiles.has(path);
+      
+      // Use dirty tracking instead of version comparison for now
+      if (isDirty) {
+        const currentContent = model.getValue();
         modifiedFiles.push({
           path: path,
-          content: model.getValue()
+          content: currentContent
         });
       }
     });
+    
+    console.log('📄 Found', modifiedFiles.length, 'modified files:', modifiedFiles.map(f => f.path));
     return modifiedFiles;
   }
 
@@ -1623,7 +1659,7 @@ export class UI {
     // Auto-clear status after 3 seconds for non-error messages
     if (type !== 'error') {
       setTimeout(() => {
-        this.setExecutionStatus('', 'Ready');
+        this.setExecutionStatus('success', 'Ready');
       }, 3000);
     }
   }
@@ -1718,8 +1754,8 @@ export class UI {
     console.error('[UI Error]:', message); // Keep for debugging
   }
 
-  showSaveSuccess() {
-    // this.showNotification('Code saved successfully', 'success');
+  showSaveSuccess(message = 'Code saved successfully') {
+    this.showStatus(message, 'success');
   }
 
   showCompletionCelebration() {

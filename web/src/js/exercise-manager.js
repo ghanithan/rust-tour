@@ -72,7 +72,9 @@ export class ExerciseManager {
   async saveAllFiles(path, files) {
     try {
       const [chapter, exercise] = path.split('/');
-      const response = await fetch(`/api/exercises/${chapter}/${exercise}/files`, {
+      const endpoint = `/api/exercises/${chapter}/${exercise}/files`;
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,12 +83,15 @@ export class ExerciseManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save files: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Failed to save files: ${response.status} ${response.statusText}: ${errorText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('Error saving files:', error);
+      console.error('❌ Error saving files:', error);
       throw error;
     }
   }
@@ -142,6 +147,7 @@ export class ExerciseManager {
     }
     
     const modifiedFiles = this.ui.getAllModifiedFiles();
+    
     if (modifiedFiles.length === 0) {
       return { success: true, savedCount: 0 };
     }
@@ -154,13 +160,19 @@ export class ExerciseManager {
         const model = this.ui.fileModels.get(file.path);
         if (model) {
           // Reset the version tracking to mark as saved
+          // The correct way in Monaco is to call pushStackElement to mark the current state as saved
           model.pushStackElement();
+          
+          // Clear dirty flag
+          if (this.ui.dirtyFiles) {
+            this.ui.dirtyFiles.delete(file.path);
+          }
         }
       });
       
       return { success: true, savedCount: modifiedFiles.length };
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      console.error('❌ Auto-save failed:', error);
       return { success: false, error: error.message };
     }
   }

@@ -1086,6 +1086,18 @@ async fn save_exercise_code(
     let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
     let main_path = exercise_path.join("src").join("main.rs");
     
+    warn!("LEGACY SAVE: Single-file save called for {}/{}, content_length={}", chapter, exercise, request.code.len());
+    warn!("Content preview: {:?}", request.code.chars().take(100).collect::<String>());
+    warn!("This will ALWAYS save to src/main.rs regardless of content!");
+    
+    // Detect if this looks like non-Rust content being saved incorrectly
+    let content_preview = request.code.chars().take(200).collect::<String>();
+    if content_preview.contains("[package]") || content_preview.contains("[dependencies]") {
+        error!("CRITICAL BUG: Cargo.toml content being saved to main.rs!");
+        error!("Content: {:?}", content_preview);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
     match fs::write(&main_path, &request.code).await {
         Ok(_) => {
             // Broadcast file change
@@ -1120,6 +1132,12 @@ async fn save_exercise_files(
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
     let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
     
+    info!("Saving {} files for exercise {}/{}", request.files.len(), chapter, exercise);
+    for (i, file) in request.files.iter().enumerate() {
+        info!("File {}: path='{}', content_length={}", i + 1, file.path, file.content.len());
+        info!("Content preview: {:?}", file.content.chars().take(100).collect::<String>());
+    }
+    
     // Validate and save each file
     for file in &request.files {
         // Validate path to prevent directory traversal
@@ -1145,10 +1163,12 @@ async fn save_exercise_files(
         }
         
         // Write file
+        info!("Writing file: {} -> {}", file.path, file_path.display());
         if let Err(e) = fs::write(&file_path, &file.content).await {
             error!("Error saving file {}: {}", file.path, e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
+        info!("Successfully wrote {} bytes to {}", file.content.len(), file_path.display());
     }
     
     // Broadcast file changes

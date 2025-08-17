@@ -70,6 +70,9 @@ class RustTour {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('app').classList.add('loaded');
       
+      // Start periodic auto-save
+      this.startPeriodicAutoSave();
+      
       console.log('🦀 Rust Tour loaded successfully!');
     } catch (error) {
       console.error('Failed to initialize platform:', error);
@@ -84,28 +87,29 @@ class RustTour {
     });
 
     // Code execution
-    document.addEventListener('run-code', () => {
-      this.runCode();
+    document.addEventListener('run-code', async () => {
+      await this.saveAllFiles();
+      await this.runCode();
     });
 
     document.addEventListener('test-code', async () => {
-      await this.saveCode();
+      await this.saveAllFiles();
       await this.testCode();
     });
 
     document.addEventListener('check-code', async () => {
-      await this.saveCode();
+      await this.saveAllFiles();
       await this.checkCode();
     });
 
     // Code saving
-    document.addEventListener('save-code', () => {
-      this.saveCode();
+    document.addEventListener('save-code', async () => {
+      await this.saveAllFiles();
     });
 
     // Save and run (sequential operation)
     document.addEventListener('save-and-run-code', async () => {
-      await this.saveCode();
+      await this.saveAllFiles();
       await this.runCode();
     });
 
@@ -124,7 +128,7 @@ class RustTour {
     document.addEventListener('code-changed', () => {
       clearTimeout(saveTimeout);
       saveTimeout = setTimeout(() => {
-        this.saveCode(true); // silent save
+        this.saveAllFiles(true); // silent save
       }, 2000);
     });
 
@@ -251,20 +255,52 @@ class RustTour {
   }
 
   async saveCode(silent = false) {
-    if (!this.currentExercise) return;
+    // DEPRECATED: Redirect to multi-file save to prevent content corruption
+    console.warn('saveCode() is deprecated, redirecting to saveAllFiles()');
+    await this.saveAllFiles(silent);
+  }
+
+  async saveAllFiles(silent = false) {
+    if (!this.currentExercise) {
+      console.warn('No current exercise, cannot save');
+      return;
+    }
 
     try {
-      const code = this.ui.getEditorContent();
-      await this.exerciseManager.saveCode(this.currentExercise.path, code);
+      const result = await this.exerciseManager.autoSaveAllFiles(this.currentExercise.path);
       
-      if (!silent) {
-        this.ui.showSaveSuccess();
+      if (!silent && result.success) {
+        if (result.savedCount > 0) {
+          this.ui.showSaveSuccess(`Saved ${result.savedCount} file${result.savedCount === 1 ? '' : 's'}`);
+        } else {
+          this.ui.showSaveSuccess('No changes to save');
+        }
       }
     } catch (error) {
-      console.error('Failed to save code:', error);
+      console.error('❌ Failed to save files:', error);
       if (!silent) {
-        this.ui.showError('Failed to save code. Please try again.');
+        this.ui.showError('Failed to save files. Please try again.');
       }
+    }
+  }
+
+  startPeriodicAutoSave() {
+    // Auto-save every 30 seconds
+    this.autoSaveInterval = setInterval(async () => {
+      try {
+        if (this.currentExercise) {
+          await this.saveAllFiles(true); // Silent save
+        }
+      } catch (error) {
+        console.error('Periodic auto-save failed:', error);
+      }
+    }, 30000); // 30 seconds
+  }
+
+  stopPeriodicAutoSave() {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
     }
   }
 
