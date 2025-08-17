@@ -120,12 +120,15 @@ jobs:
           echo "✅ Updated Cargo.toml:"
           grep "^version = " Cargo.toml
           
-          # Commit the version update
+          # Commit the version update if there are changes
           git add Cargo.toml
-          git commit -m "chore: bump version to ${{ inputs.version }}"
-          git push origin main
-          
-          echo "✅ Version updated and pushed to main branch"
+          if git diff --staged --quiet; then
+            echo "⚠️ No changes to commit - version was already ${{ inputs.version }}"
+          else
+            git commit -m "chore: bump version to ${{ inputs.version }}"
+            git push origin main
+            echo "✅ Version updated and pushed to main branch"
+          fi
 
       - name: Generate release notes
         id: release_notes
