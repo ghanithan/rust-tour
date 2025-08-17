@@ -343,17 +343,25 @@ jobs:
         run: |
           # Handle different trigger types
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, get the tag from the API
-            echo "Triggered by workflow_run, fetching latest release info..."
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
-            if [ -z "$VERSION" ]; then
-              echo "Could not determine version from latest release"
+            # For workflow_run triggers, extract version from git tags at the triggering commit
+            echo "Triggered by workflow_run, extracting version from git tags..."
+            
+            # Get the head SHA from the triggering workflow
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "Head SHA from triggering workflow: $HEAD_SHA"
+            
+            # Find version tags pointing to this commit
+            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
+            
+            if [ -z "$VERSION_TAGS" ]; then
+              echo "No version tags found at commit $HEAD_SHA"
               echo "version=" >> $GITHUB_OUTPUT
             else
+              # Extract version number (remove 'v' prefix)
+              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
+              echo "Found version tag: v$VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
@@ -463,17 +471,25 @@ jobs:
         run: |
           # Handle different trigger types
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, get the tag from the API
-            echo "Triggered by workflow_run, fetching latest release info..."
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
-            if [ -z "$VERSION" ]; then
-              echo "Could not determine version from latest release"
+            # For workflow_run triggers, extract version from git tags at the triggering commit
+            echo "Triggered by workflow_run, extracting version from git tags..."
+            
+            # Get the head SHA from the triggering workflow
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "Head SHA from triggering workflow: $HEAD_SHA"
+            
+            # Find version tags pointing to this commit
+            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
+            
+            if [ -z "$VERSION_TAGS" ]; then
+              echo "No version tags found at commit $HEAD_SHA"
               echo "version=" >> $GITHUB_OUTPUT
             else
+              # Extract version number (remove 'v' prefix)
+              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
+              echo "Found version tag: v$VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
@@ -515,17 +531,25 @@ jobs:
         run: |
           # Handle different trigger types
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, get the tag from the API
-            echo "Triggered by workflow_run, fetching latest release info..."
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-            VERSION=$(echo "$LATEST_RELEASE" | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
-            if [ -z "$VERSION" ]; then
-              echo "Could not determine version from latest release"
+            # For workflow_run triggers, extract version from git tags at the triggering commit
+            echo "Triggered by workflow_run, extracting version from git tags..."
+            
+            # Get the head SHA from the triggering workflow
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "Head SHA from triggering workflow: $HEAD_SHA"
+            
+            # Find version tags pointing to this commit
+            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
+            
+            if [ -z "$VERSION_TAGS" ]; then
+              echo "No version tags found at commit $HEAD_SHA"
               echo "version=" >> $GITHUB_OUTPUT
             else
+              # Extract version number (remove 'v' prefix)
+              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
+              echo "Found version tag: v$VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
             fi
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
