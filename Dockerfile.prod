@@ -38,8 +38,8 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Copy source code (dependencies are already built)
 COPY . .
 
-# Copy built web assets
-COPY --from=web-builder /app/web/dist ./web/dist
+# Copy built web assets to expected location for embedding
+COPY --from=web-builder /app/web/dist ./web-server/web-dist
 
 # Build the application (dependencies are cached)
 RUN cargo build --release --package rust-tour
