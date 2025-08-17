@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Start Rust Tour",
+      "type": "shell",
+      "command": "./scripts/welcome.sh",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Start the Rust Tour interactive learning platform"
+    },
+    {
+      "label": "📦 Update Rust Tour Binary",
+      "type": "shell", 
+      "command": "./scripts/run-release.sh",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Download and update to the latest Rust Tour binary"
+    },
+    {
+      "label": "🔧 Run Development Mode",
+      "type": "shell",
+      "command": "./scripts/run.sh dev",
+      "group": "build", 
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Start Rust Tour in development mode (compile from source)"
+    }
+  ]
+}

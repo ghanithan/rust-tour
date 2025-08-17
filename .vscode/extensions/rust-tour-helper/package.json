@@ -1,0 +1,51 @@
+{
+  "name": "rust-tour-helper",
+  "displayName": "Rust Tour Helper",
+  "description": "Local extension to help with Rust Tour setup and navigation",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rust-tour.startTour",
+        "title": "🚀 Start Rust Tour",
+        "category": "Rust Tour"
+      },
+      {
+        "command": "rust-tour.openWelcome",
+        "title": "📚 Open Welcome Menu",
+        "category": "Rust Tour"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "rust-tour.startTour",
+          "when": "workspaceFolder"
+        },
+        {
+          "command": "rust-tour.openWelcome",
+          "when": "workspaceFolder"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "echo 'No compilation needed for simple extension'"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ghanithan/rust-tour"
+  },
+  "publisher": "rust-tour",
+  "private": true
+}

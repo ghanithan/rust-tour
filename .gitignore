@@ -64,3 +64,4 @@ logs
 # Coverage
 coverage/
 *.lcov
+.setup-complete

@@ -18,7 +18,8 @@
         "vadimcn.vscode-lldb",
         "ms-vscode.vscode-typescript-next",
         "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "./.vscode/extensions/rust-tour-helper"
       ],
       "settings": {
         "rust-analyzer.checkOnSave.command": "clippy",
@@ -43,7 +44,7 @@
     }
   },
 
-  "postCreateCommand": "./scripts/welcome.sh",
+  "postStartCommand": "./scripts/setup-codespace.sh",
   
   "remoteUser": "vscode",
   
