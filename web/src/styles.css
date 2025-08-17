@@ -577,7 +577,7 @@ body.disable-transitions * {
 }
 
 .chapter-number {
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -586,12 +586,12 @@ body.disable-transitions * {
 }
 
 .chapter-name {
-  font-size: var(--font-xs);
+  font-size: var(--font-md);
   font-weight: 500;
   color: var(--text-secondary);
   text-transform: none;
   letter-spacing: normal;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .exercise-item {

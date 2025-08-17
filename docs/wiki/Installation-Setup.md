@@ -35,7 +35,7 @@ This comprehensive guide covers all installation methods for Rust Tour, troubles
 
 3. **Start Rust Tour**
    ```bash
-   ./scripts/run.sh start
+   ./scripts/welcome.sh
    ```
 
 4. **Access the application**
@@ -173,7 +173,7 @@ After initial setup:
    ```bash
    git clone https://github.com/ghanithan/rust-tour.git
    cd rust-tour
-   ./scripts/run.sh start
+   ./scripts/welcome.sh
    ```
 
 3. **Access the application**

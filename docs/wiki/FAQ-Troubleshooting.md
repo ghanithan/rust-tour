@@ -13,7 +13,7 @@ Find quick answers to common questions and solutions to frequent issues with Rus
 **A:** While some programming experience is helpful, Rust Tour is designed to be accessible to beginners. The exercises start with basic concepts and gradually build complexity. If you're completely new to programming, consider reviewing basic programming concepts first.
 
 #### Q: How long does it take to complete Rust Tour?
-**A:** This varies greatly depending on your background and study pace. Most learners complete the core curriculum in 2-8 weeks with consistent daily practice (1-2 hours per day).
+**A:** The current 40 exercises take approximately 15-16 hours to complete. Most learners complete the available content in 1-2 weeks with consistent daily practice (1-2 hours per day). The full planned curriculum of 200+ exercises will take 2-8 weeks.
 
 #### Q: Is Rust Tour free?
 **A:** Yes, Rust Tour is completely free and open-source. You can use it without any cost or registration requirements.
@@ -63,7 +63,7 @@ pwd  # Should show path ending in /rust-tour
 chmod +x scripts/*.sh
 
 # Try again
-./scripts/run.sh start
+./scripts/welcome.sh
 ```
 
 #### Problem: Cargo installation fails
@@ -127,7 +127,7 @@ netstat -ano | findstr :3000  # Windows
 kill -9 <PID>  # Replace <PID> with actual process ID
 
 # Or use a different port
-RUST_TOUR_PORT=3001 ./scripts/run.sh start
+RUST_TOUR_PORT=3001 ./scripts/welcome.sh
 ```
 
 #### Problem: Tests fail but solution looks correct
@@ -166,7 +166,7 @@ cargo clippy --fix
 curl http://localhost:3000/health
 
 # Check server logs
-./scripts/run.sh start  # Look for error messages
+./scripts/welcome.sh  # Look for error messages
 
 # Try different browser or incognito mode
 # Clear browser cache and cookies

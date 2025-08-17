@@ -28,8 +28,8 @@ This document provides detailed information about:
 # Set up development container (if using Codespaces)
 # The .devcontainer/ configuration handles this automatically
 
-# Start Rust Tour
-./scripts/run.sh start
+# Start Rust Tour (interactive menu)
+./scripts/welcome.sh
 
 # Start development mode (Vite + Rust server)
 ./scripts/run.sh dev

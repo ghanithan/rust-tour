@@ -13,7 +13,7 @@ Rust Tour is a comprehensive learning platform that combines theoretical knowled
 
 ## Key Features
 
-- **Progressive Learning Path**: 200+ exercises across 20 chapters following the Rust Book structure
+- **Progressive Learning Path**: 40 exercises across 5 chapters implemented, with 200+ exercises across 20 chapters planned following the Rust Book structure
 - **Test-Driven Development**: Each exercise includes comprehensive test suites
 - **Interactive Web Interface**: Monaco editor with syntax highlighting and live feedback
 - **Integrated Terminal**: Built-in terminal for running Rust commands directly
@@ -116,7 +116,7 @@ This project demonstrates the productive partnership between human developers an
 3. Wait for environment initialization (2-3 minutes)
 4. Start the application:
    ```bash
-   ./scripts/run.sh start
+   ./scripts/welcome.sh
    ```
 5. Access the web interface:
    - **Automatic**: Codespaces will show a popup notification with a link to open the forwarded port
@@ -129,7 +129,7 @@ This project demonstrates the productive partnership between human developers an
 2. Wait for environment initialization (2-3 minutes)
 3. Start the application:
    ```bash
-   ./scripts/run.sh start
+   ./scripts/welcome.sh
    ```
 4. Access the web interface:
    - **Automatic**: Codespaces will show a popup notification with a link to open the forwarded port
@@ -266,7 +266,7 @@ For using the pre-built application:
    ```bash
    git clone https://github.com/ghanithan/rust-tour.git
    cd rust-tour
-   ./scripts/run.sh start
+   ./scripts/welcome.sh
    ```
 3. Access the application at `http://localhost:3000`
 
@@ -411,7 +411,12 @@ The curriculum follows "The Rust Programming Language" book structure:
 9. **Error Handling** - Result and Option types
 10. **Generic Types, Traits, and Lifetimes** - Advanced type system features
 
-Each chapter contains 5-15 exercises progressing from basic to advanced concepts.
+Each chapter contains 6-12 exercises progressing from basic to advanced concepts. Currently 5 chapters (40 exercises, ~16 hours of content) are implemented:
+- Chapter 1: Getting Started (6 exercises)
+- Chapter 2: Guessing Game (8 exercises)
+- Chapter 3: Common Concepts (12 exercises)
+- Chapter 4: Understanding Ownership (6 exercises)
+- Chapter 5: Using Structs (8 exercises)
 
 ## Development Workflow
 
