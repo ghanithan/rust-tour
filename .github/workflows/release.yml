@@ -4,9 +4,6 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-  workflow_run:
-    workflows: ["Create Release"]
-    types: [completed]
 
 env:
   REGISTRY: ghcr.io
@@ -28,6 +25,18 @@ jobs:
       - name: Get changed files
         id: filter
         run: |
+          # Check if this is a chore commit that should be skipped
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "branch" ]]; then
+            COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+            echo "Commit message: $COMMIT_MESSAGE"
+            if [[ "$COMMIT_MESSAGE" =~ ^chore: ]]; then
+              echo "Skipping build for chore commit"
+              echo "exercises-only=false" >> $GITHUB_OUTPUT
+              echo "should-build=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          
           # Get the list of changed files
           if [[ "${{ github.event_name }}" == "push" ]]; then
             # For push events, compare with the previous commit
@@ -38,11 +47,6 @@ jobs:
             else
               CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
             fi
-          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run, assume we should build (triggered by release creation)
-            echo "exercises-only=false" >> $GITHUB_OUTPUT
-            echo "should-build=true" >> $GITHUB_OUTPUT
-            exit 0
           else
             # For pull requests or other events
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
@@ -73,19 +77,45 @@ jobs:
             fi
           fi
 
+  build-web:
+    name: Build Web Frontend
+    needs: check-changes
+    runs-on: ubuntu-latest
+    if: needs.check-changes.outputs.should-build == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Upload web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-assets
+          path: web/dist/
+          retention-days: 1
+
   build-binaries:
     name: Build Release Binaries
-    needs: check-changes
+    needs: [check-changes, build-web]
     runs-on: ${{ matrix.os }}
     if: |
       needs.check-changes.outputs.should-build == 'true' &&
-      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04  # Use Ubuntu 22.04 (GLIBC 2.35) for better compatibility
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-pc-windows-msvc
@@ -104,18 +134,11 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build web frontend
-        run: |
-          cd web
-          npm ci
-          npm run build
+          name: web-assets
+          path: web/dist/
 
       - name: Build Rust binary
         run: |
@@ -142,12 +165,11 @@ jobs:
 
   build-and-publish:
     name: Build and Publish Release Images
-    needs: check-changes
+    needs: [check-changes, build-web]
     runs-on: ubuntu-latest
     if: |
        needs.check-changes.outputs.should-build == 'true' &&
-       ((github.event_name == 'push') || 
-       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
+       github.event_name == 'push'
     permissions:
       contents: read
       packages: write
@@ -155,6 +177,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-assets
+          path: web/dist/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -180,42 +208,17 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Handle different trigger types
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, extract version from git tags at the triggering commit
-            echo "Triggered by workflow_run, extracting version from git tags..."
-            
-            # Get the head SHA from the triggering workflow
-            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "Head SHA from triggering workflow: $HEAD_SHA"
-            
-            # Find version tags pointing to this commit
-            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
-            
-            if [ -z "$VERSION_TAGS" ]; then
-              echo "No version tags found at commit $HEAD_SHA"
-              echo "version=" >> $GITHUB_OUTPUT
-              echo "major=" >> $GITHUB_OUTPUT
-              echo "minor=" >> $GITHUB_OUTPUT
-              echo "patch=" >> $GITHUB_OUTPUT
-            else
-              # Extract version number (remove 'v' prefix)
-              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
-              echo "Found version tag: v$VERSION"
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
-              echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
-              echo "patch=$VERSION" >> $GITHUB_OUTPUT
-            fi
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # For direct tag pushes
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For tag pushes, extract version directly from ref
             VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Tag push detected: v$VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
             echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
             echo "patch=$VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Not a version tag, skipping version extraction"
+            # For main branch pushes, no version (development build)
+            echo "Development build - no version tag"
             echo "version=" >> $GITHUB_OUTPUT
             echo "major=" >> $GITHUB_OUTPUT
             echo "minor=" >> $GITHUB_OUTPUT
@@ -313,14 +316,79 @@ jobs:
           
           echo "Release image $IMAGE_TAG tested successfully"
 
+  extract-linux-binaries:
+    name: Extract Linux Binaries from Docker
+    needs: [check-changes, build-and-publish]
+    runs-on: ubuntu-latest
+    if: |
+      needs.check-changes.outputs.should-build == 'true' &&
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract binaries from Docker images
+        run: |
+          # Extract amd64 binary
+          AMD64_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}"
+          echo "Extracting amd64 binary from $AMD64_IMAGE"
+          
+          # Create container without running it
+          CONTAINER_ID=$(docker create --platform linux/amd64 $AMD64_IMAGE)
+          
+          # Copy binary from container
+          docker cp $CONTAINER_ID:/usr/local/bin/rust-tour ./rust-tour-linux-amd64
+          
+          # Clean up container
+          docker rm $CONTAINER_ID
+          
+          # Create archive for amd64
+          tar -czf rust-tour-x86_64-unknown-linux-gnu.tar.gz rust-tour-linux-amd64
+          
+          # Extract arm64 binary  
+          ARM64_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}"
+          echo "Extracting arm64 binary from $ARM64_IMAGE"
+          
+          # Create container without running it
+          CONTAINER_ID=$(docker create --platform linux/arm64 $ARM64_IMAGE)
+          
+          # Copy binary from container
+          docker cp $CONTAINER_ID:/usr/local/bin/rust-tour ./rust-tour-linux-arm64
+          
+          # Clean up container
+          docker rm $CONTAINER_ID
+          
+          # Create archive for arm64
+          tar -czf rust-tour-aarch64-unknown-linux-gnu.tar.gz rust-tour-linux-arm64
+
+      - name: Upload Linux binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-tour-linux-binaries
+          path: |
+            rust-tour-x86_64-unknown-linux-gnu.tar.gz
+            rust-tour-aarch64-unknown-linux-gnu.tar.gz
+          retention-days: 1
+
   publish-cargo:
     name: Publish to Cargo
     runs-on: ubuntu-latest
-    needs: [check-changes, build-binaries]
+    needs: [check-changes, build-web, build-binaries]
     if: |
       needs.check-changes.outputs.should-build == 'true' &&
-      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -331,21 +399,15 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install Node.js and build web assets
-        uses: actions/setup-node@v4
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          name: web-assets
+          path: web/dist/
 
-      - name: Build web frontend and prepare for packaging
+      - name: Prepare web assets for packaging
         run: |
-          cd web
-          npm ci
-          npm run build
-          
           # Copy web assets to web-server/web-dist for cargo packaging
-          cd ..
           mkdir -p web-server/web-dist
           cp -r web/dist/* web-server/web-dist/
 
@@ -358,11 +420,10 @@ jobs:
   attach-binaries:
     name: Attach Binaries to Release
     runs-on: ubuntu-latest
-    needs: [check-changes, build-binaries, build-and-publish]
+    needs: [check-changes, build-binaries, build-and-publish, extract-linux-binaries]
     if: |
       needs.check-changes.outputs.should-build == 'true' &&
-      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
@@ -372,34 +433,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Handle different trigger types
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, extract version from git tags at the triggering commit
-            echo "Triggered by workflow_run, extracting version from git tags..."
-            
-            # Get the head SHA from the triggering workflow
-            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "Head SHA from triggering workflow: $HEAD_SHA"
-            
-            # Find version tags pointing to this commit
-            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
-            
-            if [ -z "$VERSION_TAGS" ]; then
-              echo "No version tags found at commit $HEAD_SHA"
-              echo "version=" >> $GITHUB_OUTPUT
-            else
-              # Extract version number (remove 'v' prefix)
-              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
-              echo "Found version tag: v$VERSION"
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-            fi
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # For direct tag pushes
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For tag pushes, extract version directly from ref
             VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Tag push detected: v$VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            # Main branch or other non-version push
-            echo "Not a version tag, this is a development build"
+            # For main branch pushes, no version (development build)
+            echo "Development build - no version tag"
             echo "version=" >> $GITHUB_OUTPUT
           fi
 
@@ -486,8 +527,7 @@ jobs:
     needs: [check-changes, build-and-publish]
     if: |
       needs.check-changes.outputs.should-build == 'true' &&
-      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Create Release'))
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -500,34 +540,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Handle different trigger types
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, extract version from git tags at the triggering commit
-            echo "Triggered by workflow_run, extracting version from git tags..."
-            
-            # Get the head SHA from the triggering workflow
-            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "Head SHA from triggering workflow: $HEAD_SHA"
-            
-            # Find version tags pointing to this commit
-            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
-            
-            if [ -z "$VERSION_TAGS" ]; then
-              echo "No version tags found at commit $HEAD_SHA"
-              echo "version=" >> $GITHUB_OUTPUT
-            else
-              # Extract version number (remove 'v' prefix)
-              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
-              echo "Found version tag: v$VERSION"
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-            fi
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # For direct tag pushes
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For tag pushes, extract version directly from ref
             VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Tag push detected: v$VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            # Main branch or other non-version push
-            echo "Not a version tag, this is a development build"
+            # For main branch pushes, no version (development build)
+            echo "Development build - no version tag"
             echo "version=" >> $GITHUB_OUTPUT
           fi
 
@@ -560,34 +580,14 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Handle different trigger types
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # For workflow_run triggers, extract version from git tags at the triggering commit
-            echo "Triggered by workflow_run, extracting version from git tags..."
-            
-            # Get the head SHA from the triggering workflow
-            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "Head SHA from triggering workflow: $HEAD_SHA"
-            
-            # Find version tags pointing to this commit
-            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
-            
-            if [ -z "$VERSION_TAGS" ]; then
-              echo "No version tags found at commit $HEAD_SHA"
-              echo "version=" >> $GITHUB_OUTPUT
-            else
-              # Extract version number (remove 'v' prefix)
-              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
-              echo "Found version tag: v$VERSION"
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-            fi
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # For direct tag pushes
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For tag pushes, extract version directly from ref
             VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Tag push detected: v$VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
-            # Main branch or other non-version push
-            echo "Not a version tag, this is a development build"
+            # For main branch pushes, no version (development build)
+            echo "Development build - no version tag"
             echo "version=" >> $GITHUB_OUTPUT
           fi
 
