@@ -225,6 +225,17 @@ jobs:
           draft: true
           prerelease: ${{ inputs.prerelease }}
 
+      - name: Trigger Release Build
+        run: |
+          echo "Triggering Release Build workflow via repository_dispatch..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            -d "{\"event_type\":\"release-build\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
+          
+          echo "✅ Release Build workflow triggered for version ${{ inputs.version }}"
+
       - name: Release Summary
         run: |
           echo "## Draft Release v${{ inputs.version }} Created Successfully" >> $GITHUB_STEP_SUMMARY
@@ -234,14 +245,10 @@ jobs:
           echo "- [x] Git tag v${{ inputs.version }} created" >> $GITHUB_STEP_SUMMARY
           echo "- [x] GitHub draft release created" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] Release Build workflow triggered" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ secrets.RELEASE_TOKEN }}" ]; then
-            echo "Release workflows will trigger automatically" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Manual trigger required** - No RELEASE_TOKEN configured" >> $GITHUB_STEP_SUMMARY
-            echo "Please manually run the Release Build workflow for tag v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Release Build workflow has been triggered automatically via repository_dispatch" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Binary artifacts will be built for multiple platforms" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Docker images will be built and pushed" >> $GITHUB_STEP_SUMMARY
