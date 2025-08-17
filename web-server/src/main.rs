@@ -773,9 +773,11 @@ async fn create_terminal_session(
     // Determine working directory and shell
     let cwd = state.exercises_path.clone();
     let shell = if cfg!(windows) {
-        "powershell.exe"
+        "powershell.exe".to_string()
     } else {
-        "bash"
+        // Use user's default shell from SHELL environment variable
+        // Fallback to /bin/bash if not available
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
     };
     
     // Create PTY system
