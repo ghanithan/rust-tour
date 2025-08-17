@@ -24,39 +24,6 @@ Rust Tour is a comprehensive learning platform that combines theoretical knowled
 
 [🚀 **Get Started** → Jump to Installation Methods](#installation-methods) | [⚡ **Quick Install** → Download Binary](#binary-installation-quick-setup)
 
-## Built with Claude Code
-
-This entire project was created using [Claude Code](https://claude.ai/code) in GitHub Codespaces - a delightful paradox worth noting! We've used AI to build a platform that champions traditional, hands-on learning. While AI helped architect the codebase, generate exercises, and design the learning framework, **the fundamental truth remains**: programming mastery requires human understanding, critical thinking, and practice.
-
-### The Beautiful Contradiction
-
-It's wonderfully ironic - an AI helped create a platform that emphasizes the irreplaceable value of human programming knowledge. This collaboration highlights a crucial principle: **AI amplifies human expertise but cannot replace it**. Every line of code generated was reviewed, refined, and validated by human judgment. Every exercise was crafted to build real understanding, not just pattern matching.
-
-### Why Programming Knowledge Still Matters
-
-Even in an AI-enhanced world, deep programming knowledge remains essential:
-
-- **Verification**: You need to understand code to validate AI output
-- **Architecture**: System design requires human creativity and judgment  
-- **Problem Solving**: Breaking down complex problems is a uniquely human skill
-- **Quality Assurance**: Recognizing good vs. problematic code requires experience
-- **Innovation**: Building novel solutions demands understanding fundamentals
-
-### The Claude Code Experience
-
-This project demonstrates the productive partnership between human developers and AI:
-
-- **Rapid Prototyping**: Ideas became working code in minutes
-- **Documentation Excellence**: Comprehensive guides generated efficiently  
-- **Best Practices**: AI knowledge of patterns combined with human oversight
-- **Creative Problem Solving**: Human creativity directed by AI implementation
-- **Quality Assurance**: Human validation ensuring production-ready results
-
-**Built entirely in GitHub Codespaces with Claude Code** - proving that the future of development is collaborative intelligence, where AI and human expertise create something greater than either could achieve alone.
-
----
-
-*"The best tools amplify human capability rather than replace it. Rust Tour stands as testament to this principle."*
 
 ## 🚀 Why We Recommend GitHub Codespaces
 
@@ -702,7 +669,6 @@ You may choose either license for your use of this software.
 
 ## Acknowledgments
 
-- **Claude Code** for being an exceptional AI pair programming partner
 - **GitHub Codespaces** for providing the perfect development environment
 - The Rust Team for creating an exceptional language and comprehensive documentation
 - The Rust community for continuous feedback and contributions
