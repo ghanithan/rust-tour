@@ -180,9 +180,35 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Only extract version if this is a tag
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # Extract version from tag (remove 'v' prefix)
+          # Handle different trigger types
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # For workflow_run triggers, extract version from git tags at the triggering commit
+            echo "Triggered by workflow_run, extracting version from git tags..."
+            
+            # Get the head SHA from the triggering workflow
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "Head SHA from triggering workflow: $HEAD_SHA"
+            
+            # Find version tags pointing to this commit
+            VERSION_TAGS=$(git tag --points-at "$HEAD_SHA" | grep '^v[0-9]' || true)
+            
+            if [ -z "$VERSION_TAGS" ]; then
+              echo "No version tags found at commit $HEAD_SHA"
+              echo "version=" >> $GITHUB_OUTPUT
+              echo "major=" >> $GITHUB_OUTPUT
+              echo "minor=" >> $GITHUB_OUTPUT
+              echo "patch=" >> $GITHUB_OUTPUT
+            else
+              # Extract version number (remove 'v' prefix)
+              VERSION=$(echo "$VERSION_TAGS" | head -1 | sed 's/^v//')
+              echo "Found version tag: v$VERSION"
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+              echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
+              echo "patch=$VERSION" >> $GITHUB_OUTPUT
+            fi
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # For direct tag pushes
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
@@ -191,6 +217,9 @@ jobs:
           else
             echo "Not a version tag, skipping version extraction"
             echo "version=" >> $GITHUB_OUTPUT
+            echo "major=" >> $GITHUB_OUTPUT
+            echo "minor=" >> $GITHUB_OUTPUT
+            echo "patch=" >> $GITHUB_OUTPUT
           fi
 
       - name: Extract metadata
@@ -200,15 +229,17 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # Latest tag only for releases (production)
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ steps.version.outputs.version != '' }}
             # Main branch latest for development
-            type=raw,value=main-latest,enable=${{ github.ref == 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
-            # Full semver version
-            type=semver,pattern=v{{version}}
+            type=raw,value=main-latest,enable=${{ github.ref == 'refs/heads/main' && steps.version.outputs.version == '' }}
+            # Full version with v prefix
+            type=raw,value=v${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.version != '' }}
+            # Full version without v prefix
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.version != '' }}
             # Major.minor version  
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ steps.version.outputs.version != '' }}
             # Major version
-            type=semver,pattern={{major}}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.version != '' }}
             # SHA for traceability
             type=sha,prefix={{branch}}-
           labels: |
