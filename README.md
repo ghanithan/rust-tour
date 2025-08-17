@@ -5,7 +5,7 @@
 An interactive Rust learning platform featuring progressive exercises aligned with "The Rust Programming Language" book.
 
 [![CI](https://github.com/ghanithan/rust-tour/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/ghanithan/rust-tour/actions)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Overview
 
@@ -660,12 +660,9 @@ We welcome contributions from the community. Please read our [Contributing Guide
 
 ## License
 
-This project is dual-licensed under either:
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT license ([LICENSE-MIT](LICENSE-MIT))
-
-You may choose either license for your use of this software.
+The MIT License is one of the most permissive licenses, allowing you to use, modify, and distribute this software freely for any purpose, including commercial use.
 
 ## Acknowledgments
 
