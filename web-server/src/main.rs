@@ -2130,6 +2130,20 @@ async fn initialize_progress_system(state: &AppState) -> anyhow::Result<()> {
     }
 }
 
+fn should_ignore_path(path: &std::path::Path) -> bool {
+    path.components().any(|c| {
+        let name = c.as_os_str().to_string_lossy();
+        // Ignore build artifacts, hidden files, and temporary files
+        name == "target" || 
+        name.starts_with('.') || 
+        name == "Cargo.lock" ||
+        name.ends_with(".tmp") ||
+        name.ends_with("~") ||
+        name.contains(".fingerprint") ||
+        name.contains(".cargo-lock")
+    })
+}
+
 async fn setup_file_watcher(state: AppState) -> anyhow::Result<()> {
     let exercises_path = state.exercises_path.clone();
     let broadcast_tx = state.broadcast_tx.clone();
@@ -2162,6 +2176,11 @@ async fn setup_file_watcher(state: AppState) -> anyhow::Result<()> {
                 Ok(event) => {
                     for path in event.paths {
                         if let Ok(relative_path) = path.strip_prefix(&exercises_path) {
+                            // Skip ignored paths (build artifacts, hidden files, etc.)
+                            if should_ignore_path(&relative_path) {
+                                continue;
+                            }
+                            
                             let path_parts: Vec<_> = relative_path.components().collect();
                             if path_parts.len() >= 2 {
                                 let chapter_dir = path_parts[0].as_os_str().to_string_lossy();

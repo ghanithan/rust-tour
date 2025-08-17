@@ -103,8 +103,9 @@ export class WebSocketManager {
   }
 
   handleMessage(data) {
-    if (this.debug) {
-      console.log('Received WebSocket message:', data);
+    // Only log errors and important messages, not every single message
+    if (this.debug && (data.type === 'error' || data.type === 'connection')) {
+      console.log('WebSocket message:', data);
     }
     
     // Dispatch to all registered handlers
@@ -159,7 +160,10 @@ export class WebSocketManager {
   handleFileChanged(data) {
     // Handle file system changes
     const displayName = data.exercise || data.file;
-    console.log(`File changed: ${displayName}`);
+    // Only log if debug mode is explicitly enabled and it's not a build artifact
+    if (this.debug && !data.file?.includes('target/')) {
+      console.log(`File changed: ${displayName}`);
+    }
     
     // Dispatch custom event
     document.dispatchEvent(new CustomEvent('file-changed', { 
