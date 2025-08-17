@@ -22,7 +22,7 @@ Rust Tour is a comprehensive learning platform that combines theoretical knowled
 - **Adaptive Difficulty**: Exercises scale from beginner to advanced within each chapter
 - **Community Driven**: Open-source platform with contribution workflows
 
-[🚀 **Get Started** → Jump to Installation Methods](#installation-methods)
+[🚀 **Get Started** → Jump to Installation Methods](#installation-methods) | [⚡ **Quick Install** → Download Binary](#binary-installation-quick-setup)
 
 ## Built with Claude Code
 
@@ -108,7 +108,15 @@ This project demonstrates the productive partnership between human developers an
 
 ## Installation Methods
 
-### GitHub Codespaces (Recommended)
+### Quick Start Options
+
+1. **[Binary Installation](#binary-installation-quick-setup)** - Download pre-built executable (no dependencies)
+2. **[Cargo Installation](#cargo-installation-recommended-for-rust-developers)** - Install via cargo (requires Rust)
+3. **[GitHub Codespaces](#github-codespaces-recommended-for-learning)** - Cloud-based, zero setup
+4. **[Docker](#docker-installation)** - Containerized deployment
+5. **[Local Repository](#local-repository-installation-end-users)** - Clone and run
+
+### GitHub Codespaces (Recommended for Learning)
 
 **With Progress Tracking (Recommended):**
 1. Fork this repository to your GitHub account
@@ -223,7 +231,116 @@ docker-compose -f docker-compose.dev.yml up
 # - Both Rust server (3000) and Vite dev server (5173)
 ```
 
-### Cargo Installation (Recommended for End Users)
+### Binary Installation (Quick Setup)
+
+Download pre-built binaries for your platform - no Rust toolchain required!
+
+#### macOS
+
+```bash
+# Download the latest release for macOS (Apple Silicon)
+curl -L https://github.com/ghanithan/rust-tour/releases/latest/download/rust-tour-aarch64-apple-darwin.tar.gz -o rust-tour.tar.gz
+
+# Extract the binary
+tar -xzf rust-tour.tar.gz
+
+# Make it executable and move to a directory in your PATH
+chmod +x rust-tour
+sudo mv rust-tour /usr/local/bin/
+
+# Verify installation
+rust-tour --version
+
+# Start learning!
+rust-tour
+```
+
+#### Linux
+
+```bash
+# Download the latest release for Linux (x86_64)
+wget https://github.com/ghanithan/rust-tour/releases/latest/download/rust-tour-x86_64-unknown-linux-gnu.tar.gz
+
+# Extract the binary
+tar -xzf rust-tour-x86_64-unknown-linux-gnu.tar.gz
+
+# Make it executable and move to a directory in your PATH
+chmod +x rust-tour
+sudo mv rust-tour /usr/local/bin/
+
+# Verify installation
+rust-tour --version
+
+# Start learning!
+rust-tour
+```
+
+**Alternative without sudo:**
+```bash
+# Extract to your home directory
+mkdir -p ~/.local/bin
+tar -xzf rust-tour-x86_64-unknown-linux-gnu.tar.gz -C ~/.local/bin/
+chmod +x ~/.local/bin/rust-tour
+
+# Add to PATH if not already there
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Start learning!
+rust-tour
+```
+
+#### Windows
+
+**Option 1: PowerShell (Recommended)**
+```powershell
+# Download the latest release for Windows
+Invoke-WebRequest -Uri "https://github.com/ghanithan/rust-tour/releases/latest/download/rust-tour-x86_64-pc-windows-msvc.zip" -OutFile "rust-tour.zip"
+
+# Extract the archive
+Expand-Archive -Path "rust-tour.zip" -DestinationPath "."
+
+# Move to a directory in your PATH (e.g., C:\Windows\System32 or create a custom directory)
+# Option A: System-wide (requires admin)
+Move-Item -Path "rust-tour.exe" -Destination "C:\Windows\System32\rust-tour.exe"
+
+# Option B: User directory (no admin required)
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\bin"
+Move-Item -Path "rust-tour.exe" -Destination "$env:USERPROFILE\bin\rust-tour.exe"
+# Add to PATH: Settings → System → About → Advanced system settings → Environment Variables
+# Add %USERPROFILE%\bin to your user PATH variable
+
+# Verify installation
+rust-tour --version
+
+# Start learning!
+rust-tour
+```
+
+**Option 2: Manual Download**
+1. Go to [Releases Page](https://github.com/ghanithan/rust-tour/releases/latest)
+2. Download `rust-tour-x86_64-pc-windows-msvc.zip`
+3. Extract the zip file
+4. Move `rust-tour.exe` to a directory in your PATH
+5. Open Command Prompt or PowerShell and run `rust-tour`
+
+#### Post-Installation
+
+After installing the binary, on first run:
+- Rust Tour will guide you through downloading the exercises (~5MB)
+- Choose where to store your exercises (default: `~/rust-tour-exercises`)
+- Your progress is automatically saved between sessions
+
+**All platforms support these options:**
+```bash
+rust-tour --help                    # Show help and available options
+rust-tour --port 8080              # Use a custom port
+rust-tour --exercises-path /path   # Use exercises from a specific location
+```
+
+### Cargo Installation (Recommended for Rust Developers)
+
+If you already have Rust installed, you can use cargo for automatic updates:
 
 ```bash
 # Install Rust Tour
