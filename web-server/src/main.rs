@@ -5,7 +5,7 @@ use axum::{
     },
     http::{header, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use chrono::Utc;
@@ -182,6 +182,14 @@ struct ExerciseWithPath {
     path: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct FileContent {
+    path: String,
+    content: String,
+    language: String,
+    editable: bool,
+}
+
 #[derive(Debug, Serialize)]
 struct ExerciseDetails {
     metadata: ExerciseMetadata,
@@ -190,6 +198,7 @@ struct ExerciseDetails {
     readme: String,
     hints: String,
     path: String,
+    files: Vec<FileContent>,  // New field for all files
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -306,6 +315,23 @@ struct ChapterInfo {
 #[derive(Debug, Deserialize)]
 struct SaveCodeRequest {
     code: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BatchSaveRequest {
+    files: Vec<FileSaveRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FileSaveRequest {
+    path: String,
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct FileOperationRequest {
+    path: String,
+    content: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -499,6 +525,9 @@ fn create_router(state: AppState) -> Router {
         .route("/api/exercises", get(get_exercises))
         .route("/api/exercises/:chapter/:exercise", get(get_exercise))
         .route("/api/exercises/:chapter/:exercise/code", put(save_exercise_code))
+        .route("/api/exercises/:chapter/:exercise/files", put(save_exercise_files))
+        .route("/api/exercises/:chapter/:exercise/file", post(create_exercise_file))
+        .route("/api/exercises/:chapter/:exercise/file", delete(delete_exercise_file))
         .route("/api/exercises/:chapter/:exercise/test", post(test_exercise))
         .route("/api/exercises/:chapter/:exercise/run", post(run_exercise))
         .route("/api/exercises/:chapter/:exercise/check", post(check_exercise))
@@ -609,10 +638,67 @@ async fn handle_websocket_message(
             let terminal_msg: TerminalMessage = serde_json::from_value(message.data)?;
             handle_terminal_message(state, connection_id, terminal_msg).await?;
         }
+        "heartbeat" => {
+            handle_heartbeat_message(state, connection_id, &message).await?;
+        }
+        "exercise_view" => {
+            // Handle exercise view tracking
+            if state.debug_websocket {
+                debug!("Exercise view from connection {}", connection_id);
+            }
+        }
+        "code_execution" => {
+            // Handle code execution events
+            if state.debug_websocket {
+                debug!("Code execution from connection {}", connection_id);
+            }
+        }
+        "progress_update" => {
+            // Handle progress updates
+            if state.debug_websocket {
+                debug!("Progress update from connection {}", connection_id);
+            }
+        }
         _ => {
             warn!("Unknown WebSocket message type: {}", message.msg_type);
         }
     }
+    
+    Ok(())
+}
+
+async fn handle_heartbeat_message(
+    state: &AppState,
+    connection_id: ConnectionId,
+    message: &WebSocketMessage,
+) -> anyhow::Result<()> {
+    if state.debug_websocket {
+        debug!("Received heartbeat from connection {}", connection_id);
+    }
+    
+    // Extract timestamp from heartbeat if available
+    let timestamp = message.data.get("timestamp")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+        );
+    
+    // Send heartbeat response (pong) back to client via broadcast
+    let response = BroadcastMessage {
+        msg_type: "heartbeat_response".to_string(),
+        data: serde_json::json!({
+            "timestamp": timestamp,
+            "server_time": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+        }),
+    };
+    
+    // Send response via broadcast system
+    let _ = state.broadcast_tx.send(response);
     
     Ok(())
 }
@@ -1025,6 +1111,146 @@ async fn save_exercise_code(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+async fn save_exercise_files(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<BatchSaveRequest>,
+) -> Result<Json<ApiResponse<()>>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    
+    // Validate and save each file
+    for file in &request.files {
+        // Validate path to prevent directory traversal
+        if file.path.contains("..") || file.path.starts_with('/') {
+            error!("Invalid file path: {}", file.path);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        
+        // Only allow editing certain files
+        if !is_editable_file(&file.path) {
+            error!("File not editable: {}", file.path);
+            return Err(StatusCode::FORBIDDEN);
+        }
+        
+        let file_path = exercise_path.join(&file.path);
+        
+        // Ensure parent directory exists
+        if let Some(parent) = file_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent).await {
+                error!("Error creating directory for {}: {}", file.path, e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+        
+        // Write file
+        if let Err(e) = fs::write(&file_path, &file.content).await {
+            error!("Error saving file {}: {}", file.path, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    // Broadcast file changes
+    let exercise_name = match load_exercise_title(&exercise_path).await {
+        Ok(title) => title,
+        Err(_) => format!("{}/{}", chapter, exercise),
+    };
+    
+    for file in &request.files {
+        let broadcast_msg = BroadcastMessage {
+            msg_type: "file_updated".to_string(),
+            data: serde_json::json!({
+                "exercise": &exercise_name,
+                "file": &file.path
+            }),
+        };
+        let _ = state.broadcast_tx.send(broadcast_msg);
+    }
+    
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn create_exercise_file(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<FileOperationRequest>,
+) -> Result<Json<ApiResponse<()>>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    
+    // Validate path
+    if request.path.contains("..") || request.path.starts_with('/') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    // Only allow creating files in src/ directory
+    if !request.path.starts_with("src/") || !request.path.ends_with(".rs") {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let file_path = exercise_path.join(&request.path);
+    
+    // Check if file already exists
+    if file_path.exists() {
+        return Err(StatusCode::CONFLICT);
+    }
+    
+    // Ensure parent directory exists
+    if let Some(parent) = file_path.parent() {
+        if let Err(e) = fs::create_dir_all(parent).await {
+            error!("Error creating directory: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    // Create file with default content
+    let content = request.content.unwrap_or_else(|| "// New file\n".to_string());
+    if let Err(e) = fs::write(&file_path, content).await {
+        error!("Error creating file: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn delete_exercise_file(
+    AxumPath((chapter, exercise)): AxumPath<(String, String)>,
+    State(state): State<AppState>,
+    Json(request): Json<FileOperationRequest>,
+) -> Result<Json<ApiResponse<()>>, StatusCode> {
+    let exercise_path = state.exercises_path.join(&chapter).join(&exercise);
+    
+    // Validate path
+    if request.path.contains("..") || request.path.starts_with('/') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    // Don't allow deleting critical files
+    if request.path == "src/main.rs" || request.path == "Cargo.toml" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    // Only allow deleting files in src/ directory
+    if !request.path.starts_with("src/") {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let file_path = exercise_path.join(&request.path);
+    
+    // Delete the file
+    if let Err(e) = fs::remove_file(&file_path).await {
+        error!("Error deleting file: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    
+    Ok(Json(ApiResponse::success(())))
+}
+
+// Helper function to check if a file is editable
+fn is_editable_file(path: &str) -> bool {
+    // Allow editing Cargo.toml and any file in src/
+    path == "Cargo.toml" || 
+    (path.starts_with("src/") && (path.ends_with(".rs") || path.ends_with(".toml")))
 }
 
 async fn test_exercise(
@@ -1466,12 +1692,71 @@ async fn load_exercise_details(
         String::new()
     };
     
+    // Load all files for editing
+    let mut files = Vec::new();
+    
+    // Add Cargo.toml
+    let cargo_path = exercise_path.join("Cargo.toml");
+    if cargo_path.exists() {
+        if let Ok(content) = fs::read_to_string(&cargo_path).await {
+            files.push(FileContent {
+                path: "Cargo.toml".to_string(),
+                content,
+                language: "toml".to_string(),
+                editable: true,
+            });
+        }
+    }
+    
+    // Add main.rs (already loaded, but add to files array)
+    files.push(FileContent {
+        path: "src/main.rs".to_string(),
+        content: main_content.clone(),
+        language: "rust".to_string(),
+        editable: true,
+    });
+    
+    // Check for lib.rs
+    let lib_path = exercise_path.join("src").join("lib.rs");
+    if lib_path.exists() {
+        if let Ok(content) = fs::read_to_string(&lib_path).await {
+            files.push(FileContent {
+                path: "src/lib.rs".to_string(),
+                content,
+                language: "rust".to_string(),
+                editable: true,
+            });
+        }
+    }
+    
+    // Scan for any other .rs files in src/
+    let src_dir = exercise_path.join("src");
+    if let Ok(mut entries) = fs::read_dir(&src_dir).await {
+        while let Some(entry) = entries.next_entry().await.ok().flatten() {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.ends_with(".rs") && file_name != "main.rs" && file_name != "lib.rs" {
+                if let Ok(content) = fs::read_to_string(entry.path()).await {
+                    files.push(FileContent {
+                        path: format!("src/{}", file_name),
+                        content,
+                        language: "rust".to_string(),
+                        editable: true,
+                    });
+                }
+            }
+        }
+    }
+    
+    // Sort files for consistent ordering
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    
     Ok(ExerciseDetails {
         metadata,
         main_content,
         readme,
         hints,
         path: path.to_string(),
+        files,
     })
 }
 

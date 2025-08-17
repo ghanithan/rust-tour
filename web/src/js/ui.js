@@ -11,7 +11,7 @@ export class UI {
     this.rightPanelOpen = false;
     this.exerciseHierarchy = null; // Will store the hierarchical structure
     this.currentTheme = localStorage.getItem('theme') || 'dark';
-    this.currentFontSize = localStorage.getItem('fontSize') || 'medium';
+    this.currentFontSize = localStorage.getItem('fontSize') || 'small';
     this.fontSizeMultipliers = {
       small: 12/14,   // 12px
       medium: 13/14,  // 13px  
@@ -19,6 +19,15 @@ export class UI {
     };
     this.currentOutputHeight = 200; // Default expanded height
     this.minimizedOutputHeight = 40; // Status bar height
+    
+    // Multi-file support
+    this.fileModels = new Map();     // path -> monaco model
+    this.fileViewStates = new Map(); // path -> view state
+    this.currentFile = null;         // currently active file path
+    this.openTabs = [];              // array of open file paths
+    
+    // Tooltip instances for dynamic content
+    this.tooltipInstances = new Map();
   }
 
   async init(platform) {
@@ -30,6 +39,7 @@ export class UI {
     await this.initializeEditor();
     this.setupEventHandlers();
     this.setupOutputResize(); // Now safely disabled internally
+    this.initializeStaticTooltips(); // Initialize tooltips for static elements
     console.log('UI initialized');
   }
 
@@ -103,10 +113,10 @@ export class UI {
             <span>Rust Tour</span>
           </div>
           <div class="header-controls">
-            <button class="font-size-toggle" id="font-size-toggle" title="Font Size: Medium">
+            <button class="font-size-toggle" id="font-size-toggle">
               <span class="font-size-icon"><i class="fas fa-text-height"></i></span>
             </button>
-            <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+            <button class="theme-toggle" id="theme-toggle">
               <span class="theme-icon"><i class="fas fa-moon"></i></span>
             </button>
             <div class="progress-indicator">
@@ -146,6 +156,17 @@ export class UI {
               </button>
             </div>
           </div>
+          
+          <!-- File Tabs -->
+          <div class="file-tabs-container">
+            <div class="file-tabs" id="file-tabs">
+              <!-- Tabs will be inserted here dynamically -->
+            </div>
+            <button class="add-file-btn" id="add-file-btn" title="New File" style="display: none;">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          
           <div id="editor"></div>
         </main>
 
@@ -211,17 +232,18 @@ export class UI {
           <div class="panel-header">
             <span class="panel-title"><i class="fas fa-book-open"></i> Learning Resources</span>
             <div class="panel-nav-buttons">
-              <button class="panel-nav-btn" id="prev-chapter-btn" title="Previous Exercise" disabled>
-                ‹
+              <button class="panel-nav-btn" id="prev-chapter-btn" disabled>
+                <i class="fas fa-chevron-left"></i>
               </button>
               <span class="exercise-counter" id="exercise-counter">-/-</span>
-              <button class="panel-nav-btn" id="next-chapter-btn" title="Next Exercise" disabled>
-                ›
+              <button class="panel-nav-btn" id="next-chapter-btn" disabled>
+                <i class="fas fa-chevron-right"></i>
               </button>
             </div>
           </div>
           <div class="panel-tabs">
             <div class="panel-tab active" data-tab="info"><i class="fas fa-info-circle"></i> Info</div>
+            <div class="panel-tab" data-tab="files"><i class="fas fa-folder"></i> Files</div>
             <div class="panel-tab" data-tab="hints"><i class="fas fa-lightbulb"></i> Hints</div>
             <div class="panel-tab" data-tab="book"><i class="fas fa-book"></i> Book</div>
           </div>
@@ -229,6 +251,19 @@ export class UI {
             <div class="panel-section active" id="info-section">
               <div id="exercise-info">
                 Select an exercise to see details
+              </div>
+            </div>
+            <div class="panel-section" id="files-section">
+              <div class="file-explorer">
+                <div class="file-explorer-header">
+                  <span>Project Files</span>
+                  <button class="new-file-btn" id="new-file-btn">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+                <div class="file-tree" id="file-tree">
+                  <div class="file-placeholder">No exercise selected</div>
+                </div>
               </div>
             </div>
             <div class="panel-section" id="hints-section">
@@ -286,6 +321,26 @@ export class UI {
         ]
       }
     });
+    
+    // Configure Monaco Editor for TOML
+    monaco.languages.register({ id: 'toml' });
+    
+    // Set up TOML syntax highlighting
+    monaco.languages.setMonarchTokensProvider('toml', {
+      tokenizer: {
+        root: [
+          [/^\s*\[.*\]/, 'keyword'],           // [sections]
+          [/#.*$/, 'comment'],                 // # comments
+          [/^\s*\w+\s*=/, 'variable'],         // keys =
+          [/"[^"]*"/, 'string'],                // "strings"
+          [/'[^']*'/, 'string'],                // 'strings'
+          [/\d+\.\d+\.\d+/, 'number'],         // version numbers
+          [/\d+\.\d+/, 'number'],              // floats
+          [/\d+/, 'number'],                   // integers
+          [/true|false/, 'constant'],          // booleans
+        ]
+      }
+    });
 
     // Initialize editor with fixed font size (to preserve scrolling functionality)
     this.editor = monaco.editor.create(document.getElementById('editor'), {
@@ -294,14 +349,17 @@ export class UI {
       theme: this.currentTheme === 'dark' ? 'vs-dark' : 'vs',
       fontSize: 14,
       fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
-      minimap: { enabled: true },
+      minimap: { enabled: false },
       scrollBeyondLastLine: false,
       automaticLayout: true,
       formatOnPaste: true,
       formatOnType: true,
+      renderIndentGuides: false,
+      rulers: [],
       wordWrap: 'on',
       lineNumbers: 'on',
-      rulers: [80, 120],
+      lineNumbersMinChars: 2,
+      folding: true,
       renderWhitespace: 'boundary',
       bracketPairColorization: { enabled: true }
     });
@@ -478,6 +536,11 @@ export class UI {
       document.dispatchEvent(new CustomEvent('toggle-terminal'));
     });
 
+    // New file button in file explorer
+    document.getElementById('new-file-btn').addEventListener('click', () => {
+      this.showNewFileModal();
+    });
+
     // Handle all links to open in new tabs
     document.addEventListener('click', (e) => {
       if (e.target && e.target.tagName === 'A' && e.target.href) {
@@ -571,8 +634,16 @@ export class UI {
     // Update editor title
     document.getElementById('editor-title').textContent = exercise.metadata.title;
     
-    // Update editor content
-    this.editor.setValue(exercise.mainContent);
+    // Initialize file models if exercise has files array
+    if (exercise.files && exercise.files.length > 0) {
+      this.initializeFileModels(exercise.files);
+      // Switch to first file (usually src/main.rs)
+      const mainFile = exercise.files.find(f => f.path === 'src/main.rs') || exercise.files[0];
+      this.switchToFile(mainFile.path);
+    } else {
+      // Fallback to old behavior for backward compatibility
+      this.editor.setValue(exercise.mainContent);
+    }
     
     // Update exercise info (now includes instructions)
     this.updateExerciseInfo(exercise);
@@ -596,6 +667,684 @@ export class UI {
     
     // Switch to info tab by default
     this.switchPanelTab('info');
+  }
+
+  // Multi-file management methods
+  initializeFileModels(files) {
+    // Clear existing models
+    this.fileModels.forEach(model => model.dispose());
+    this.fileModels.clear();
+    this.fileViewStates.clear();
+    this.openTabs = [];
+    
+    // Create models for each file
+    files.forEach(file => {
+      const language = this.detectLanguage(file.path);
+      const uri = monaco.Uri.parse(`file:///${file.path}`);
+      const model = monaco.editor.createModel(file.content, language, uri);
+      
+      this.fileModels.set(file.path, model);
+      
+      // Track model changes for unsaved indicators
+      model.onDidChangeContent(() => {
+        this.updateFileModifiedState(file.path);
+      });
+    });
+    
+    // Load saved tabs for this exercise, or default to main file only
+    const savedTabs = this.loadOpenTabsFromStorage();
+    if (savedTabs && savedTabs.length > 0) {
+      // Filter saved tabs to only include files that still exist
+      this.openTabs = savedTabs.filter(path => this.fileModels.has(path));
+    } else {
+      // Default to main file only
+      const mainFile = files.find(f => f.path === 'src/main.rs') || files[0];
+      this.openTabs = mainFile ? [mainFile.path] : [];
+    }
+    
+    this.updateFileTabs();
+    this.updateFileTree(files);
+  }
+  
+  openFile(filePath) {
+    // Check if file model exists
+    if (!this.fileModels.has(filePath)) {
+      console.error('No model found for file:', filePath, 'Available models:', Array.from(this.fileModels.keys()));
+      return;
+    }
+    
+    // Add to tabs if not already open
+    if (!this.openTabs.includes(filePath)) {
+      this.openTabs.push(filePath);
+      this.saveOpenTabsToStorage();
+    }
+    
+    // Switch to the file
+    this.switchToFile(filePath);
+  }
+
+  switchToFile(filePath) {
+    
+    // Save current view state
+    if (this.currentFile && this.editor) {
+      this.fileViewStates.set(this.currentFile, this.editor.saveViewState());
+    }
+    
+    // Get the model for the new file
+    const model = this.fileModels.get(filePath);
+    if (!model) {
+      console.error('Model not found for file:', filePath);
+      return;
+    }
+    
+    // Switch editor model
+    this.editor.setModel(model);
+    
+    // Restore view state
+    const viewState = this.fileViewStates.get(filePath);
+    if (viewState) {
+      this.editor.restoreViewState(viewState);
+    }
+    
+    // Update current file
+    this.currentFile = filePath;
+    
+    // Update UI
+    this.updateFileTabs();
+    this.updateActiveTab(filePath);
+    this.updateEditorTitle(filePath);
+  }
+  
+  detectLanguage(filePath) {
+    const ext = filePath.split('.').pop().toLowerCase();
+    switch(ext) {
+      case 'rs': return 'rust';
+      case 'toml': return 'toml';
+      case 'md': return 'markdown';
+      case 'json': return 'json';
+      default: return 'plaintext';
+    }
+  }
+  
+  updateFileModifiedState(filePath) {
+    const model = this.fileModels.get(filePath);
+    if (model) {
+      const isModified = model.getAlternativeVersionId() !== model.getVersionId();
+      this.updateTabModifiedIndicator(filePath, isModified);
+      this.updateFileTreeItemState(filePath, isModified);
+    }
+  }
+  
+  updateFileTreeItemState(filePath, isModified) {
+    const fileItem = document.querySelector(`.file-tree-item[data-path="${filePath}"]`);
+    if (fileItem) {
+      fileItem.classList.toggle('modified', isModified);
+    }
+  }
+  
+  updateTabModifiedIndicator(filePath, isModified) {
+    const tab = document.querySelector(`.file-tab[data-path="${filePath}"]`);
+    if (tab) {
+      const filename = filePath.split('/').pop();
+      if (isModified) {
+        tab.classList.add('modified');
+        tab.querySelector('.tab-name').textContent = `• ${filename}`;
+      } else {
+        tab.classList.remove('modified');
+        tab.querySelector('.tab-name').textContent = filename;
+      }
+    }
+  }
+  
+  initializeStaticTooltips() {
+    if (!window.tippy) return;
+    
+    // Exercise navigation buttons
+    const prevBtn = document.getElementById('prev-chapter-btn');
+    const nextBtn = document.getElementById('next-chapter-btn');
+    
+    if (prevBtn) {
+      window.tippy(prevBtn, {
+        content: 'Previous Exercise',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    }
+    
+    if (nextBtn) {
+      window.tippy(nextBtn, {
+        content: 'Next Exercise',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    }
+    
+    // Font size and theme buttons
+    const fontSizeBtn = document.getElementById('font-size-toggle');
+    const themeBtn = document.getElementById('theme-toggle');
+    
+    if (fontSizeBtn) {
+      const sizeLabel = this.currentFontSize.charAt(0).toUpperCase() + this.currentFontSize.slice(1);
+      const fontSizeTooltip = window.tippy(fontSizeBtn, {
+        content: `Font Size: ${sizeLabel}`,
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+      this.tooltipInstances.set('fontSizeBtn', fontSizeTooltip);
+    }
+    
+    if (themeBtn) {
+      const themeTooltip = window.tippy(themeBtn, {
+        content: `Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} theme`,
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+      this.tooltipInstances.set('themeBtn', themeTooltip);
+    }
+    
+    // New file button
+    const newFileBtn = document.getElementById('new-file-btn');
+    if (newFileBtn) {
+      window.tippy(newFileBtn, {
+        content: 'New File',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    }
+  }
+
+  initializeFileTreeTooltips(fileTreeContainer) {
+    if (!window.tippy) return;
+    
+    // Initialize tooltips for delete buttons
+    const deleteButtons = fileTreeContainer.querySelectorAll('.delete-file');
+    deleteButtons.forEach(deleteBtn => {
+      window.tippy(deleteBtn, {
+        content: 'Delete',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    });
+  }
+
+  initializeTabTooltips(tabContainer) {
+    if (!window.tippy) return;
+    
+    // Initialize tooltip for add file tab
+    const addTab = tabContainer.querySelector('.file-tab-add');
+    if (addTab) {
+      window.tippy(addTab, {
+        content: 'New File',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    }
+    
+    // Initialize tooltips for close buttons
+    const closeButtons = tabContainer.querySelectorAll('.tab-close');
+    closeButtons.forEach(closeBtn => {
+      window.tippy(closeBtn, {
+        content: 'Close',
+        theme: 'rust-tour',
+        placement: 'bottom'
+      });
+    });
+  }
+
+  updateFileTabs() {
+    const tabContainer = document.getElementById('file-tabs');
+    if (!tabContainer) return;
+    
+    const fileTabs = this.openTabs.map(filePath => {
+      const filename = filePath.split('/').pop();
+      const isActive = filePath === this.currentFile;
+      const icon = this.getFileIcon(filePath);
+      return `
+        <div class="file-tab ${isActive ? 'active' : ''}" data-path="${filePath}">
+          <span class="tab-icon">${icon}</span>
+          <span class="tab-name">${filename}</span>
+          <button class="tab-close" data-path="${filePath}">×</button>
+        </div>
+      `;
+    }).join('');
+    
+    // Add the + tab at the end
+    const addTab = `
+      <div class="file-tab file-tab-add" id="file-tab-add">
+        <span class="tab-icon">+</span>
+      </div>
+    `;
+    
+    tabContainer.innerHTML = fileTabs + addTab;
+    
+    // Initialize tooltips for tab elements
+    this.initializeTabTooltips(tabContainer);
+    
+    // Add event listeners
+    tabContainer.querySelectorAll('.file-tab').forEach(tab => {
+      const path = tab.dataset.path;
+      
+      // Handle + tab click
+      if (tab.classList.contains('file-tab-add')) {
+        tab.addEventListener('click', () => {
+          this.showNewFileModal();
+        });
+      } else {
+        // Handle regular file tab click
+        tab.addEventListener('click', (e) => {
+          // Don't switch file if clicking the close button
+          if (!e.target.classList.contains('tab-close')) {
+            this.switchToFile(path);
+          }
+        });
+      }
+    });
+    
+    tabContainer.querySelectorAll('.tab-close').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeTab(btn.dataset.path);
+      });
+    });
+  }
+  
+  updateActiveTab(filePath) {
+    document.querySelectorAll('.file-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.path === filePath);
+    });
+    
+    // Update file tree active state
+    document.querySelectorAll('.file-tree-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.path === filePath);
+    });
+  }
+  
+  updateEditorTitle(filePath) {
+    const filename = filePath.split('/').pop();
+    const titleElement = document.getElementById('editor-title');
+    if (titleElement) {
+      const exerciseTitle = this.currentExercise?.metadata?.title || 'Exercise';
+      titleElement.textContent = `${exerciseTitle} - ${filename}`;
+    }
+  }
+  
+  closeTab(filePath) {
+    // Don't allow closing the main file
+    if (filePath === 'src/main.rs') return;
+    
+    // Remove from open tabs
+    const index = this.openTabs.indexOf(filePath);
+    if (index > -1) {
+      this.openTabs.splice(index, 1);
+      this.saveOpenTabsToStorage();
+    }
+    
+    // If this was the current file, switch to another
+    if (this.currentFile === filePath) {
+      const newFile = this.openTabs[Math.max(0, index - 1)];
+      if (newFile) {
+        this.switchToFile(newFile);
+      }
+    }
+    
+    // Update UI
+    this.updateFileTabs();
+  }
+  
+  getAllModifiedFiles() {
+    const modifiedFiles = [];
+    this.fileModels.forEach((model, path) => {
+      if (model.getAlternativeVersionId() !== model.getVersionId()) {
+        modifiedFiles.push({
+          path: path,
+          content: model.getValue()
+        });
+      }
+    });
+    return modifiedFiles;
+  }
+
+  updateFileTree(files) {
+    const fileTreeContainer = document.getElementById('file-tree');
+    if (!fileTreeContainer) return;
+
+    if (!files || files.length === 0) {
+      fileTreeContainer.innerHTML = '<div class="file-placeholder">No files available</div>';
+      return;
+    }
+
+    // Group files by directory
+    const filesByDir = {
+      root: [],
+      src: []
+    };
+
+    files.forEach(file => {
+      if (file.path.startsWith('src/')) {
+        filesByDir.src.push(file);
+      } else {
+        filesByDir.root.push(file);
+      }
+    });
+
+    let html = '';
+
+    // Root files (like Cargo.toml)
+    filesByDir.root.forEach(file => {
+      const isActive = file.path === this.currentFile;
+      const isModified = this.isFileModified(file.path);
+      const icon = this.getFileIcon(file.path);
+      
+      html += `
+        <div class="file-tree-item ${isActive ? 'active' : ''} ${isModified ? 'modified' : ''}" 
+             data-path="${file.path}">
+          <span class="file-icon">${icon}</span>
+          <span class="file-name">${file.path}</span>
+          <div class="file-actions">
+            ${file.path !== 'Cargo.toml' ? '<button class="file-action-btn delete-file">×</button>' : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    // src/ folder
+    if (filesByDir.src.length > 0) {
+      html += `
+        <div class="file-tree-folder">
+          <div class="folder-header">
+            <span class="folder-icon"><i class="fas fa-folder-open"></i></span>
+            <span>src/</span>
+          </div>
+          <div class="folder-content">
+      `;
+
+      filesByDir.src.forEach(file => {
+        const isActive = file.path === this.currentFile;
+        const isModified = this.isFileModified(file.path);
+        const filename = file.path.split('/').pop();
+        const icon = this.getFileIcon(file.path);
+        
+        html += `
+          <div class="file-tree-item ${isActive ? 'active' : ''} ${isModified ? 'modified' : ''}" 
+               data-path="${file.path}">
+            <span class="file-icon">${icon}</span>
+            <span class="file-name">${filename}</span>
+            <div class="file-actions">
+              ${file.path !== 'src/main.rs' ? '<button class="file-action-btn delete-file">×</button>' : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    fileTreeContainer.innerHTML = html;
+
+    // Initialize tooltips for delete buttons
+    this.initializeFileTreeTooltips(fileTreeContainer);
+
+    // Add event listeners
+    fileTreeContainer.querySelectorAll('.file-tree-item').forEach(item => {
+      const path = item.dataset.path;
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('file-action-btn')) {
+          this.openFile(path);
+        }
+      });
+    });
+
+    fileTreeContainer.querySelectorAll('.delete-file').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = btn.closest('.file-tree-item');
+        const path = item.dataset.path;
+        this.deleteFile(path);
+      });
+    });
+  }
+
+  getFileIcon(filePath) {
+    const filename = filePath.split('/').pop().toLowerCase();
+    const ext = filename.split('.').pop();
+    
+    // Special cases for specific files
+    if (filename === 'cargo.toml') {
+      return '<i class="fas fa-cube" style="color: #dea584;"></i>';
+    }
+    if (filename === 'readme.md') {
+      return '<i class="fas fa-book-open" style="color: #4a90e2;"></i>';
+    }
+    
+    // By extension
+    switch(ext) {
+      case 'rs': 
+        return '<i class="fas fa-file-code" style="color: #ce422b;"></i>';
+      case 'toml': 
+        return '<i class="fas fa-cog" style="color: #dea584;"></i>';
+      case 'md': 
+        return '<i class="fas fa-file-alt" style="color: #4a90e2;"></i>';
+      case 'json': 
+        return '<i class="fas fa-file-code" style="color: #f1c40f;"></i>';
+      case 'txt':
+        return '<i class="fas fa-file-alt" style="color: #95a5a6;"></i>';
+      default: 
+        return '<i class="fas fa-file" style="color: #95a5a6;"></i>';
+    }
+  }
+
+  isFileModified(filePath) {
+    const model = this.fileModels.get(filePath);
+    return model ? model.getAlternativeVersionId() !== model.getVersionId() : false;
+  }
+
+  async deleteFile(filePath) {
+    if (!this.currentExercise) return;
+    
+    const confirmed = await this.showDeleteConfirmModal(filePath);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      // Remove from backend
+      await this.platform.exerciseManager.deleteFile(this.currentExercise.path, filePath);
+      
+      // Remove model
+      const model = this.fileModels.get(filePath);
+      if (model) {
+        model.dispose();
+        this.fileModels.delete(filePath);
+      }
+      
+      // Remove from open tabs
+      const tabIndex = this.openTabs.indexOf(filePath);
+      if (tabIndex > -1) {
+        this.openTabs.splice(tabIndex, 1);
+      }
+      
+      // Switch to another file if this was active
+      if (this.currentFile === filePath) {
+        const nextFile = this.openTabs[0];
+        if (nextFile) {
+          this.switchToFile(nextFile);
+        }
+      }
+      
+      // Update UI
+      this.updateFileTabs();
+      this.updateFileTree(Array.from(this.fileModels.keys()).map(path => ({ path })));
+      
+      this.showStatus('File deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      this.showStatus('Failed to delete file', 'error');
+    }
+  }
+
+  showNewFileModal() {
+    // Create modal HTML
+    const modalHTML = `
+      <div class="modal-backdrop" id="new-file-modal-backdrop">
+        <div class="modal-dialog" id="new-file-modal">
+          <div class="modal-header">
+            <h3 class="modal-title">
+              <i class="fas fa-plus"></i> Create New File
+            </h3>
+            <button class="modal-close" id="new-file-modal-close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="new-file-name">File name:</label>
+              <div class="input-with-prefix">
+                <span class="input-prefix">src/</span>
+                <input type="text" id="new-file-name" placeholder="utils.rs" autocomplete="off" />
+              </div>
+              <small class="help-text">Only .rs files are allowed</small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="new-file-cancel">Cancel</button>
+            <button class="btn btn-primary" id="new-file-create">
+              <i class="fas fa-plus"></i> Create File
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Get elements
+    const modal = document.getElementById('new-file-modal');
+    const backdrop = document.getElementById('new-file-modal-backdrop');
+    const input = document.getElementById('new-file-name');
+    const createBtn = document.getElementById('new-file-create');
+    const cancelBtn = document.getElementById('new-file-cancel');
+    const closeBtn = document.getElementById('new-file-modal-close');
+    
+    // Focus input
+    setTimeout(() => input.focus(), 100);
+    
+    // Close modal function
+    const closeModal = () => {
+      backdrop.remove();
+    };
+    
+    // Create file function
+    const createFile = async () => {
+      const filename = input.value.trim();
+      if (!filename) {
+        input.focus();
+        return;
+      }
+      
+      if (!filename.endsWith('.rs')) {
+        this.showModalError('Only .rs files are allowed');
+        input.focus();
+        return;
+      }
+      
+      const filePath = `src/${filename}`;
+      
+      // Check if file already exists
+      if (this.fileModels.has(filePath)) {
+        this.showModalError('File already exists');
+        input.focus();
+        return;
+      }
+      
+      try {
+        // Close modal first
+        closeModal();
+        
+        // Create file
+        await this.createNewFile(filePath);
+      } catch (error) {
+        console.error('Error creating file:', error);
+        this.showStatus('Failed to create file', 'error');
+      }
+    };
+    
+    // Event listeners
+    createBtn.addEventListener('click', createFile);
+    cancelBtn.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+    
+    // Enter key to create
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        createFile();
+      } else if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+  }
+
+  showModalError(message) {
+    const existingError = document.querySelector('.modal-error');
+    if (existingError) existingError.remove();
+    
+    const errorHTML = `<div class="modal-error">${message}</div>`;
+    const helpText = document.querySelector('.help-text');
+    helpText.insertAdjacentHTML('afterend', errorHTML);
+    
+    // Remove error after 3 seconds
+    setTimeout(() => {
+      const error = document.querySelector('.modal-error');
+      if (error) error.remove();
+    }, 3000);
+  }
+
+  async createNewFile(filePath) {
+    if (!this.currentExercise) return;
+    
+    try {
+      // Create on backend  
+      const filename = filePath.split('/').pop();
+      const fileContent = `// ${filename}\n`;
+      await this.platform.exerciseManager.createFile(this.currentExercise.path, filePath, fileContent);
+      
+      // Create model locally
+      const language = this.detectLanguage(filePath);
+      const uri = monaco.Uri.parse(`file:///${filePath}`);
+      const model = monaco.editor.createModel(fileContent, language, uri);
+      
+      this.fileModels.set(filePath, model);
+      
+      // Track changes
+      model.onDidChangeContent(() => {
+        this.updateFileModifiedState(filePath);
+      });
+      
+      // Add to tabs
+      this.openTabs.push(filePath);
+      this.saveOpenTabsToStorage();
+      
+      // Switch to new file
+      this.switchToFile(filePath);
+      
+      // Update UI
+      this.updateFileTabs();
+      this.updateFileTree(Array.from(this.fileModels.keys()).map(path => ({ path })));
+      
+      // Focus the file pane in right panel
+      this.openRightPanelAndSwitchToFiles();
+      
+      this.showStatus('File created successfully', 'success');
+    } catch (error) {
+      console.error('Error creating file:', error);
+      this.showStatus('Failed to create file', 'error');
+    }
   }
 
 
@@ -858,6 +1607,25 @@ export class UI {
     
     statusIcon.className = `status-icon ${status}`;
     statusText.textContent = message;
+  }
+
+  showStatus(message, type = 'info') {
+    // Map type to status classes
+    const statusMap = {
+      'success': 'success',
+      'error': 'error', 
+      'warning': 'warning',
+      'info': 'info'
+    };
+    
+    this.setExecutionStatus(statusMap[type] || 'info', message);
+    
+    // Auto-clear status after 3 seconds for non-error messages
+    if (type !== 'error') {
+      setTimeout(() => {
+        this.setExecutionStatus('', 'Ready');
+      }, 3000);
+    }
   }
 
   showHint(hint, level) {
@@ -1427,6 +2195,118 @@ export class UI {
     trigger.classList.remove('open');
   }
 
+  openRightPanelAndSwitchToFiles() {
+    // Open right panel if it's not already open
+    if (!this.rightPanelOpen) {
+      this.toggleRightPanel();
+    }
+    
+    // Switch to files tab
+    this.switchPanelTab('files');
+  }
+
+  // Exercise-specific tab persistence
+  getExerciseTabsKey() {
+    return this.currentExercise ? `openTabs_${this.currentExercise.path}` : null;
+  }
+
+  saveOpenTabsToStorage() {
+    const key = this.getExerciseTabsKey();
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(this.openTabs));
+    }
+  }
+
+  loadOpenTabsFromStorage() {
+    const key = this.getExerciseTabsKey();
+    if (key) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse saved tabs:', e);
+        }
+      }
+    }
+    return null;
+  }
+
+  showDeleteConfirmModal(filePath) {
+    return new Promise((resolve) => {
+      const filename = filePath.split('/').pop();
+      
+      // Create modal HTML
+      const modalHTML = `
+        <div class="modal-backdrop" id="delete-confirm-modal-backdrop">
+          <div class="modal-dialog" id="delete-confirm-modal">
+            <div class="modal-header">
+              <h3 class="modal-title">
+                <i class="fas fa-exclamation-triangle" style="color: var(--status-warning);"></i> Confirm Delete
+              </h3>
+              <button class="modal-close" id="delete-confirm-modal-close">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Are you sure you want to delete <strong>${filename}</strong>?</p>
+              <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" id="delete-confirm-cancel">Cancel</button>
+              <button class="btn" id="delete-confirm-delete" style="background: var(--status-error); color: white;">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to DOM
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      
+      const modal = document.getElementById('delete-confirm-modal');
+      const backdrop = document.getElementById('delete-confirm-modal-backdrop');
+      const closeBtn = document.getElementById('delete-confirm-modal-close');
+      const cancelBtn = document.getElementById('delete-confirm-cancel');
+      const deleteBtn = document.getElementById('delete-confirm-delete');
+      
+      // Close modal function
+      const closeModal = () => {
+        backdrop.remove();
+        resolve(false);
+      };
+      
+      // Delete function
+      const confirmDelete = () => {
+        backdrop.remove();
+        resolve(true);
+      };
+      
+      // Event listeners
+      deleteBtn.addEventListener('click', confirmDelete);
+      cancelBtn.addEventListener('click', closeModal);
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+          closeModal();
+        }
+      });
+      
+      // Escape key to cancel
+      const handleKeydown = (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', handleKeydown);
+        }
+      };
+      document.addEventListener('keydown', handleKeydown);
+      
+      // Focus delete button for keyboard users
+      setTimeout(() => deleteBtn.focus(), 100);
+    });
+  }
+
   handleResize() {
     const trigger = document.getElementById('right-panel-trigger');
     const rightPanel = document.getElementById('right-panel');
@@ -1447,7 +2327,7 @@ export class UI {
       trigger.style.display = 'none';
       resizeHandle.style.display = 'flex';
       // Restore saved desktop layout using ratios
-      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1';
+      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1.22';
       const savedRightRatio = localStorage.getItem('layout-right-ratio') || '1';
       mainLayout.style.gridTemplateColumns = `${savedLeftRatio}fr 0.25rem ${savedRightRatio}fr`;
       // Ensure panel is closed when switching back to desktop
@@ -1464,15 +2344,15 @@ export class UI {
     
     // Only apply saved layout if we're on desktop (> 1024px)
     if (window.innerWidth > 1024) {
-      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1';
+      const savedLeftRatio = localStorage.getItem('layout-left-ratio') || '1.22';
       const savedRightRatio = localStorage.getItem('layout-right-ratio') || '1';
       mainLayout.style.gridTemplateColumns = `${savedLeftRatio}fr 0.25rem ${savedRightRatio}fr`;
     }
 
-    // Double-click to reset to default 50/50 split
+    // Double-click to reset to default 55/45 split
     resizeHandle.addEventListener('dblclick', () => {
-      mainLayout.style.gridTemplateColumns = '1fr 0.25rem 1fr';
-      localStorage.setItem('layout-left-ratio', '1');
+      mainLayout.style.gridTemplateColumns = '1.22fr 0.25rem 1fr';
+      localStorage.setItem('layout-left-ratio', '1.22');
       localStorage.setItem('layout-right-ratio', '1');
     });
 
@@ -1855,10 +2735,10 @@ export class UI {
   }
 
   updateFontSizeTooltip() {
-    const fontSizeToggle = document.getElementById('font-size-toggle');
-    if (fontSizeToggle) {
+    const fontSizeTooltip = this.tooltipInstances.get('fontSizeBtn');
+    if (fontSizeTooltip) {
       const sizeLabel = this.currentFontSize.charAt(0).toUpperCase() + this.currentFontSize.slice(1);
-      fontSizeToggle.title = `Font Size: ${sizeLabel}`;
+      fontSizeTooltip.setContent(`Font Size: ${sizeLabel}`);
     }
   }
 
@@ -1970,9 +2850,9 @@ export class UI {
     }
     
     // Update tooltip
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-      themeToggle.title = `Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} theme`;
+    const themeTooltip = this.tooltipInstances.get('themeBtn');
+    if (themeTooltip) {
+      themeTooltip.setContent(`Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} theme`);
     }
   }
 

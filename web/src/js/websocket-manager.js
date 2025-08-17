@@ -137,6 +137,9 @@ export class WebSocketManager {
       case 'system_notification':
         this.handleSystemNotification(data);
         break;
+      case 'heartbeat_response':
+        this.handleHeartbeatResponse(data);
+        break;
       default:
         console.log('Unhandled message type:', data.type);
     }
@@ -173,6 +176,25 @@ export class WebSocketManager {
 
   handleSystemNotification(data) {
     this.showNotification(data.message, data.level || 'info');
+  }
+
+  handleHeartbeatResponse(data) {
+    if (this.debug) {
+      const latency = Date.now() - data.timestamp;
+      console.log(`Heartbeat response received. Latency: ${latency}ms`);
+    }
+    
+    // Update connection quality indicator or health metrics
+    this.updateConnectionHealth(data);
+  }
+
+  updateConnectionHealth(data) {
+    // Optional: Update UI to show connection latency/quality
+    // Could be used for showing connection status indicators
+    if (this.debug) {
+      const latency = Date.now() - data.timestamp;
+      console.log(`Connection health - Latency: ${latency}ms, Server time: ${data.server_time}`);
+    }
   }
 
   send(data) {

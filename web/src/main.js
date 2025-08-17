@@ -1,4 +1,6 @@
 import './styles.css';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
 import { ExerciseManager } from './js/exercise-manager.js';
 import { ProgressTracker } from './js/progress-tracker.js';
 import { BookIntegration } from './js/book-integration.js';
@@ -15,7 +17,7 @@ class RustTour {
     this.ui = new UI();
     
     // Calculate initial terminal font size based on current font size setting
-    const currentFontSize = localStorage.getItem('fontSize') || 'medium';
+    const currentFontSize = localStorage.getItem('fontSize') || 'small';
     const fontSizeMap = { small: 12, medium: 13, large: 14 };
     const initialTerminalFontSize = fontSizeMap[currentFontSize];
     
@@ -42,11 +44,14 @@ class RustTour {
       this.ui.init(this);
       this.ui.updateExerciseList(this.exercises);
       
+      // Connect UI and exercise manager
+      this.exerciseManager.setUI(this.ui);
+      
       // Initialize terminal
       this.terminal.init('terminal');
       
       // Apply initial font size to terminal
-      const currentFontSize = localStorage.getItem('fontSize') || 'medium';
+      const currentFontSize = localStorage.getItem('fontSize') || 'small';
       const terminalSizeMap = { small: 12, medium: 13, large: 14 };
       const terminalFontSize = terminalSizeMap[currentFontSize];
       this.terminal.updateFontSize(terminalFontSize);
@@ -368,6 +373,9 @@ class RustTour {
     this.terminal.hide();
   }
 }
+
+// Make tippy available globally for UI components
+window.tippy = tippy;
 
 // Initialize the platform when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

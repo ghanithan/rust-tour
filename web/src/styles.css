@@ -240,7 +240,7 @@ body {
     "header header header"
     "editor resize panel"
     "output resize panel";
-  grid-template-columns: 1.5fr 0.25rem 1fr;
+  grid-template-columns: 1.22fr 0.25rem 1fr;
   grid-template-rows: var(--header-height) 1fr var(--output-height);
   /* Transition only when not manually resizing */
   transition: grid-template-rows 0.15s ease;
@@ -701,7 +701,7 @@ body.disable-transitions * {
 .editor-header {
   background: var(--bg-secondary);
   border-bottom: 0.0625rem solid var(--border-primary);
-  padding: 0.4rem 0.75rem;
+  padding: var(--ui-padding-sm) 0.75rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -716,6 +716,501 @@ body.disable-transitions * {
 .editor-actions {
   display: flex;
   gap: var(--space-sm);
+}
+
+/* File Tabs */
+.file-tabs-container {
+  background: var(--bg-secondary);
+  border-bottom: 0.0625rem solid var(--border-primary);
+  display: flex;
+  align-items: stretch;
+  height: 1.75rem;
+  padding: 0 0.375rem 0 0;
+}
+
+.file-tabs {
+  display: flex;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  align-items: stretch;
+}
+
+.file-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.file-tab {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-tertiary);
+  border: none;
+  border-right: 1px solid var(--border-primary);
+  border-radius: 0;
+  margin-right: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.file-tab:hover {
+  background: var(--bg-accent);
+}
+
+.file-tab.active {
+  background: var(--bg-primary);
+  border-right-color: var(--accent-blue);
+  color: var(--accent-blue);
+  border-bottom: 2px solid var(--accent-blue);
+}
+
+.file-tab.modified .tab-name {
+  color: var(--text-warning);
+  font-style: italic;
+}
+
+.tab-icon {
+  margin-right: 0.375rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  width: 0.75rem;
+  text-align: center;
+}
+
+.file-tab.active .tab-icon {
+  color: var(--accent-blue);
+}
+
+.tab-name {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-right: 0.375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 8rem;
+}
+
+.file-tab.active .tab-name {
+  color: var(--accent-blue);
+}
+
+/* Add file tab styling */
+.file-tab-add {
+  background: var(--bg-tertiary) !important;
+  border: none !important;
+  border-right: 1px solid var(--border-primary) !important;
+  border-radius: 0 !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
+  padding: 0.25rem 0.5rem !important;
+  margin-right: 0 !important;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.file-tab-add:hover {
+  background: var(--bg-accent) !important;
+  border-color: var(--accent-blue) !important;
+  opacity: 1;
+}
+
+.file-tab-add .tab-icon {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-muted);
+  margin: 0;
+  width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.file-tab-add:hover .tab-icon {
+  color: var(--accent-blue);
+}
+
+/* Remove right border from last regular tab */
+.file-tab:last-of-type:not(.file-tab-add) {
+  border-right: none;
+}
+
+.tab-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.1rem;
+  border-radius: 0.125rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0;
+  transition: color 0.2s ease;
+  font-weight: bold;
+  min-width: 1rem;
+  min-height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-tab:hover .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  color: var(--rust-orange);
+}
+
+.add-file-btn {
+  background: none;
+  border: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.add-file-btn:hover {
+  background: var(--bg-accent);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+/* File Explorer in Right Panel */
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.file-explorer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.new-file-btn {
+  background: none;
+  border: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.new-file-btn:hover {
+  background: var(--bg-accent);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.new-file-btn .fas {
+  margin-right: 0;
+}
+
+.file-tree {
+  flex: 1;
+  padding: 0.5rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.file-tree::-webkit-scrollbar {
+  display: none;
+}
+
+.file-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.file-tree-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0.2rem 0.3rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  margin-bottom: 0.1rem;
+  gap: 0.25rem;
+}
+
+.file-tree-item:hover {
+  background: var(--bg-accent);
+}
+
+.file-tree-item.active {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.file-tree-item.modified {
+  color: var(--text-warning);
+}
+
+.file-tree-item .file-icon {
+  margin-right: 0.5rem;
+  width: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.file-tree-item.active .file-icon {
+  color: white;
+}
+
+.file-tree-item .file-name {
+  flex: 1;
+}
+
+.file-tree-item .file-actions {
+  opacity: 1;
+  justify-self: end;
+  grid-column: 3;
+}
+
+.file-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin: 0;
+  position: relative;
+  pointer-events: auto;
+  z-index: 10;
+  isolation: isolate;
+}
+
+.file-action-btn:hover {
+  color: var(--rust-orange);
+  background: rgba(206, 66, 43, 0.1);
+}
+
+/* Tippy.js tooltip theming to match app design */
+.tippy-box[data-theme~='rust-tour'] {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-size: 0.75rem;
+}
+
+.tippy-box[data-theme~='rust-tour'] .tippy-arrow {
+  color: var(--bg-tertiary);
+}
+
+.file-tree-folder {
+  margin-bottom: 0.5rem;
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.folder-header:hover {
+  background: var(--bg-accent);
+}
+
+.folder-header .folder-icon {
+  margin-right: 0.5rem;
+  color: var(--accent-blue);
+}
+
+.folder-content {
+  margin-left: 0.5rem;
+  border-left: 1px solid var(--border-primary);
+  padding-left: 0.3rem;
+}
+
+/* New File Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  min-width: 400px;
+  max-width: 500px;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-accent);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-primary);
+  border-radius: 0.25rem;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.input-prefix {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-right: 1px solid var(--border-primary);
+  font-family: var(--font-mono);
+}
+
+.input-with-prefix input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  outline: none;
+}
+
+.input-with-prefix input::placeholder {
+  color: var(--text-muted);
+}
+
+.input-with-prefix:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.modal-error {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-error);
+  background: rgba(244, 67, 54, 0.1);
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 
 .btn {
@@ -853,7 +1348,7 @@ body.disable-transitions * {
 }
 
 .panel-header {
-  padding: 0.4rem 0.75rem;
+  padding: var(--ui-padding-sm) 0.75rem;
   border-bottom: 0.0625rem solid var(--border-primary);
   display: flex;
   justify-content: space-between;
@@ -884,8 +1379,15 @@ body.disable-transitions * {
   justify-content: center;
   font-size: var(--ui-font-size);
   font-weight: 500;
+  font-family: inherit;
   transition: all 0.2s ease;
   gap: 0.3rem;
+  line-height: 1;
+}
+
+.panel-nav-btn .fas {
+  font-size: var(--ui-font-size);
+  margin: 0;
   line-height: 1;
 }
 
@@ -920,17 +1422,21 @@ body.disable-transitions * {
   display: flex;
   background: var(--bg-tertiary);
   border-bottom: 0.0625rem solid var(--border-primary);
+  height: 1.75rem;
 }
 
 .panel-tab {
   flex: 1;
-  padding: 0.375rem;
+  padding: 0.25rem 0.375rem;
   text-align: center;
   cursor: pointer;
-  font-size: var(--ui-font-size);
+  font-size: 0.75rem;
   font-weight: 500;
   border-bottom: 0.125rem solid transparent;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .panel-tab.active {
