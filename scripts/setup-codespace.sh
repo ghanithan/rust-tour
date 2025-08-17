@@ -48,7 +48,19 @@ mkdir -p ./bin
 
 # Download latest release
 echo -e "${BLUE}⬇️  Downloading latest release...${NC}"
-LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+
+# Use gh CLI if available to avoid rate limits (should be available in Codespaces)
+if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+    LATEST_RELEASE=$(gh api repos/ghanithan/rust-tour/releases/latest)
+else
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+    # Check for rate limit error
+    if echo "$LATEST_RELEASE" | grep -q "API rate limit exceeded"; then
+        echo -e "${YELLOW}⚠️  GitHub API rate limit exceeded. Will build from source if needed.${NC}"
+        # Don't exit, let the setup continue
+    fi
+fi
+
 DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -o "https://github.com/ghanithan/rust-tour/releases/download/[^\"]*rust-tour-${TARGET}\.tar\.gz" | head -1)
 
 if [ -z "$DOWNLOAD_URL" ]; then

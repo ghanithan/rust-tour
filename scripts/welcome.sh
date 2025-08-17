@@ -31,10 +31,16 @@ if [ -f "./bin/rust-tour" ]; then
     
     # Check for updates
     CURRENT_VERSION=$(./bin/rust-tour --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
+    # Use gh CLI if available to avoid rate limits, otherwise use curl
+    if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+        LATEST_VERSION=$(gh api repos/ghanithan/rust-tour/releases/latest --jq '.tag_name' | sed 's/^v//')
+    else
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest | grep -o '"tag_name": "[^"]*"' | sed 's/"tag_name": "v*//;s/"//')
+    fi
     
     if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "" ]; then
-        echo -e "${YELLOW}📦 Update available: $CURRENT_VERSION → $LATEST_VERSION${NC}"
+        echo -e "${YELLOW}📦 Release $LATEST_VERSION is available (current binary: $CURRENT_VERSION)${NC}"
+        echo -e "${BLUE}   Note: Binary may already be up-to-date despite version mismatch${NC}"
     else
         echo -e "${GREEN}✅ You have the latest version: $CURRENT_VERSION${NC}"
     fi
@@ -112,7 +118,24 @@ case $choice in
             
             # Download latest release
             echo -e "${BLUE}⬇️  Downloading latest release...${NC}"
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+            
+            # Use gh CLI if available to avoid rate limits
+            if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+                echo -e "${GREEN}Using GitHub CLI for authenticated API access${NC}"
+                LATEST_RELEASE=$(gh api repos/ghanithan/rust-tour/releases/latest)
+            else
+                LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+                # Check for rate limit error
+                if echo "$LATEST_RELEASE" | grep -q "API rate limit exceeded"; then
+                    echo -e "${RED}❌ GitHub API rate limit exceeded${NC}"
+                    echo -e "${YELLOW}Try one of these alternatives:${NC}"
+                    echo "  1. Wait an hour and try again"
+                    echo "  2. Use Docker: docker run -p 3000:3000 ghcr.io/ghanithan/rust-tour:latest"
+                    echo "  3. Build from source: ./scripts/run.sh dev"
+                    exit 1
+                fi
+            fi
+            
             DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -o "https://github.com/ghanithan/rust-tour/releases/download/[^\"]*rust-tour-${TARGET}\.tar\.gz" | head -1)
             
             if [ -z "$DOWNLOAD_URL" ]; then

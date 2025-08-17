@@ -109,6 +109,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Update version in Cargo.toml
+        run: |
+          echo "📝 Updating version in Cargo.toml to ${{ inputs.version }}"
+          
+          # Update the workspace version in root Cargo.toml
+          sed -i 's/^version = .*/version = "${{ inputs.version }}"/' Cargo.toml
+          
+          # Verify the update
+          echo "✅ Updated Cargo.toml:"
+          grep "^version = " Cargo.toml
+          
+          # Commit the version update
+          git add Cargo.toml
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+          git push origin main
+          
+          echo "✅ Version updated and pushed to main branch"
+
       - name: Generate release notes
         id: release_notes
         run: |
@@ -180,6 +198,19 @@ jobs:
       - name: Create and push tag
         run: |
           echo "Creating tag v${{ inputs.version }}"
+          
+          # Pull the latest changes (including version bump)
+          git pull origin main
+          
+          # Verify Cargo.toml has the correct version
+          CARGO_VERSION=$(grep "^version = " Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          if [ "$CARGO_VERSION" != "${{ inputs.version }}" ]; then
+            echo "❌ Version mismatch! Cargo.toml has $CARGO_VERSION but expected ${{ inputs.version }}"
+            exit 1
+          fi
+          echo "✅ Cargo.toml version confirmed: $CARGO_VERSION"
+          
+          # Create and push tag
           git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
           git push origin "v${{ inputs.version }}"
 

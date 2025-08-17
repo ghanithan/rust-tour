@@ -51,7 +51,25 @@ mkdir -p ./bin
 
 # Download latest release
 echo -e "${BLUE}⬇️  Fetching latest release info...${NC}"
-LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+
+# Use gh CLI if available to avoid rate limits
+if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+    echo -e "${GREEN}Using GitHub CLI for authenticated API access${NC}"
+    LATEST_RELEASE=$(gh api repos/ghanithan/rust-tour/releases/latest)
+else
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/ghanithan/rust-tour/releases/latest)
+    # Check for rate limit error
+    if echo "$LATEST_RELEASE" | grep -q "API rate limit exceeded"; then
+        echo -e "${RED}❌ GitHub API rate limit exceeded${NC}"
+        echo -e "${YELLOW}Try one of these alternatives:${NC}"
+        echo "  1. Wait an hour and try again"
+        echo "  2. Use Docker: docker run -p 3000:3000 ghcr.io/ghanithan/rust-tour:latest"
+        echo "  3. Build from source: ./scripts/run.sh dev"
+        echo "  4. Install GitHub CLI and authenticate: gh auth login"
+        exit 1
+    fi
+fi
+
 DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -o "https://github.com/ghanithan/rust-tour/releases/download/[^\"]*rust-tour-${TARGET}\.tar\.gz" | head -1)
 
 if [ -z "$DOWNLOAD_URL" ]; then
