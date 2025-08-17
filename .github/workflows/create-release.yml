@@ -191,17 +191,17 @@ jobs:
           tag_name: v${{ inputs.version }}
           release_name: Release v${{ inputs.version }}
           body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-          draft: false
+          draft: true
           prerelease: ${{ inputs.prerelease }}
 
       - name: Release Summary
         run: |
-          echo "## Release v${{ inputs.version }} Created Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Draft Release v${{ inputs.version }} Created Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Completed Steps:" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Version validation passed" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Git tag v${{ inputs.version }} created" >> $GITHUB_STEP_SUMMARY
-          echo "- [x] GitHub release published" >> $GITHUB_STEP_SUMMARY
+          echo "- [x] GitHub draft release created" >> $GITHUB_STEP_SUMMARY
           echo "- [x] Release notes generated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps (Automated via CI/CD):" >> $GITHUB_STEP_SUMMARY
@@ -218,6 +218,7 @@ jobs:
           echo "  - \`ghcr.io/ghanithan/rust-tour:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "  - \`ghcr.io/ghanithan/rust-tour:v${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Binary downloads will be attached to the GitHub release" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Draft release will be published when binaries are ready" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Release Notes:" >> $GITHUB_STEP_SUMMARY
           echo "[View full release notes](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY

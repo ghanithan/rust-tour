@@ -391,6 +391,57 @@ jobs:
             ### Binary Downloads
             Download the appropriate binary for your platform from the assets below.
 
+      - name: Publish Release
+        if: steps.version.outputs.version != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Looking for draft release v${{ steps.version.outputs.version }}..."
+          
+          # Find the draft release
+          RELEASE_ID=$(curl -s \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" | \
+            jq -r ".[] | select(.tag_name==\"v${{ steps.version.outputs.version }}\" and .draft==true) | .id")
+          
+          if [ -n "$RELEASE_ID" ]; then
+            echo "Found draft release ID: $RELEASE_ID"
+            echo "Publishing release..."
+            
+            # Publish the release
+            RESPONSE=$(curl -X PATCH \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
+              -d '{"draft": false}')
+            
+            # Check if successful
+            if echo "$RESPONSE" | jq -e '.draft == false' > /dev/null; then
+              echo "✅ Release v${{ steps.version.outputs.version }} published successfully!"
+              echo "Release is now visible at: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
+            else
+              echo "⚠️ Failed to publish release. Response:"
+              echo "$RESPONSE" | jq '.'
+              exit 1
+            fi
+          else
+            echo "⚠️ No draft release found for v${{ steps.version.outputs.version }}"
+            echo "This might be a re-run or the release was already published."
+            
+            # Check if release already exists and is published
+            PUBLISHED_RELEASE=$(curl -s \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }}" | \
+              jq -r 'select(.draft==false) | .id')
+            
+            if [ -n "$PUBLISHED_RELEASE" ]; then
+              echo "✅ Release v${{ steps.version.outputs.version }} is already published"
+            else
+              echo "❌ No release found for v${{ steps.version.outputs.version }}"
+              exit 1
+            fi
+          fi
+
   update-documentation:
     name: Update Release Documentation
     needs: [check-changes, build-and-publish]
