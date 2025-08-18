@@ -20,7 +20,7 @@ COPY web/ ./
 RUN npm run build
 
 # Rust build stage using pre-built base image with cargo-chef
-FROM ghcr.io/ghanithan/rust-tour/base:alpine-rust-1.83 AS chef
+FROM ghcr.io/ghanithan/rust-tour/base:alpine-rust-1.88 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -48,7 +48,7 @@ RUN cargo build --profile ci-release --package rust-tour --no-default-features
 RUN mkdir -p ./solutions/
 
 # Final runtime stage with Rust toolchain
-FROM rust:1.83-alpine
+FROM rust:1.88-alpine
 
 # Install runtime dependencies and useful tools
 RUN apk add --no-cache \

@@ -1,6 +1,6 @@
 # Base Alpine image with Rust and cargo-chef pre-installed
 # This image is built and pushed to GHCR for faster builds
-FROM rust:1.84-alpine
+FROM rust:1.88-alpine
 
 # Install build dependencies required for most Rust projects on Alpine
 RUN apk add --no-cache \
