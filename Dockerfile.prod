@@ -36,7 +36,9 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Copy source code (dependencies are already built)
-COPY . .
+COPY ./web-server ./web-server
+COPY ./exercises ./exercises
+COPY ./scripts ./scripts
 
 # Copy built web assets to expected location for embedding
 COPY --from=web-builder /app/web/dist ./web-server/web-dist
