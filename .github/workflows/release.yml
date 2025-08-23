@@ -449,6 +449,13 @@ jobs:
         run: |
           echo "Looking for draft release v${{ steps.version.outputs.version }}..."
           
+          # First, check if the tag exists
+          TAG_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/v${{ steps.version.outputs.version }}")
+          
+          echo "Tag existence check: HTTP $TAG_EXISTS"
+          
           # Find the draft release
           RELEASE_ID=$(curl -s \
             -H "Authorization: token $GITHUB_TOKEN" \
@@ -457,22 +464,50 @@ jobs:
           
           if [ -n "$RELEASE_ID" ]; then
             echo "Found draft release ID: $RELEASE_ID"
+            
+            # Get the current release details
+            CURRENT_RELEASE=$(curl -s \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID")
+            
+            echo "Current release draft status: $(echo "$CURRENT_RELEASE" | jq -r '.draft')"
+            echo "Current release tag: $(echo "$CURRENT_RELEASE" | jq -r '.tag_name')"
+            
             echo "Publishing release..."
             
-            # Publish the release
-            RESPONSE=$(curl -X PATCH \
+            # Publish the release (only change draft status, don't modify tag_name)
+            RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X PATCH \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
-              -d '{"draft": false}')
+              -d '{"draft": false, "prerelease": false}')
+            
+            # Extract HTTP code and response body
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1 | cut -d: -f2)
+            RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
             
             # Check if successful
-            if echo "$RESPONSE" | jq -e '.draft == false' > /dev/null; then
+            if [ "$HTTP_CODE" = "200" ] && echo "$RESPONSE_BODY" | jq -e '.draft == false' > /dev/null 2>&1; then
               echo "✅ Release v${{ steps.version.outputs.version }} published successfully!"
               echo "Release is now visible at: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
             else
-              echo "⚠️ Failed to publish release. Response:"
-              echo "$RESPONSE" | jq '.'
+              echo "⚠️ Failed to publish release. HTTP Code: $HTTP_CODE"
+              echo "Response:"
+              echo "$RESPONSE_BODY" | jq '.' 2>/dev/null || echo "$RESPONSE_BODY"
+              
+              # If it's a 422 with tag already exists, check if release is already published
+              if [ "$HTTP_CODE" = "422" ]; then
+                echo "Checking if release is already published..."
+                PUBLISHED_CHECK=$(curl -s \
+                  -H "Authorization: token $GITHUB_TOKEN" \
+                  "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }}")
+                
+                if echo "$PUBLISHED_CHECK" | jq -e '.draft == false' > /dev/null 2>&1; then
+                  echo "✅ Release v${{ steps.version.outputs.version }} is already published"
+                  exit 0
+                fi
+              fi
+              
               exit 1
             fi
           else
