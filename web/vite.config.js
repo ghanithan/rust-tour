@@ -1,4 +1,6 @@
 import { defineConfig } from 'vite';
+import pkg from 'vite-plugin-monaco-editor';
+const monacoEditorPlugin = pkg.default || pkg;
 
 export default defineConfig({
   root: 'src',
@@ -6,7 +8,12 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
   },
-  plugins: [],
+  plugins: [
+    monacoEditorPlugin({
+      languageWorkers: ['json', 'typescript'],
+      globalAPI: true
+    })
+  ],
   server: {
     port: 8000,
     proxy: {
