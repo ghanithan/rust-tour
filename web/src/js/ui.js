@@ -925,27 +925,18 @@ export class UI {
     const tabContainer = document.getElementById('file-tabs');
     if (!tabContainer) return;
     
-    const fileTabs = this.openTabs.map(filePath => {
-      const filename = filePath.split('/').pop();
-      const isActive = filePath === this.currentFile;
-      const icon = this.getFileIcon(filePath);
-      return `
-        <div class="file-tab ${isActive ? 'active' : ''}" data-path="${filePath}">
-          <span class="tab-icon">${icon}</span>
-          <span class="tab-name">${filename}</span>
-          <button class="tab-close" data-path="${filePath}">×</button>
-        </div>
-      `;
-    }).join('');
+    // Clear container safely
+    tabContainer.textContent = '';
+    
+    // Create file tabs
+    this.openTabs.forEach(filePath => {
+      const tab = this.createFileTab(filePath);
+      tabContainer.appendChild(tab);
+    });
     
     // Add the + tab at the end
-    const addTab = `
-      <div class="file-tab file-tab-add" id="file-tab-add">
-        <span class="tab-icon">+</span>
-      </div>
-    `;
-    
-    tabContainer.innerHTML = fileTabs + addTab;
+    const addTab = this.createAddTab();
+    tabContainer.appendChild(addTab);
     
     // Initialize tooltips for tab elements
     this.initializeTabTooltips(tabContainer);
@@ -1050,8 +1041,14 @@ export class UI {
     const fileTreeContainer = document.getElementById('file-tree');
     if (!fileTreeContainer) return;
 
+    // Clear container safely
+    fileTreeContainer.textContent = '';
+
     if (!files || files.length === 0) {
-      fileTreeContainer.innerHTML = '<div class="file-placeholder">No files available</div>';
+      const placeholder = document.createElement('div');
+      placeholder.className = 'file-placeholder';
+      placeholder.textContent = 'No files available';
+      fileTreeContainer.appendChild(placeholder);
       return;
     }
 
@@ -1069,62 +1066,17 @@ export class UI {
       }
     });
 
-    let html = '';
-
     // Root files (like Cargo.toml)
     filesByDir.root.forEach(file => {
-      const isActive = file.path === this.currentFile;
-      const isModified = this.isFileModified(file.path);
-      const icon = this.getFileIcon(file.path);
-      
-      html += `
-        <div class="file-tree-item ${isActive ? 'active' : ''} ${isModified ? 'modified' : ''}" 
-             data-path="${file.path}">
-          <span class="file-icon">${icon}</span>
-          <span class="file-name">${file.path}</span>
-          <div class="file-actions">
-            ${file.path !== 'Cargo.toml' ? '<button class="file-action-btn delete-file">×</button>' : ''}
-          </div>
-        </div>
-      `;
+      const fileItem = this.createFileTreeItem(file, this.currentFile, this.isFileModified(file.path));
+      fileTreeContainer.appendChild(fileItem);
     });
 
     // src/ folder
     if (filesByDir.src.length > 0) {
-      html += `
-        <div class="file-tree-folder">
-          <div class="folder-header">
-            <span class="folder-icon"><i class="fas fa-folder-open"></i></span>
-            <span>src/</span>
-          </div>
-          <div class="folder-content">
-      `;
-
-      filesByDir.src.forEach(file => {
-        const isActive = file.path === this.currentFile;
-        const isModified = this.isFileModified(file.path);
-        const filename = file.path.split('/').pop();
-        const icon = this.getFileIcon(file.path);
-        
-        html += `
-          <div class="file-tree-item ${isActive ? 'active' : ''} ${isModified ? 'modified' : ''}" 
-               data-path="${file.path}">
-            <span class="file-icon">${icon}</span>
-            <span class="file-name">${filename}</span>
-            <div class="file-actions">
-              ${file.path !== 'src/main.rs' ? '<button class="file-action-btn delete-file">×</button>' : ''}
-            </div>
-          </div>
-        `;
-      });
-
-      html += `
-          </div>
-        </div>
-      `;
+      const srcFolder = this.createSrcFolder(filesByDir.src);
+      fileTreeContainer.appendChild(srcFolder);
     }
-
-    fileTreeContainer.innerHTML = html;
 
     // Initialize tooltips for delete buttons
     this.initializeFileTreeTooltips(fileTreeContainer);
@@ -1147,6 +1099,165 @@ export class UI {
         this.deleteFile(path);
       });
     });
+  }
+
+  createFileTreeItem(file, currentFile, isModified) {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-tree-item';
+    
+    // Set class states safely
+    if (file.path === currentFile) {
+      fileItem.classList.add('active');
+    }
+    if (isModified) {
+      fileItem.classList.add('modified');
+    }
+    
+    // Set data attribute safely
+    fileItem.dataset.path = file.path;
+    
+    // Create file icon
+    const fileIcon = document.createElement('span');
+    fileIcon.className = 'file-icon';
+    fileIcon.innerHTML = this.getFileIcon(file.path); // getFileIcon returns safe HTML
+    fileItem.appendChild(fileIcon);
+    
+    // Create file name (safely set text content)
+    const fileName = document.createElement('span');
+    fileName.className = 'file-name';
+    fileName.textContent = file.path; // Safe text content assignment
+    fileItem.appendChild(fileName);
+    
+    // Create file actions
+    const fileActions = document.createElement('div');
+    fileActions.className = 'file-actions';
+    
+    if (file.path !== 'Cargo.toml') {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'file-action-btn delete-file';
+      deleteBtn.textContent = '×';
+      fileActions.appendChild(deleteBtn);
+    }
+    
+    fileItem.appendChild(fileActions);
+    return fileItem;
+  }
+
+  createSrcFolder(srcFiles) {
+    const srcFolder = document.createElement('div');
+    srcFolder.className = 'file-tree-folder';
+    
+    // Create folder header
+    const folderHeader = document.createElement('div');
+    folderHeader.className = 'folder-header';
+    
+    const folderIcon = document.createElement('span');
+    folderIcon.className = 'folder-icon';
+    folderIcon.innerHTML = '<i class="fas fa-folder-open"></i>'; // Static safe HTML
+    folderHeader.appendChild(folderIcon);
+    
+    const folderName = document.createElement('span');
+    folderName.textContent = 'src/';
+    folderHeader.appendChild(folderName);
+    
+    srcFolder.appendChild(folderHeader);
+    
+    // Create folder content
+    const folderContent = document.createElement('div');
+    folderContent.className = 'folder-content';
+    
+    srcFiles.forEach(file => {
+      const filename = file.path.split('/').pop();
+      const isActive = file.path === this.currentFile;
+      const isModified = this.isFileModified(file.path);
+      
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-tree-item';
+      
+      if (isActive) {
+        fileItem.classList.add('active');
+      }
+      if (isModified) {
+        fileItem.classList.add('modified');
+      }
+      
+      fileItem.dataset.path = file.path;
+      
+      // Create file icon
+      const fileIcon = document.createElement('span');
+      fileIcon.className = 'file-icon';
+      fileIcon.innerHTML = this.getFileIcon(file.path); // getFileIcon returns safe HTML
+      fileItem.appendChild(fileIcon);
+      
+      // Create file name (safely set text content)
+      const fileName = document.createElement('span');
+      fileName.className = 'file-name';
+      fileName.textContent = filename; // Safe text content assignment
+      fileItem.appendChild(fileName);
+      
+      // Create file actions
+      const fileActions = document.createElement('div');
+      fileActions.className = 'file-actions';
+      
+      if (file.path !== 'src/main.rs') {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'file-action-btn delete-file';
+        deleteBtn.textContent = '×';
+        fileActions.appendChild(deleteBtn);
+      }
+      
+      fileItem.appendChild(fileActions);
+      folderContent.appendChild(fileItem);
+    });
+    
+    srcFolder.appendChild(folderContent);
+    return srcFolder;
+  }
+
+  createFileTab(filePath) {
+    const filename = filePath.split('/').pop();
+    const isActive = filePath === this.currentFile;
+    
+    const tab = document.createElement('div');
+    tab.className = 'file-tab';
+    if (isActive) {
+      tab.classList.add('active');
+    }
+    tab.dataset.path = filePath;
+    
+    // Create tab icon
+    const tabIcon = document.createElement('span');
+    tabIcon.className = 'tab-icon';
+    tabIcon.innerHTML = this.getFileIcon(filePath); // getFileIcon returns safe HTML
+    tab.appendChild(tabIcon);
+    
+    // Create tab name (safely set text content)
+    const tabName = document.createElement('span');
+    tabName.className = 'tab-name';
+    tabName.textContent = filename; // Safe text content assignment
+    tab.appendChild(tabName);
+    
+    // Create close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tab-close';
+    closeBtn.dataset.path = filePath;
+    closeBtn.textContent = '×';
+    tab.appendChild(closeBtn);
+    
+    return tab;
+  }
+
+  createAddTab() {
+    const addTab = document.createElement('div');
+    addTab.className = 'file-tab file-tab-add';
+    addTab.id = 'file-tab-add';
+    
+    const tabIcon = document.createElement('span');
+    tabIcon.className = 'tab-icon';
+    tabIcon.textContent = '+';
+    addTab.appendChild(tabIcon);
+    
+    return addTab;
   }
 
   getFileIcon(filePath) {
