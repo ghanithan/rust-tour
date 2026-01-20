@@ -106,7 +106,7 @@ fn test_program_shows_attempt_count() {
         .expect("Failed to start program");
 
     let stdin = child.stdin.as_mut().expect("Failed to open stdin");
-    stdin.write_all(b"5\n1\n10\n3\n7\n").expect("Failed to write to stdin");
+    stdin.write_all(b"5\n1\n10\n3\n7\n2\n9\n4\n8\n6\n").expect("Failed to write to stdin");
     drop(stdin);
 
     let output = child.wait_with_output().expect("Failed to wait for program");
@@ -226,7 +226,7 @@ fn test_program_shows_range_information() {
         .expect("Failed to start program");
 
     let stdin = child.stdin.as_mut().expect("Failed to open stdin");
-    stdin.write_all(b"5\n").expect("Failed to write to stdin");
+    stdin.write_all(b"5\n1\n2\n3\n4\n6\n7\n8\n9\n10\n").expect("Failed to write to stdin");
     drop(stdin);
 
     let output = child.wait_with_output().expect("Failed to wait for program");
